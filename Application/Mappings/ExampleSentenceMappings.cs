@@ -17,4 +17,15 @@ public static class ExampleSentenceMappings
             FullSentence = TextHelpers.CombineFullExampleSentence(sentence.ClozeSentence, sentence.ExpectedAnswer)
         };
     }
+
+    public static ExampleSentence ToEntity(this CreateExampleSentenceRequest request)
+    {
+        return new ExampleSentence()
+        {
+            Id = Guid.NewGuid().ToString(),
+            ClozeSentence = request.ClozeSentence,
+            Hint = request.Hint,
+            ExpectedAnswer = request.ExpectedAnswer,
+        };
+    }
 }

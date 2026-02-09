@@ -7,6 +7,7 @@ public interface IUnitOfWork
     IDeckRepository Decks { get; }
     IVocabularyCardRepository VocabularyCards { get; }
     IExampleSentenceRepository ExampleSentences { get; }
+    IGrammarRepository GrammarCards { get; }
 
     Task<int> SaveChangesAsync();
 }

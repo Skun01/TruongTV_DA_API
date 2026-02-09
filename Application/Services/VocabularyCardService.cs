@@ -29,13 +29,7 @@ public class VocabularyCardService : IVocabularyCardService
         if(deck.Type != DeckType.Vocabulary)
             throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
 
-        var examples = request.Examples.Select(e => new ExampleSentence()
-        {
-            Id = Guid.NewGuid().ToString(),
-            ClozeSentence = e.ClozeSentence,
-            Hint = e.Hint,
-            ExpectedAnswer = e.ExpectedAnswer,
-        }).ToList();
+        var examples = request.Examples.Select(e => e.ToEntity()).ToList();
 
         var newVocabCard = new VocabularyCard()
         {

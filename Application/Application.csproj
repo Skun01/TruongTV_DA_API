@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <Folder Include="DTOs\Auth\" />
+    <Folder Include="DTOs\GrammarCard\" />
     <Folder Include="DTOs\User\" />
     <Folder Include="DTOs\VocabularyCard\" />
     <Folder Include="Helpers\" />
