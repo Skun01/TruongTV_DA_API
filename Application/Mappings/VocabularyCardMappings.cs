@@ -24,7 +24,7 @@ public static class VocabularyCardMappings
             Term = card.Term,
             Meaning = card.Meaning,
             DeckId = card.DeckId,
-            Examples = card.ExampleSentences.Select(e => e.ToDTO())
+            Examples = card.ExampleSentences.Select(e => e.ToDTO()).ToList()
         };
     }
 }

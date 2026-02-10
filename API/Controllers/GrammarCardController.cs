@@ -29,4 +29,17 @@ public class GrammarCardController : BaseController
 
         return result;
     }
+
+    /// <summary>
+    /// Lấy danh chi tiết các grammar card theo deck id
+    /// </summary>
+    /// <param name="deckId"></param>
+    /// <returns></returns>
+    [HttpGet("deck/{deckId}")]
+    public async Task<ApiResponse<IEnumerable<GrammarCardDTO>>> Get(string deckId)
+    {
+        var result = await HandleException(_service.GetGrammarListByDeckIdAsync(deckId, GetCurrentUserId()));
+
+        return result;
+    }
 }

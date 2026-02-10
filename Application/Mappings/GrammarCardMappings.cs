@@ -1,4 +1,5 @@
 using Application.DTOs.Card;
+using Application.DTOs.GrammarCard;
 using Domain.Entities;
 
 namespace Application.Mappings;
@@ -12,6 +13,20 @@ public static class GrammarCardMappings
             Id = card.Id,
             Term = card.Term,
             Meaning = card.Meaning
+        };
+    }
+
+    public static GrammarCardDTO ToDTO(this GrammarCard card)
+    {
+        return new GrammarCardDTO()
+        {
+            Id = card.Id,
+            Term = card.Term,
+            Meaning = card.Meaning,
+            Structure = card.Structure,
+            Explanation = card.Explanation,
+            Caution = card.Caution,
+            Examples = card.ExampleSentences.Select(e => e.ToDTO()).ToList()
         };
     }
 }
