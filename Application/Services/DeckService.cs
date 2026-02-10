@@ -96,6 +96,7 @@ public class DeckService : IDeckService
 
         deck.Name = request.Name;
         deck.Description = request.Description;
+        deck.UpdatedAt = DateTime.UtcNow;
 
         await _unitOfWork.SaveChangesAsync();
 
