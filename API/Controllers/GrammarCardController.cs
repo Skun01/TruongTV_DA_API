@@ -23,7 +23,7 @@ public class GrammarCardController : BaseController
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost]
-    public async Task<ApiResponse<bool>> CreateCard(CreateGrammarCardRequest request)
+    public async Task<ApiResponse<bool>> CreateCard([FromBody] CreateGrammarCardRequest request)
     {
         var result = await HandleException(_service.CreateGrammarCardAsync(request, GetCurrentUserId()));
 
@@ -36,7 +36,7 @@ public class GrammarCardController : BaseController
     /// <param name="deckId"></param>
     /// <returns></returns>
     [HttpGet("deck/{deckId}")]
-    public async Task<ApiResponse<IEnumerable<GrammarCardDTO>>> Get(string deckId)
+    public async Task<ApiResponse<IEnumerable<GrammarCardDTO>>> Get([FromRoute] string deckId)
     {
         var result = await HandleException(_service.GetGrammarListByDeckIdAsync(deckId, GetCurrentUserId()));
 
