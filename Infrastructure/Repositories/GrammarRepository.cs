@@ -20,6 +20,7 @@ public class GrammarRepository : Repository<GrammarCard>, IGrammarRepository
     public async Task<GrammarCard?> GetFullInfoByIdAsync(string id)
     {
         return await _context.GrammarCards
+            .Include(gc => gc.Deck)
             .Include(gc => gc.ExampleSentences)
             .Where(gc => gc.Id == id)
             .FirstOrDefaultAsync();

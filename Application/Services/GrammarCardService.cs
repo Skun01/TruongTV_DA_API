@@ -71,4 +71,25 @@ public class GrammarCardService : IGrammarCardService
 
         return cards.Select(c => c.ToDTO()).ToList();
     }
+
+    public async Task<bool> UpdateCardByIdAsync(UpdateGrammarCardRequest request, string cardId, string userId)
+    {
+        var card = await _unitOfWork.GrammarCards.GetFullInfoByIdAsync(cardId);
+
+        if(card == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        if(card.Deck!.CreatedBy != userId)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+
+        card.Term = request.Term;
+        card.Meaning = request.Meaning;
+        card.Explanation = request.Explanation;
+        card.Caution = request.Caution;
+        card.Structure = request.Structure;
+
+        await _unitOfWork.SaveChangesAsync();
+        
+        return true;
+    }
 }

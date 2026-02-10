@@ -20,6 +20,7 @@ public class VocabularyCardRepository : Repository<VocabularyCard>, IVocabularyC
     public async Task<VocabularyCard?> GetFullInfoByIdAsync(string id)
     {
         return await _context.VocabularyCards
+            .Include(c => c.Deck)
             .Include(c => c.ExampleSentences)
             .FirstOrDefaultAsync(c => c.Id == id);
     }

@@ -55,4 +55,18 @@ public class GrammarCardController : BaseController
 
         return result;
     }
+
+    /// <summary>
+    /// Cập nhật grammar card theo id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPut("{id}")]
+    public async Task<ApiResponse<bool>> Update([FromRoute] string id, [FromBody] UpdateGrammarCardRequest request)
+    {
+        var result = await HandleException(_service.UpdateCardByIdAsync(request, id, GetCurrentUserId()));
+
+        return result;
+    }
 }
