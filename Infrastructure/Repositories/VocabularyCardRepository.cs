@@ -21,7 +21,6 @@ public class VocabularyCardRepository : Repository<VocabularyCard>, IVocabularyC
     {
         return await _context.VocabularyCards
             .Include(c => c.ExampleSentences)
-            .Include(c => c.Deck)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 }

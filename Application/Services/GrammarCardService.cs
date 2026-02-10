@@ -69,6 +69,6 @@ public class GrammarCardService : IGrammarCardService
 
         var cards = await _unitOfWork.GrammarCards.GetAllByDeckIdAsync(deckId);
 
-        return cards.Select(c => c.ToDTO(deckId)).ToList();
+        return cards.Select(c => c.ToDTO()).ToList();
     }
 }

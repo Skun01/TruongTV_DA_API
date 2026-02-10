@@ -21,7 +21,6 @@ public class GrammarRepository : Repository<GrammarCard>, IGrammarRepository
     {
         return await _context.GrammarCards
             .Include(gc => gc.ExampleSentences)
-            .Include(gc => gc.Deck)
             .Where(gc => gc.Id == id)
             .FirstOrDefaultAsync();
     }
