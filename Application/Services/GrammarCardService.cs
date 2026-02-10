@@ -50,6 +50,22 @@ public class GrammarCardService : IGrammarCardService
         return true;
     }
 
+    public async Task<bool> DeleteByIdAsync(string cardId, string userId)
+    {
+        var card = await _unitOfWork.GrammarCards.GetFullInfoByIdAsync(cardId);
+
+        if(card == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        if(card.Deck!.CreatedBy != userId)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+
+        _unitOfWork.GrammarCards.Delete(card);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
+
     public async Task<GrammarCardDTO> GetCardByIdAsync(string id)
     {
         var card = await _unitOfWork.GrammarCards.GetFullInfoByIdAsync(id);

@@ -8,4 +8,5 @@ public interface IGrammarCardService
     Task<IEnumerable<GrammarCardDTO>> GetGrammarListByDeckIdAsync(string deckId, string userId);
     Task<GrammarCardDTO> GetCardByIdAsync(string id);
     Task<bool> UpdateCardByIdAsync(UpdateGrammarCardRequest request, string cardId, string userId);
+    Task<bool> DeleteByIdAsync(string cardId, string userId);
 }
