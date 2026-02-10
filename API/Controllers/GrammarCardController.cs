@@ -42,4 +42,17 @@ public class GrammarCardController : BaseController
 
         return result;
     }
+
+    /// <summary>
+    /// Lấy thông tin chi tiết 1 grammar card theo id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpGet("{id}")]
+    public async Task<ApiResponse<GrammarCardDTO>> GetCardById([FromRoute] string id)
+    {
+        var result = await HandleException(_service.GetCardByIdAsync(id));
+
+        return result;
+    }
 }

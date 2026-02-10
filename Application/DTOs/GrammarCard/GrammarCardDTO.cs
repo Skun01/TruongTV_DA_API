@@ -10,5 +10,6 @@ public class GrammarCardDTO
     public string Structure { set; get; } = string.Empty;
     public string? Explanation { set; get; }
     public string? Caution { set; get; }
+    public string? DeckId { set; get; }
      public IEnumerable<ExampleSentenceDTO> Examples { set; get; } = [];
 }

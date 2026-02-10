@@ -11,7 +11,18 @@ public class GrammarRepository : Repository<GrammarCard>, IGrammarRepository
 
     public async Task<IEnumerable<GrammarCard>> GetAllByDeckIdAsync(string deckId)
     {
-        return await _context.GrammarCards.Where(gc => gc.DeckId == deckId)
+        return await _context.GrammarCards
+            .AsNoTracking()
+            .Where(gc => gc.DeckId == deckId)
             .ToListAsync();
+    }
+
+    public async Task<GrammarCard?> GetFullInfoByIdAsync(string id)
+    {
+        return await _context.GrammarCards
+            .Include(gc => gc.ExampleSentences)
+            .Include(gc => gc.Deck)
+            .Where(gc => gc.Id == id)
+            .FirstOrDefaultAsync();
     }
 }

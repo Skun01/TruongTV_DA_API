@@ -16,7 +16,7 @@ public static class GrammarCardMappings
         };
     }
 
-    public static GrammarCardDTO ToDTO(this GrammarCard card)
+    public static GrammarCardDTO ToDTO(this GrammarCard card, string deckId = "")
     {
         return new GrammarCardDTO()
         {
@@ -26,6 +26,7 @@ public static class GrammarCardMappings
             Structure = card.Structure,
             Explanation = card.Explanation,
             Caution = card.Caution,
+            DeckId = card.Deck?.Id ?? deckId,
             Examples = card.ExampleSentences.Select(e => e.ToDTO()).ToList()
         };
     }

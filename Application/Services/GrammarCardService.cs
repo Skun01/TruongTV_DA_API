@@ -50,6 +50,16 @@ public class GrammarCardService : IGrammarCardService
         return true;
     }
 
+    public async Task<GrammarCardDTO> GetCardByIdAsync(string id)
+    {
+        var card = await _unitOfWork.GrammarCards.GetFullInfoByIdAsync(id);
+
+        if(card == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        return card.ToDTO();
+    }
+
     public async Task<IEnumerable<GrammarCardDTO>> GetGrammarListByDeckIdAsync(string deckId, string userId)
     {
         var isDeckExist = await _unitOfWork.Decks.IsExist(deckId, DeckType.Grammar);
@@ -59,6 +69,6 @@ public class GrammarCardService : IGrammarCardService
 
         var cards = await _unitOfWork.GrammarCards.GetAllByDeckIdAsync(deckId);
 
-        return cards.Select(c => c.ToDTO()).ToList();
+        return cards.Select(c => c.ToDTO(deckId)).ToList();
     }
 }
