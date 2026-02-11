@@ -30,4 +30,18 @@ public class ExampleSentenceController : BaseController
 
         return result;
     }
+
+    /// <summary>
+    /// Cập nhật ví dụ
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpPost("{id}")]
+    public async Task<ApiResponse<bool>> Update([FromBody] UpdateCardExampleRequest request, [FromRoute] string id)
+    {
+        var result = await HandleException(_service.UpdateExampleAsync(request, id));
+
+        return result;
+    }
 }

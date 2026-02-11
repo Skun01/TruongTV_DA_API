@@ -58,4 +58,20 @@ public class ExampleSentenceService : IExampleSentenceService
 
         return true;
     }
+
+    public async Task<bool> UpdateExampleAsync(UpdateCardExampleRequest request, string exampleId)
+    {
+        // chưa kiểm tra liệu có thuộc vể user không?
+        var example = await _unitOfWork.ExampleSentences.GetByIdAsync(exampleId);
+
+        if(example == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        example.ClozeSentence = request.ClozeSentence;
+        example.ExpectedAnswer = request.ExpectedAnswer;
+        example.Hint = request.Hint;
+
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
 }
