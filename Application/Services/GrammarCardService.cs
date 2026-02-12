@@ -66,12 +66,15 @@ public class GrammarCardService : IGrammarCardService
         return true;
     }
 
-    public async Task<GrammarCardDTO> GetCardByIdAsync(string id)
+    public async Task<GrammarCardDTO> GetCardByIdAsync(string id, string userId)
     {
         var card = await _unitOfWork.GrammarCards.GetFullInfoByIdAsync(id);
 
         if(card == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        if(card.Deck!.CreatedBy != userId)
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         return card.ToDTO();
     }

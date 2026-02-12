@@ -62,12 +62,15 @@ public class VocabularyCardService : IVocabularyCardService
         return true;
     }
 
-    public async Task<VocabularyCardDTO> GetCardByIdAsync(string id)
+    public async Task<VocabularyCardDTO> GetCardByIdAsync(string id, string userId)
     {
         var card = await _unitOfWork.VocabularyCards.GetFullInfoByIdAsync(id);
 
         if(card == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        if(card.Deck!.CreatedBy != userId)
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         return card.ToDTO();
     }

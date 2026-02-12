@@ -40,7 +40,7 @@ public class ExampleSentenceController : BaseController
     [HttpPut("{id}")]
     public async Task<ApiResponse<bool>> Update([FromBody] UpdateCardExampleRequest request, [FromRoute] string id)
     {
-        var result = await HandleException(_service.UpdateExampleAsync(request, id));
+        var result = await HandleException(_service.UpdateExampleAsync(request, id, GetCurrentUserId()));
 
         return result;
     }
@@ -53,7 +53,7 @@ public class ExampleSentenceController : BaseController
     [HttpDelete("{id}")]
     public async Task<ApiResponse<bool>> Delete([FromRoute] string id)
     {
-        var result = await HandleException(_service.DeleteExampleAsync(id));
+        var result = await HandleException(_service.DeleteExampleAsync(id, GetCurrentUserId()));
 
         return result;
     }

@@ -59,13 +59,14 @@ public class ExampleSentenceService : IExampleSentenceService
         return true;
     }
 
-    public async Task<bool> UpdateExampleAsync(UpdateCardExampleRequest request, string exampleId)
+    public async Task<bool> UpdateExampleAsync(UpdateCardExampleRequest request, string exampleId, string userId)
     {
-        // chưa kiểm tra liệu có thuộc vể user không?
         var example = await _unitOfWork.ExampleSentences.GetByIdAsync(exampleId);
 
         if(example == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        await ValidateOwnershipAsync(example, userId);
 
         example.ClozeSentence = request.ClozeSentence;
         example.ExpectedAnswer = request.ExpectedAnswer;
@@ -75,16 +76,43 @@ public class ExampleSentenceService : IExampleSentenceService
         return true;
     }
 
-    public async Task<bool> DeleteExampleAsync(string id)
+    public async Task<bool> DeleteExampleAsync(string id, string userId)
     {
         var example = await _unitOfWork.ExampleSentences.GetByIdAsync(id);
 
         if(example == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
+        await ValidateOwnershipAsync(example, userId);
+
         _unitOfWork.ExampleSentences.Delete(example);
         await _unitOfWork.SaveChangesAsync();
 
         return true;
+    }
+
+    // Kiểm tra example có thuộc về user không
+    private async Task ValidateOwnershipAsync(ExampleSentence example, string userId)
+    {
+        string? deckId = null;
+
+        if(!string.IsNullOrEmpty(example.GrammarCardId))
+        {
+            var card = await _unitOfWork.GrammarCards.GetByIdAsync(example.GrammarCardId);
+            deckId = card?.DeckId;
+        }
+        else if(!string.IsNullOrEmpty(example.VocabularyCardId))
+        {
+            var card = await _unitOfWork.VocabularyCards.GetByIdAsync(example.VocabularyCardId);
+            deckId = card?.DeckId;
+        }
+
+        if(deckId == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        var deck = await _unitOfWork.Decks.GetByIdAsync(deckId);
+
+        if(deck?.CreatedBy != userId)
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
     }
 }

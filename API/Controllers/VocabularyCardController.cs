@@ -51,7 +51,7 @@ public class VocabularyCardController : BaseController
     [HttpGet("{id}")]
     public async Task<ApiResponse<VocabularyCardDTO>> GetCardById([FromRoute] string id)
     {
-        var result = await HandleException(_service.GetCardByIdAsync(id));
+        var result = await HandleException(_service.GetCardByIdAsync(id, GetCurrentUserId()));
 
         return result;
     }

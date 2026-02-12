@@ -51,7 +51,7 @@ public class GrammarCardController : BaseController
     [HttpGet("{id}")]
     public async Task<ApiResponse<GrammarCardDTO>> GetCardById([FromRoute] string id)
     {
-        var result = await HandleException(_service.GetCardByIdAsync(id));
+        var result = await HandleException(_service.GetCardByIdAsync(id, GetCurrentUserId()));
 
         return result;
     }
