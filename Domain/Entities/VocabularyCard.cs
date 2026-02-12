@@ -1,8 +1,7 @@
 namespace Domain.Entities;
 
-public class VocabularyCard
+public class VocabularyCard : BaseEntity
 {
-    public string Id { set; get;} = string.Empty;
     public string Term { set; get; } = string.Empty;
     public string Meaning { set; get; } = string.Empty;
     public string DeckId { set; get; } = string.Empty;

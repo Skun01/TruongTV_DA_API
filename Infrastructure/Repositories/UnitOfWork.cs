@@ -11,7 +11,7 @@ public class UnitOfWork : IUnitOfWork
     private IDeckRepository? _decks;
     private IVocabularyCardRepository? _vocabularyCards;
     private IExampleSentenceRepository? _exampleSentences;
-    private IGrammarRepository? _grammaCards;
+    private IGrammarCardRepository? _grammarCards;
     
     public UnitOfWork(AppDbContext context)
     {
@@ -24,7 +24,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IVocabularyCardRepository VocabularyCards => _vocabularyCards ??= new VocabularyCardRepository(_context);
     public IExampleSentenceRepository ExampleSentences => _exampleSentences ??= new ExampleSentenceRepository(_context);
-    public IGrammarRepository GrammarCards => _grammaCards ??= new GrammarRepository(_context);
+    public IGrammarCardRepository GrammarCards => _grammarCards ??= new GrammarCardRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {

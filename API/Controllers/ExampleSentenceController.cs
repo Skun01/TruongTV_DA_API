@@ -37,7 +37,7 @@ public class ExampleSentenceController : BaseController
     /// <param name="request"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    [HttpPost("{id}")]
+    [HttpPut("{id}")]
     public async Task<ApiResponse<bool>> Update([FromBody] UpdateCardExampleRequest request, [FromRoute] string id)
     {
         var result = await HandleException(_service.UpdateExampleAsync(request, id));

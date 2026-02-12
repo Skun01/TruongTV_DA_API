@@ -10,7 +10,7 @@ namespace Application.Services;
 
 public class VocabularyCardService : IVocabularyCardService
 {
-    private IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork;
     public VocabularyCardService(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
@@ -46,7 +46,7 @@ public class VocabularyCardService : IVocabularyCardService
         return true;
     }
 
-    public async Task<bool> DeleteCardByIdAsync(string id, string userId)
+    public async Task<bool> DeleteByIdAsync(string id, string userId)
     {
         var card = await _unitOfWork.VocabularyCards.GetFullInfoByIdAsync(id);
 
@@ -72,7 +72,7 @@ public class VocabularyCardService : IVocabularyCardService
         return card.ToDTO();
     }
 
-    public async Task<IEnumerable<VocabularyCardDTO>> GetVocabularyListByDeckId(string deckId)
+    public async Task<IEnumerable<VocabularyCardDTO>> GetVocabularyListByDeckIdAsync(string deckId)
     {
         var isDeckExist = await _unitOfWork.Decks.IsExist(deckId, DeckType.Vocabulary);
 
@@ -84,7 +84,7 @@ public class VocabularyCardService : IVocabularyCardService
         return cards.Select(c => c.ToDTO()).ToList();
     }
 
-    public async Task<bool> UpdateCardAsync(UpdateVocabularyCardRequest request, string cardId, string userId)
+    public async Task<bool> UpdateCardByIdAsync(UpdateVocabularyCardRequest request, string cardId, string userId)
     {
         var card = await _unitOfWork.VocabularyCards.GetFullInfoByIdAsync(cardId);
 

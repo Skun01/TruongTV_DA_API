@@ -11,7 +11,7 @@ namespace API.Controllers;
 [Authorize]
 public class VocabularyCardController : BaseController
 {
-    private IVocabularyCardService _service;
+    private readonly IVocabularyCardService _service;
     public VocabularyCardController(IVocabularyCardService service)
     {
         _service = service;
@@ -38,7 +38,7 @@ public class VocabularyCardController : BaseController
     [HttpGet("deck/{deckId}")]
     public async Task<ApiResponse<IEnumerable<VocabularyCardDTO>>> GetCardListByDeckId([FromRoute] string deckId)
     {
-        var result = await HandleException(_service.GetVocabularyListByDeckId(deckId));
+        var result = await HandleException(_service.GetVocabularyListByDeckIdAsync(deckId));
 
         return result;
     }
@@ -65,7 +65,7 @@ public class VocabularyCardController : BaseController
     [HttpPut("{id}")]
     public async Task<ApiResponse<bool>> Update([FromRoute] string id, [FromBody] UpdateVocabularyCardRequest request)
     {
-        var result = await HandleException(_service.UpdateCardAsync(request, id, GetCurrentUserId()));
+        var result = await HandleException(_service.UpdateCardByIdAsync(request, id, GetCurrentUserId()));
 
         return result;
     }
@@ -78,7 +78,7 @@ public class VocabularyCardController : BaseController
     [HttpDelete("{id}")]
     public async Task<ApiResponse<bool>> Delete([FromRoute] string id)
     {
-        var result = await HandleException(_service.DeleteCardByIdAsync(id, GetCurrentUserId()));
+        var result = await HandleException(_service.DeleteByIdAsync(id, GetCurrentUserId()));
 
         return result;
     }

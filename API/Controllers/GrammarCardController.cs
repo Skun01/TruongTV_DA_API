@@ -11,7 +11,7 @@ namespace API.Controllers;
 [Authorize]
 public class GrammarCardController : BaseController
 {
-    private IGrammarCardService _service;
+    private readonly IGrammarCardService _service;
     public GrammarCardController(IGrammarCardService service)
     {
         _service = service;

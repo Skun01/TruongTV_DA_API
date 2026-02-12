@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories;
 
-public class GrammarRepository : Repository<GrammarCard>, IGrammarRepository
+public class GrammarCardRepository : Repository<GrammarCard>, IGrammarCardRepository
 {
-    public GrammarRepository(AppDbContext context) : base(context) {}
+    public GrammarCardRepository(AppDbContext context) : base(context) {}
 
     public async Task<IEnumerable<GrammarCard>> GetAllByDeckIdAsync(string deckId)
     {
