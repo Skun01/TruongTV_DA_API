@@ -24,7 +24,7 @@ public class VocabularyCardService : IVocabularyCardService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(deck.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         if(deck.Type != DeckType.Vocabulary)
             throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
@@ -54,7 +54,7 @@ public class VocabularyCardService : IVocabularyCardService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(card.Deck!.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         _unitOfWork.VocabularyCards.Delete(card);
         await _unitOfWork.SaveChangesAsync();
@@ -95,7 +95,7 @@ public class VocabularyCardService : IVocabularyCardService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(card.Deck!.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         card.Term = request.Term;
         card.Meaning = request.Meaning;

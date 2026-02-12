@@ -24,7 +24,7 @@ public class GrammarCardService : IGrammarCardService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(deck.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         if(deck.Type != DeckType.Grammar)
             throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
@@ -58,7 +58,7 @@ public class GrammarCardService : IGrammarCardService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(card.Deck!.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         _unitOfWork.GrammarCards.Delete(card);
         await _unitOfWork.SaveChangesAsync();
@@ -99,7 +99,7 @@ public class GrammarCardService : IGrammarCardService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(card.Deck!.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         card.Term = request.Term;
         card.Meaning = request.Meaning;

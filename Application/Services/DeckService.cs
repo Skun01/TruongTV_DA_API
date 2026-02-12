@@ -43,7 +43,7 @@ public class DeckService : IDeckService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         if(deck.CreatedBy != userId)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+            throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
         _unitOfWork.Decks.Delete(deck);
         await _unitOfWork.SaveChangesAsync();

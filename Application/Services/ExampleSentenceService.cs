@@ -34,7 +34,7 @@ public class ExampleSentenceService : IExampleSentenceService
             var deck = await _unitOfWork.Decks.GetByIdAsync(grammarCard.DeckId);
             
             if(deck?.CreatedBy != userId)
-                throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+                throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
             newExample.GrammarCardId = request.GrammarCardId;
 
@@ -48,7 +48,7 @@ public class ExampleSentenceService : IExampleSentenceService
             var deck = await _unitOfWork.Decks.GetByIdAsync(vocabCard.DeckId);
             
             if(deck?.CreatedBy != userId)
-                throw new ApplicationException(MessageConstants.CommonMessage.NOT_ALLOW);
+                throw new UnauthorizedAccessException(MessageConstants.CommonMessage.NOT_ALLOW);
 
             newExample.VocabularyCardId = request.VocabularyCardId;
         }
