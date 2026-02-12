@@ -74,4 +74,17 @@ public class ExampleSentenceService : IExampleSentenceService
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
+
+    public async Task<bool> DeleteExampleAsync(string id)
+    {
+        var example = await _unitOfWork.ExampleSentences.GetByIdAsync(id);
+
+        if(example == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        _unitOfWork.ExampleSentences.Delete(example);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
 }

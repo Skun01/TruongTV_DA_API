@@ -44,4 +44,17 @@ public class ExampleSentenceController : BaseController
 
         return result;
     }
+
+    /// <summary>
+    /// Xóa ví dụ
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpDelete("{id}")]
+    public async Task<ApiResponse<bool>> Delete([FromRoute] string id)
+    {
+        var result = await HandleException(_service.DeleteExampleAsync(id));
+
+        return result;
+    }
 }
