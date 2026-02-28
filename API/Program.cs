@@ -15,11 +15,12 @@ builder.Host.UseSerilog((context, services, configuration) =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", 
-    builder =>
+    policy =>
     {
-        builder.AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 

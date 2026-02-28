@@ -50,7 +50,7 @@ public class AuthController : BaseController
     /// Lấy token mới khi token cũ hết hạn
     /// </summary>
     /// <returns></returns>
-    [HttpPost("refresh-token")]
+    [HttpPost("refresh")]
     public async Task<ApiResponse<AuthDTO>> RefreshToken()
     {
         var refreshToken = Request.Cookies[CookieConstants.RefreshToken];
@@ -81,7 +81,7 @@ public class AuthController : BaseController
     /// <param name="email"></param>
     /// <returns></returns>
     [HttpPost("forgot-password")]
-    public async Task<ApiResponse<bool>> SendResetEmail([FromBody] string email)
+    public async Task<ApiResponse<bool>> SendResetEmail([FromQuery] string email)
     {
         var result = await HandleException(_authService.SendResetPasswordEmailAsync(email));
 

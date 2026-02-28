@@ -10,7 +10,7 @@ public static class HttpExtensions
         {
             HttpOnly = true,
             Expires = DateTime.UtcNow.AddDays(7),
-            Secure = false,
+            Secure = true,
             SameSite = SameSiteMode.Lax
         };
 
