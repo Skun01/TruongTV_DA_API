@@ -8,6 +8,11 @@ public interface IUnitOfWork
     IVocabularyCardRepository VocabularyCards { get; }
     IExampleSentenceRepository ExampleSentences { get; }
     IGrammarCardRepository GrammarCards { get; }
+    IUserSettingsRepository UserSettings { get; }
+    IDeckQueueRepository DeckQueues { get; }
+    ICardProgressRepository CardProgresses { get; }
+    IReviewLogRepository ReviewLogs { get; }
 
     Task<int> SaveChangesAsync();
 }
+

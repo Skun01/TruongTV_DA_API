@@ -30,6 +30,12 @@ public static class DependencyInjection
         services.AddScoped<IGrammarCardService, GrammarCardService>();
         services.AddScoped<IExampleSentenceService, ExampleSentenceService>();
 
+        // Learn & Review Services
+        services.AddScoped<IUserSettingsService, UserSettingsService>();
+        services.AddScoped<IDeckQueueService, DeckQueueService>();
+        services.AddScoped<ILearnService, LearnService>();
+        services.AddScoped<IReviewService, ReviewService>();
+
         // Internal services
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailSenderService, EmailSenderService>();

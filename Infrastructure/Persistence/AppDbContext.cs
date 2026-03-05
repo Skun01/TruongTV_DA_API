@@ -15,6 +15,10 @@ public class AppDbContext : DbContext
     public DbSet<VocabularyCard> VocabularyCards { set; get; }
     public DbSet<GrammarCard> GrammarCards { set; get; }
     public DbSet<ExampleSentence> ExampleSentences { set; get; }
+    public DbSet<UserSettings> UserSettings { set; get; }
+    public DbSet<DeckQueue> DeckQueues { set; get; }
+    public DbSet<CardProgress> CardProgresses { set; get; }
+    public DbSet<ReviewLog> ReviewLogs { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

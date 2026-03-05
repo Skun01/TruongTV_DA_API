@@ -17,4 +17,17 @@ public static class MessageConstants
         public const string EMAIL_EXIST = "Email_Exist_409";
         public const string TOKEN_EXPIRED = "Token_Expried_409";
     }
+
+    public static class LearnMessage
+    {
+        public const string ALREADY_IN_QUEUE = "Queue_Exist_409";
+        public const string NOT_IN_QUEUE = "Queue_NotFound_404";
+        public const string NO_CARDS_TO_LEARN = "Learn_Empty_404";
+        public const string ALREADY_LEARNED = "Learn_Already_409";
+    }
+
+    public static class ReviewMessage
+    {
+        public const string NO_REVIEWS_DUE = "Review_Empty_404";
+    }
 }
