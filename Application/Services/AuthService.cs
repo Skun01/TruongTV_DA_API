@@ -6,6 +6,8 @@ using Application.Settings;
 using Domain.Constants;
 using Domain.Entities;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Application.Services;
 
@@ -128,12 +130,13 @@ public class AuthService : IAuthService
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
     {
-        var user = await _unitOfWork.Users.GetByPasswordResetTokenAsync(request.Token);
+        var tokenHash = HashToken(request.Token);
+        var user = await _unitOfWork.Users.GetByPasswordResetTokenAsync(tokenHash);
 
         if(user == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
-        if(user.PasswordResetTokenExpiry < DateTime.UtcNow)
+        if(user.PasswordResetTokenExpiry == null || user.PasswordResetTokenExpiry <= DateTime.UtcNow)
             throw new ApplicationException(MessageConstants.AuthMessage.TOKEN_EXPIRED);
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
@@ -152,13 +155,14 @@ public class AuthService : IAuthService
 
         if(user != null)
         {
-            user.PasswordResetToken = _tokenService.GenerateRandomToken();
+            var rawToken = _tokenService.GenerateRandomToken();
+            user.PasswordResetToken = HashToken(rawToken);
             user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(_jwtSettings.ResetPasswordTokenExpireMinutes);
             
             _unitOfWork.Users.UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
             
-            string emailTemplate = _emailTemplate.GetPasswordResetTemplate(user.Username, user.PasswordResetToken, 
+            string emailTemplate = _emailTemplate.GetPasswordResetTemplate(user.Username, rawToken, 
                 _jwtSettings.ResetPasswordTokenExpireMinutes);
 
             await _emailService.SendEmailAsync(
@@ -169,5 +173,11 @@ public class AuthService : IAuthService
         }
 
         return true;
+    }
+
+    private static string HashToken(string token)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(hash);
     }
 }

@@ -14,9 +14,9 @@ public class UserRepository : Repository<User>, IUserRepository
         return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
     }
 
-    public async Task<User?> GetByPasswordResetTokenAsync(string token)
+    public async Task<User?> GetByPasswordResetTokenAsync(string tokenHash)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+        return await _context.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == tokenHash);
     }
 
     public async Task<bool> IsEmailExist(string email)

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Application.Common;
 using Domain.Constants;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,7 @@ public class BaseController : ControllerBase
         }
         catch(ApplicationException ex)
         {
-            return ApiResponse<T>.FailResponse(ex.Message, 200);
+            return ApiResponse<T>.FailResponse(ex.Message, ResolveStatusCode(ex.Message));
         }
         catch(UnauthorizedAccessException ex)
         {
@@ -39,5 +40,14 @@ public class BaseController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         return userId != null ? userId : throw new Exception("Token Không chứa user id");
+    }
+
+    private static int ResolveStatusCode(string message)
+    {
+        var match = Regex.Match(message, @"_(\d{3})$");
+        if (match.Success && int.TryParse(match.Groups[1].Value, out var code))
+            return code;
+
+        return 400;
     }
 }
