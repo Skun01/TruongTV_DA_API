@@ -3,6 +3,7 @@ using Application.Common;
 using Application.DTOs.Auth;
 using Application.IServices;
 using Domain.Constants;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -65,6 +66,7 @@ public class AuthController : BaseController
     /// Đăng xuất
     /// </summary>
     /// <returns></returns>
+    [Authorize]
     [HttpPost("logout")]
     public async Task<ApiResponse<bool>> Logout()
     {
