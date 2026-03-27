@@ -78,12 +78,12 @@ public class AuthController : BaseController
     /// <summary>
     /// Gửi mail yêu cầu reset password
     /// </summary>
-    /// <param name="email"></param>
+    /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("forgot-password")]
-    public async Task<ApiResponse<bool>> SendResetEmail([FromBody] string email)
+    public async Task<ApiResponse<bool>> SendResetEmail([FromBody] ForgotPasswordRequest request)
     {
-        var result = await HandleException(_authService.SendResetPasswordEmailAsync(email));
+        var result = await HandleException(_authService.SendResetPasswordEmailAsync(request.Email));
 
         return result;
     }

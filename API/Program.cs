@@ -1,4 +1,6 @@
 using API.Extensions;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Infrastructure;
 using Serilog;
 
@@ -11,18 +13,23 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .Enrich.FromLogContext();
 });
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["https://localhost:5173"];
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", 
-    builder =>
+    options.AddPolicy("Frontend", policy =>
     {
-        builder.AllowAnyOrigin()
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddOptionSettingsExtension(builder.Configuration);
 builder.Services.AddAuthConfigurationExtension(builder.Configuration);
@@ -30,7 +37,7 @@ builder.Services.AddSwaggerExtension();
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
-app.UseCors("AllowAll");
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
