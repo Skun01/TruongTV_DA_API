@@ -26,9 +26,8 @@ public class AuthController : BaseController
     [HttpPost("register")]
     public async Task<ApiResponse<bool>> Register([FromBody] RegisterRequest request)
     {
-        var result = await HandleException(_authService.RegisterAsync(request));
-
-        return result;
+        var result = await _authService.RegisterAsync(request);
+        return ApiResponse<bool>.SuccessResponse(result);
     }
 
     /// <summary>
@@ -39,11 +38,9 @@ public class AuthController : BaseController
     [HttpPost("login")]
     public async Task<ApiResponse<AuthDTO>> Login([FromBody] LoginRequest request)
     {
-        var result = await HandleException(_authService.LoginAsync(request));
-        if(result.Data != null)
-            Response.SetRefreshTokenCookieExtension(result.Data.RefreshToken);
-
-        return result;
+        var result = await _authService.LoginAsync(request);
+        Response.SetRefreshTokenCookieExtension(result.RefreshToken);
+        return ApiResponse<AuthDTO>.SuccessResponse(result);
     }
 
 
@@ -55,11 +52,9 @@ public class AuthController : BaseController
     public async Task<ApiResponse<AuthDTO>> RefreshToken()
     {
         var refreshToken = Request.Cookies[CookieConstants.RefreshToken];
-        var result = await HandleException(_authService.RefreshTokenAsync(refreshToken));
-        if(result.Data != null)
-            Response.SetRefreshTokenCookieExtension(result.Data.RefreshToken);
-
-        return result;
+        var result = await _authService.RefreshTokenAsync(refreshToken);
+        Response.SetRefreshTokenCookieExtension(result.RefreshToken);
+        return ApiResponse<AuthDTO>.SuccessResponse(result);
     }
 
     /// <summary>
@@ -71,10 +66,9 @@ public class AuthController : BaseController
     public async Task<ApiResponse<bool>> Logout()
     {
         var refreshToken = Request.Cookies[CookieConstants.RefreshToken];
-        var result = await HandleException(_authService.LogoutAsync(refreshToken));
+        var result = await _authService.LogoutAsync(refreshToken);
         Response.DeleteRefreshTokenCookieExtension();
-
-        return result;
+        return ApiResponse<bool>.SuccessResponse(result);
     }
 
     /// <summary>
@@ -85,9 +79,8 @@ public class AuthController : BaseController
     [HttpPost("forgot-password")]
     public async Task<ApiResponse<bool>> SendResetEmail([FromBody] ForgotPasswordRequest request)
     {
-        var result = await HandleException(_authService.SendResetPasswordEmailAsync(request.Email));
-
-        return result;
+        var result = await _authService.SendResetPasswordEmailAsync(request.Email);
+        return ApiResponse<bool>.SuccessResponse(result);
     }
 
     /// <summary>
@@ -98,8 +91,7 @@ public class AuthController : BaseController
     [HttpPost("reset-password")]
     public async Task<ApiResponse<bool>> ResetPassword([FromBody] ResetPasswordRequest request)
     {
-        var result = await HandleException(_authService.ResetPasswordAsync(request));
-
-        return result;
+        var result = await _authService.ResetPasswordAsync(request);
+        return ApiResponse<bool>.SuccessResponse(result);
     }
 }

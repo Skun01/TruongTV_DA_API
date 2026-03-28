@@ -28,6 +28,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
+builder.Services.AddApiBehaviorExtension();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -37,6 +38,7 @@ builder.Services.AddSwaggerExtension();
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
+app.UseGlobalExceptionHandling();
 app.UseCors("Frontend");
 
 app.UseAuthentication();
