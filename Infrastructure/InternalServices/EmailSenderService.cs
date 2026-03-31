@@ -23,6 +23,7 @@ public class EmailSenderService : IEmailSenderService
         {
             using var client = new SmtpClient(_settings.SmtpServer, _settings.Port)
             {
+                Port = _settings.Port,
                 Credentials = new NetworkCredential(_settings.FromAddress, _settings.Password),
                 EnableSsl = true
             };

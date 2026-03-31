@@ -7,10 +7,17 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {
     public RegisterRequestValidator()
     {
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.DisplayName) || !string.IsNullOrWhiteSpace(x.Username))
+            .WithMessage("DisplayName or Username is required");
+
+        RuleFor(x => x.DisplayName)
+            .MaximumLength(50)
+            .When(x => !string.IsNullOrWhiteSpace(x.DisplayName));
+
         RuleFor(x => x.Username)
-            .NotEmpty()
-            .MinimumLength(3)
-            .MaximumLength(50);
+            .MaximumLength(50)
+            .When(x => !string.IsNullOrWhiteSpace(x.Username));
 
         RuleFor(x => x.Email)
             .NotEmpty()

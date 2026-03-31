@@ -1,6 +1,8 @@
 using System.Text;
 using Application.Settings;
+using Domain.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -23,7 +25,18 @@ public static class AuthenticationConfigurationExtension
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
+                NameClaimType = ClaimTypes.NameIdentifier,
+                RoleClaimType = ClaimTypes.Role,
             };
+        });
+
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(AuthPolicyConstants.AdminOnly, policy =>
+                policy.RequireRole("admin"));
+
+            options.AddPolicy(AuthPolicyConstants.EditorOrAdmin, policy =>
+                policy.RequireRole("editor", "admin"));
         });
 
         // Lấy từ Settings

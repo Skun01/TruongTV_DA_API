@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers;
 
 [ApiController]
-[Route("auth")]
+[Route("api/auth")]
 public class AuthController : BaseController
 {
     private readonly IAuthService _authService;
@@ -24,10 +24,11 @@ public class AuthController : BaseController
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("register")]
-    public async Task<ApiResponse<bool>> Register([FromBody] RegisterRequest request)
+    public async Task<ApiResponse<AuthDTO>> Register([FromBody] RegisterRequest request)
     {
         var result = await _authService.RegisterAsync(request);
-        return ApiResponse<bool>.SuccessResponse(result);
+        Response.SetRefreshTokenCookieExtension(result.RefreshToken);
+        return ApiResponse<AuthDTO>.SuccessResponse(result);
     }
 
     /// <summary>
@@ -55,6 +56,39 @@ public class AuthController : BaseController
         var result = await _authService.RefreshTokenAsync(refreshToken);
         Response.SetRefreshTokenCookieExtension(result.RefreshToken);
         return ApiResponse<AuthDTO>.SuccessResponse(result);
+    }
+
+    [HttpPost("refresh")]
+    public async Task<ApiResponse<AuthDTO>> RefreshTokenAlias()
+    {
+        return await RefreshToken();
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<ApiResponse<AuthUserDTO>> Me()
+    {
+        var userId = GetCurrentUserId();
+        var result = await _authService.GetCurrentUserAsync(userId);
+        return ApiResponse<AuthUserDTO>.SuccessResponse(result);
+    }
+
+    [Authorize]
+    [HttpPatch("me/profile")]
+    public async Task<ApiResponse<AuthUserDTO>> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _authService.UpdateProfileAsync(userId, request);
+        return ApiResponse<AuthUserDTO>.SuccessResponse(result);
+    }
+
+    [Authorize]
+    [HttpPatch("change-password")]
+    public async Task<ApiResponse<bool>> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _authService.ChangePasswordAsync(userId, request);
+        return ApiResponse<bool>.SuccessResponse(result);
     }
 
     /// <summary>

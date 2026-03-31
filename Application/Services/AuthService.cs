@@ -5,6 +5,7 @@ using Application.IServices.IInternal;
 using Application.Settings;
 using Domain.Constants;
 using Domain.Entities;
+using Domain.Enums;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using System.Text;
@@ -51,8 +52,18 @@ public class AuthService : IAuthService
         return new AuthDTO()
         {
             AccessToken = accessToken,
-            RefreshToken = userRefreshToken.Token
+            RefreshToken = userRefreshToken.Token,
+            User = MapToAuthUser(user),
         };
+    }
+
+    public async Task<AuthUserDTO> GetCurrentUserAsync(string userId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        return MapToAuthUser(user);
     }
 
     public async Task<bool> LogoutAsync(string? refreshToken)
@@ -105,24 +116,76 @@ public class AuthService : IAuthService
         return new AuthDTO()
         {
             AccessToken = newAccessToken,
-            RefreshToken = newRefreshToken.Token
+            RefreshToken = newRefreshToken.Token,
+            User = MapToAuthUser(user),
         };
     }
 
-    public async Task<bool> RegisterAsync(RegisterRequest request)
+    public async Task<AuthDTO> RegisterAsync(RegisterRequest request)
     {
         if(await _unitOfWork.Users.IsEmailExist(request.Email))
             throw new ApplicationException(MessageConstants.AuthMessage.EMAIL_EXIST);
 
+        var displayName = request.DisplayName ?? request.Username;
+        if (string.IsNullOrWhiteSpace(displayName))
+            throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
+
         User newUser = new User()
         {
             Id = Guid.NewGuid().ToString(),
-            Username = request.Username,
+            Username = displayName,
             Email = request.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = UserRole.User,
         };
 
         await _unitOfWork.Users.AddAsync(newUser);
+
+        var accessToken = _tokenService.GenerateAccessToken(newUser);
+        var userRefreshToken = new RefreshToken
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = newUser.Id,
+            Token = _tokenService.GenerateRefreshToken(),
+            ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpireDays)
+        };
+
+        await _unitOfWork.RefreshTokens.AddAsync(userRefreshToken);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new AuthDTO
+        {
+            AccessToken = accessToken,
+            RefreshToken = userRefreshToken.Token,
+            User = MapToAuthUser(newUser),
+        };
+    }
+
+    public async Task<AuthUserDTO> UpdateProfileAsync(string userId, UpdateProfileRequest request)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        user.Username = request.DisplayName.Trim();
+        user.AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl) ? null : request.AvatarUrl.Trim();
+        _unitOfWork.Users.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return MapToAuthUser(user);
+    }
+
+    public async Task<bool> ChangePasswordAsync(string userId, ChangePasswordRequest request)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new ApplicationException(MessageConstants.AuthMessage.WRONG_CURRENT_PASSWORD);
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        _unitOfWork.Users.UpdateAsync(user);
         await _unitOfWork.SaveChangesAsync();
 
         return true;
@@ -179,5 +242,18 @@ public class AuthService : IAuthService
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToHexString(hash);
+    }
+
+    private static AuthUserDTO MapToAuthUser(User user)
+    {
+        return new AuthUserDTO
+        {
+            Id = user.Id,
+            Email = user.Email,
+            DisplayName = user.Username,
+            AvatarUrl = user.AvatarUrl,
+            Role = user.Role.ToString().ToLowerInvariant(),
+            CreatedAt = user.CreatedAt,
+        };
     }
 }

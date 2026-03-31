@@ -14,7 +14,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
 });
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["https://localhost:5173"];
+    ?? ["http://localhost:5173", "http://localhost:5174"];
 
 builder.Services.AddCors(options =>
 {
@@ -39,6 +39,8 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 app.UseGlobalExceptionHandling();
+app.UseHttpsRedirection();
+
 app.UseCors("Frontend");
 
 app.UseAuthentication();
@@ -52,7 +54,6 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });    
 }
-app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
