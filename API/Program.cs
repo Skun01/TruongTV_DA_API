@@ -13,19 +13,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .Enrich.FromLogContext();
 });
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:5173", "http://localhost:5174"];
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
-    });
-});
+builder.Services.AddCorsConfigurationExtension(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddApiBehaviorExtension();
@@ -41,7 +29,7 @@ app.UseSerilogRequestLogging();
 app.UseGlobalExceptionHandling();
 app.UseHttpsRedirection();
 
-app.UseCors("Frontend");
+app.UseCors(CorsConfigurationExtension.FrontendPolicyName);
 
 app.UseAuthentication();
 app.UseAuthorization();
