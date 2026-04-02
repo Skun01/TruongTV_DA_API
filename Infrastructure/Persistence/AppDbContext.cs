@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users { set; get; }
     public DbSet<RefreshToken> RefreshTokens { set; get; }
+    public DbSet<MediaAsset> MediaAssets { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

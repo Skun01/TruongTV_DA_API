@@ -83,6 +83,24 @@ public class AuthController : BaseController
     }
 
     [Authorize]
+    [HttpPost("me/avatar")]
+    public async Task<ApiResponse<AuthUserDTO>> UploadAvatar([FromForm] UploadAvatarFormRequest request, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        await using var stream = request.Avatar.OpenReadStream();
+
+        var result = await _authService.UploadAvatarAsync(userId, new UploadAvatarRequest
+        {
+            FileName = request.Avatar.FileName,
+            ContentType = request.Avatar.ContentType,
+            SizeInBytes = request.Avatar.Length,
+            Content = stream,
+        }, cancellationToken);
+
+        return ApiResponse<AuthUserDTO>.SuccessResponse(result);
+    }
+
+    [Authorize]
     [HttpPatch("change-password")]
     public async Task<ApiResponse<bool>> ChangePassword([FromBody] ChangePasswordRequest request)
     {

@@ -1,7 +1,22 @@
 # Tacho Learning API - Implemented API Documentation
 
-> **Last updated:** 2026-04-01  
----
+> **Last updated:** 2026-04-02
+
+## Response Contract
+
+Most business and validation failures are returned in HTTP 200 with this shape:
+
+```json
+{
+  "code": 200,
+  "success": true,
+  "message": "optional",
+  "data": {},
+  "metaData": null
+}
+```
+
+Unhandled exceptions are returned as HTTP 500.
 
 ## Auth Module
 
@@ -9,212 +24,69 @@
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/register` | ❌ | Đăng ký tài khoản mới |
-| POST | `/auth/login` | ❌ | Đăng nhập |
-| POST | `/auth/refresh-token` | ❌ | Làm mới access token |
-| POST | `/auth/refresh` | ❌ | Alias của refresh-token |
-| GET | `/auth/me` | ✅ | Lấy thông tin user hiện tại |
-| PATCH | `/auth/me/profile` | ✅ | Cập nhật profile |
-| PATCH | `/auth/change-password` | ✅ | Đổi mật khẩu |
-| POST | `/auth/logout` | ✅ | Đăng xuất |
-| POST | `/auth/forgot-password` | ❌ | Gửi email reset password |
-| POST | `/auth/reset-password` | ❌ | Reset password bằng token |
+| POST | `/api/auth/register` | No | Đăng ký tài khoản |
+| POST | `/api/auth/login` | No | Đăng nhập |
+| POST | `/api/auth/refresh-token` | No | Làm mới access token |
+| POST | `/api/auth/refresh` | No | Alias của refresh-token |
+| GET | `/api/auth/me` | Yes | Lấy user hiện tại |
+| PATCH | `/api/auth/me/profile` | Yes | Cập nhật profile |
+| POST | `/api/auth/me/avatar` | Yes | Upload avatar image |
+| PATCH | `/api/auth/change-password` | Yes | Đổi mật khẩu |
+| POST | `/api/auth/logout` | Yes | Đăng xuất |
+| POST | `/api/auth/forgot-password` | No | Gửi email reset password |
+| POST | `/api/auth/reset-password` | No | Reset password |
 
----
+### POST `/api/auth/me/avatar`
 
-### POST `/auth/register`
+Upload ảnh avatar mới cho user hiện tại.
 
-Đăng ký tài khoản mới.
+- Content-Type: `multipart/form-data`
+- Form field: `avatar`
+- Allowed mime: `image/jpeg`, `image/png`, `image/webp`
+- Max size: `5 MB`
+- Behavior: avatar cũ (nếu có) sẽ bị xóa trong storage và record cũ trong DB cũng bị xóa.
 
-**Request Body:**
+Response data (AuthUserDTO):
+
 ```json
 {
-  "username": "string | null",
-  "displayName": "string | null",
+  "id": "string",
   "email": "string",
-  "password": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": {
-    "accessToken": "string",
-    "user": {
-      "id": "string",
-      "email": "string",
-      "displayName": "string",
-      "avatarUrl": "string | null",
-      "role": "user | editor | admin",
-      "createdAt": "datetime"
-    }
-  }
-}
-```
-
-**Cookie:** `refreshToken` (HttpOnly)
-
----
-
-### POST `/auth/login`
-
-Đăng nhập vào hệ thống.
-
-**Request Body:**
-```json
-{
-  "email": "string",
-  "password": "string"
-}
-```
-
-**Response:** Giống `/auth/register`
-
-**Cookie:** `refreshToken` (HttpOnly)
-
----
-
-### POST `/auth/refresh-token`
-
-Làm mới access token khi token cũ hết hạn.
-
-**Request:** Không cần body, đọc `refreshToken` từ cookie.
-
-**Response:** Giống `/auth/register`
-
-**Cookie:** `refreshToken` mới (HttpOnly)
-
----
-
-### GET `/auth/me`
-
-Lấy thông tin user đang đăng nhập.
-
-**Headers:** `Authorization: Bearer <accessToken>`
-
-**Response:**
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": {
-    "id": "string",
-    "email": "string",
-    "displayName": "string",
-    "avatarUrl": "string | null",
-    "role": "user | editor | admin",
-    "createdAt": "datetime"
-  }
-}
-```
-
----
-
-### PATCH `/auth/me/profile`
-
-Cập nhật thông tin profile.
-
-**Headers:** `Authorization: Bearer <accessToken>`
-
-**Request Body:**
-```json
-{
   "displayName": "string",
-  "avatarUrl": "string | null"
+  "avatarUrl": "string | null",
+  "role": "user | editor | admin",
+  "createdAt": "datetime"
 }
 ```
 
-**Response:** Giống `/auth/me`
+## Resources Module
 
----
+### Endpoints
 
-### PATCH `/auth/change-password`
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/resources/audio` | Yes | Upload audio resource |
 
-Đổi mật khẩu.
+### POST `/api/resources/audio`
 
-**Headers:** `Authorization: Bearer <accessToken>`
+Upload file audio và lưu metadata vào `MediaAssets`.
 
-**Request Body:**
+- Content-Type: `multipart/form-data`
+- Form field: `audio`
+- Allowed mime: `audio/mpeg`, `audio/wav`, `audio/mp4`
+- Max size: `20 MB`
+
+Response data:
+
 ```json
 {
-  "currentPassword": "string",
-  "newPassword": "string"
+  "id": "string",
+  "fileUrl": "string",
+  "fileType": "audio",
+  "usageType": "audio",
+  "sizeInBytes": 12345,
+  "createdAt": "datetime"
 }
 ```
-
-**Response:**
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": true
-}
-```
-
----
-
-### POST `/auth/logout`
-
-Đăng xuất, revoke refresh token.
-
-**Headers:** `Authorization: Bearer <accessToken>`
-
-**Request:** Đọc `refreshToken` từ cookie.
-
-**Response:**
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": true
-}
-```
-
-**Cookie:** Xóa `refreshToken`
-
----
-
-### POST `/auth/forgot-password`
-
-Gửi email chứa link reset password.
-
-**Request Body:**
-```json
-{
-  "email": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": true
-}
-```
-
----
-
-### POST `/auth/reset-password`
-
-Reset password bằng token từ email.
-
-**Request Body:**
-```json
-{
-  "token": "string",
-  "newPassword": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 200,
-  "message": "Success",
 
 ---

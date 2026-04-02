@@ -12,4 +12,6 @@ public class User : BaseEntity
     public bool IsVerified { set; get; }
     public string? PasswordResetToken { set; get; }
     public DateTime? PasswordResetTokenExpiry { set; get; }
+
+    public ICollection<MediaAsset> MediaAssets { set; get; } = new List<MediaAsset>();
 }

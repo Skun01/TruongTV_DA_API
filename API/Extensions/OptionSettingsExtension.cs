@@ -21,6 +21,11 @@ public static class OptionSettingsExtension
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<CloudinarySettings>()
+            .Bind(configuration.GetSection(CloudinarySettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         return services;
     }
 }

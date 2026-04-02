@@ -8,6 +8,7 @@ public interface IAuthService
     public Task<AuthDTO> RegisterAsync(RegisterRequest request);
     public Task<AuthUserDTO> GetCurrentUserAsync(string userId);
     public Task<AuthUserDTO> UpdateProfileAsync(string userId, UpdateProfileRequest request);
+    public Task<AuthUserDTO> UploadAvatarAsync(string userId, UploadAvatarRequest request, CancellationToken cancellationToken = default);
     public Task<bool> ChangePasswordAsync(string userId, ChangePasswordRequest request);
     public Task<bool> SendResetPasswordEmailAsync(string email);
     public Task<bool> ResetPasswordAsync(ResetPasswordRequest request);

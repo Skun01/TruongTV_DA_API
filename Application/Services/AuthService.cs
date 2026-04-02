@@ -1,4 +1,5 @@
 using Application.DTOs.Auth;
+using Application.DTOs.Internal;
 using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
@@ -19,14 +20,16 @@ public class AuthService : IAuthService
     private readonly JwtSettings _jwtSettings;
     private readonly IEmailSenderService _emailService;
     private readonly IEmailTemplateService _emailTemplate;
+    private readonly IFileUploadService _fileUploadService;
     public AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, IOptions<JwtSettings> jwtSettings,
-        IEmailSenderService emailService, IEmailTemplateService emailTemplate)
+        IEmailSenderService emailService, IEmailTemplateService emailTemplate, IFileUploadService fileUploadService)
     {
         _unitOfWork = unitOfWork;
         _tokenService = tokenService;
         _jwtSettings = jwtSettings.Value;
         _emailService = emailService;
         _emailTemplate = emailTemplate;
+        _fileUploadService = fileUploadService;
     }
 
     public async Task<AuthDTO> LoginAsync(LoginRequest request)
@@ -170,6 +173,56 @@ public class AuthService : IAuthService
         user.Username = request.DisplayName.Trim();
         user.AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl) ? null : request.AvatarUrl.Trim();
         _unitOfWork.Users.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return MapToAuthUser(user);
+    }
+
+    public async Task<AuthUserDTO> UploadAvatarAsync(string userId, UploadAvatarRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        if (request.Content == Stream.Null || request.SizeInBytes <= 0 || string.IsNullOrWhiteSpace(request.FileName) || string.IsNullOrWhiteSpace(request.ContentType))
+            throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
+
+        var oldAvatar = await _unitOfWork.MediaAssets.GetLatestByUserAndUsageAsync(userId, ResourceUsageType.Avatar);
+        if (oldAvatar != null)
+        {
+            await _fileUploadService.DeleteAsync(oldAvatar.StorageKey, cancellationToken);
+            _unitOfWork.MediaAssets.DeleteAsync(oldAvatar);
+        }
+
+        var uploadResult = await _fileUploadService.UploadAsync(new FileUploadRequest
+        {
+            UserId = userId,
+            FileName = request.FileName,
+            ContentType = request.ContentType,
+            Content = request.Content,
+            FileType = FileType.Image,
+            UsageType = ResourceUsageType.Avatar,
+        }, cancellationToken);
+
+        var mediaAsset = new MediaAsset
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = userId,
+            FileUrl = uploadResult.FileUrl,
+            StorageKey = uploadResult.StorageKey,
+            OriginalFileName = request.FileName,
+            ContentType = uploadResult.ContentType,
+            SizeInBytes = request.SizeInBytes,
+            FileType = uploadResult.FileType,
+            UsageType = uploadResult.UsageType,
+            StorageProvider = StorageProvider.Cloud,
+        };
+
+        await _unitOfWork.MediaAssets.AddAsync(mediaAsset);
+
+        user.AvatarUrl = mediaAsset.FileUrl;
+        _unitOfWork.Users.UpdateAsync(user);
+
         await _unitOfWork.SaveChangesAsync();
 
         return MapToAuthUser(user);
