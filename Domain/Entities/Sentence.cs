@@ -1,0 +1,14 @@
+using Domain.Enums;
+
+namespace Domain.Entities;
+
+public class Sentence : BaseEntity
+{
+    public string Text { get; set; } = string.Empty;
+    public string Meaning { get; set; } = string.Empty;
+    public string? AudioUrl { get; set; }
+    public JlptLevel? Level { get; set; }
+
+    // Navigation
+    public ICollection<CardSentence> CardSentences { get; set; } = new List<CardSentence>();
+}

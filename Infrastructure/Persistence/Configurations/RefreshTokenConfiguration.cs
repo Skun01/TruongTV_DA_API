@@ -37,7 +37,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(rt => rt.CreatedAt)
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("now()");
 
         builder.Property(rt => rt.UpdatedAt)
             .IsRequired(false);

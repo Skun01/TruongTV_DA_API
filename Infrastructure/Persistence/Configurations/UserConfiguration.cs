@@ -46,7 +46,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasDefaultValue(false);
 
         builder.Property(u => u.CreatedAt)
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("now()");
 
         builder.Property(u => u.UpdatedAt)
             .IsRequired(false);

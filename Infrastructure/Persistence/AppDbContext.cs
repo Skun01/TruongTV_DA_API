@@ -11,6 +11,13 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { set; get; }
     public DbSet<RefreshToken> RefreshTokens { set; get; }
     public DbSet<MediaAsset> MediaAssets { set; get; }
+    
+    public DbSet<Card> Cards { set; get; }
+    public DbSet<VocabularyDetail> VocabularyDetails { set; get; }
+    public DbSet<Sentence> Sentences { set; get; }
+    public DbSet<CardSentence> CardSentences { set; get; }
+    public DbSet<UserCardNote> UserCardNotes { set; get; }
+    public DbSet<NoteLike> NoteLikes { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

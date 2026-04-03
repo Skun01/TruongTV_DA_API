@@ -1,4 +1,4 @@
-﻿using Application.IRepositories;
+using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
 using Application.Services;
@@ -17,7 +17,7 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         services.AddDbContext<AppDbContext>(options =>
         {
-            options.UseSqlServer(connectionString);
+            options.UseNpgsql(connectionString);
         });
 
         // Unit of work

@@ -57,7 +57,7 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
             .IsRequired();
 
         builder.Property(ma => ma.CreatedAt)
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("now()");
 
         builder.Property(ma => ma.UpdatedAt)
             .IsRequired(false);
