@@ -9,6 +9,7 @@ public class UploadAvatarFormRequestValidator : AbstractValidator<UploadAvatarFo
     public UploadAvatarFormRequestValidator()
     {
         RuleFor(x => x.Avatar)
+            .Cascade(CascadeMode.Stop)
             .NotNull()
             .WithMessage("Avatar is required")
             .Must(file => file.Length > 0)

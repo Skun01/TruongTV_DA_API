@@ -190,7 +190,7 @@ public class AuthService : IAuthService
         var oldAvatar = await _unitOfWork.MediaAssets.GetLatestByUserAndUsageAsync(userId, ResourceUsageType.Avatar);
         if (oldAvatar != null)
         {
-            await _fileUploadService.DeleteAsync(oldAvatar.StorageKey, cancellationToken);
+            await _fileUploadService.DeleteAsync(oldAvatar.StorageKey, oldAvatar.FileType, cancellationToken);
             _unitOfWork.MediaAssets.DeleteAsync(oldAvatar);
         }
 

@@ -56,17 +56,24 @@ public class FileUploadService : IFileUploadService
         };
     }
 
-    public async Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(string storageKey, Domain.Enums.FileType fileType, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(storageKey))
         {
             return;
         }
 
+        var resourceType = fileType switch
+        {
+            Domain.Enums.FileType.Image => ResourceType.Image,
+            Domain.Enums.FileType.Audio => ResourceType.Video,
+            _ => ResourceType.Raw
+        };
+
         var deletionParams = new DeletionParams(storageKey)
         {
             Invalidate = true,
-            ResourceType = ResourceType.Auto
+            ResourceType = resourceType
         };
 
         var deleteResult = await _cloudinary.DestroyAsync(deletionParams);
