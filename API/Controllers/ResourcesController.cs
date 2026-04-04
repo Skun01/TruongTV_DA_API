@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers;
 
 [ApiController]
-[Route("api/resources")]
+[Route("api/uploads")]
 public class ResourcesController : BaseController
 {
     private readonly IResourceService _resourceService;

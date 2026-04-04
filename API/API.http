@@ -1,6 +1,56 @@
 @API_HostAddress = http://localhost:5246
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiI2ZGMwNzhiMy02M2Y5LTQ4MjAtYTM5Zi1iYTJkMjZlMWE4NDkiLCJlbWFpbCI6InRoYWl0cnVvbmdAYWRtaW4uY29tIiwicm9sZSI6ImFkbWluIiwibmJmIjoxNzc1Mjk4NDMwLCJleHAiOjE3NzUzMDkyMzAsImlhdCI6MTc3NTI5ODQzMCwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo1MTUwIiwiYXVkIjoiaHR0cDovL2xvY2FsaG9zdDo1MTczIn0.YzgHim613ga_fGM-RFiuga-RCT97PBdDFIcNoYGbJ4M
 
 GET {{API_HostAddress}}/weatherforecast/
 Accept: application/json
+
+###
+
+### Sentences - Search (Editor/Admin)
+GET {{API_HostAddress}}/api/sentences?q=食べる&level=N5&page=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### Sentences - Get By Id (Editor/Admin)
+GET {{API_HostAddress}}/api/sentences/sentence-001
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### Sentences - Create (Editor/Admin)
+POST {{API_HostAddress}}/api/sentences
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+	"text": "昨日、友達と映画を見た。",
+	"meaning": "Hom qua toi da xem phim cung ban.",
+	"audioUrl": "https://example.com/audio/new-sentence.mp3",
+	"level": "N4"
+}
+
+###
+
+### Sentences - Update (Editor/Admin)
+PATCH {{API_HostAddress}}/api/sentences/sentence-001
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+	"text": "毎朝パンを食べます。",
+	"meaning": "Moi sang toi an banh mi.",
+	"audioUrl": "https://example.com/audio/s001-updated.mp3",
+	"level": "N5"
+}
+
+###
+
+### Sentences - Delete (Editor/Admin)
+DELETE {{API_HostAddress}}/api/sentences/sentence-001
+Accept: application/json
+Authorization: Bearer {{accessToken}}
 
 ###
