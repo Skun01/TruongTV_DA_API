@@ -19,6 +19,9 @@ public class SentencesController : BaseController
         _sentenceService = sentenceService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách câu ví dụ có phân trang.
+    /// </summary>
     [HttpGet]
     public async Task<ApiResponse<List<SentenceResponse>>> Search([FromQuery] SentenceSearchQuery query)
     {
@@ -26,6 +29,9 @@ public class SentencesController : BaseController
         return ApiResponse<List<SentenceResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết câu ví dụ theo id.
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ApiResponse<SentenceResponse>> GetById([FromRoute] string id)
     {
@@ -33,6 +39,9 @@ public class SentencesController : BaseController
         return ApiResponse<SentenceResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Tạo mới câu ví dụ.
+    /// </summary>
     [HttpPost]
     public async Task<ApiResponse<SentenceResponse>> Create([FromBody] CreateSentenceRequest request)
     {
@@ -40,6 +49,9 @@ public class SentencesController : BaseController
         return ApiResponse<SentenceResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Cập nhật câu ví dụ theo id.
+    /// </summary>
     [HttpPatch("{id}")]
     public async Task<ApiResponse<SentenceResponse>> Update([FromRoute] string id, [FromBody] UpdateSentenceRequest request)
     {
@@ -47,6 +59,9 @@ public class SentencesController : BaseController
         return ApiResponse<SentenceResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Xóa câu ví dụ theo id.
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<ApiResponse<bool>> Delete([FromRoute] string id)
     {

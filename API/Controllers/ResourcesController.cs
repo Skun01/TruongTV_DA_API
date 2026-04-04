@@ -17,6 +17,9 @@ public class ResourcesController : BaseController
         _resourceService = resourceService;
     }
 
+    /// <summary>
+    /// Tải lên tệp âm thanh và trả về thông tin tài nguyên.
+    /// </summary>
     [Authorize]
     [HttpPost("audio")]
     public async Task<ApiResponse<UploadAudioResponse>> UploadAudio([FromForm] UploadAudioFormRequest request, CancellationToken cancellationToken)

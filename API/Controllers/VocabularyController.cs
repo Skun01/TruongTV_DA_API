@@ -18,6 +18,9 @@ public class VocabularyController : BaseController
         _vocabularyDetailService = vocabularyDetailService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách vocabulary cho Editor/Admin.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet]
     public async Task<ApiResponse<List<VocabularyListItemResponse>>> Search([FromQuery] VocabularySearchQuery query)
@@ -29,6 +32,9 @@ public class VocabularyController : BaseController
         return ApiResponse<List<VocabularyListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết một vocabulary card theo id.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("{cardId}")]
     public async Task<ApiResponse<VocabularyDetailResponse>> GetDetail([FromRoute] string cardId)
@@ -38,6 +44,9 @@ public class VocabularyController : BaseController
         return ApiResponse<VocabularyDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tạo mới một vocabulary card.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost]
     public async Task<ApiResponse<VocabularyDetailResponse>> Create([FromBody] CreateVocabularyCardRequest request)
@@ -47,6 +56,9 @@ public class VocabularyController : BaseController
         return ApiResponse<VocabularyDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật thông tin một vocabulary card.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPatch("{cardId}")]
     public async Task<ApiResponse<VocabularyDetailResponse>> Update([FromRoute] string cardId, [FromBody] UpdateVocabularyCardRequest request)
@@ -56,6 +68,9 @@ public class VocabularyController : BaseController
         return ApiResponse<VocabularyDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa mềm một vocabulary card (chuyển trạng thái Archived).
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpDelete("{cardId}")]
     public async Task<ApiResponse<bool>> SoftDelete([FromRoute] string cardId)

@@ -58,12 +58,18 @@ public class AuthController : BaseController
         return ApiResponse<AuthDTO>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Alias của endpoint refresh token.
+    /// </summary>
     [HttpPost("refresh")]
     public async Task<ApiResponse<AuthDTO>> RefreshTokenAlias()
     {
         return await RefreshToken();
     }
 
+    /// <summary>
+    /// Lấy thông tin người dùng hiện tại.
+    /// </summary>
     [Authorize]
     [HttpGet("me")]
     public async Task<ApiResponse<AuthUserDTO>> Me()
@@ -73,6 +79,9 @@ public class AuthController : BaseController
         return ApiResponse<AuthUserDTO>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật hồ sơ người dùng hiện tại.
+    /// </summary>
     [Authorize]
     [HttpPatch("me/profile")]
     public async Task<ApiResponse<AuthUserDTO>> UpdateProfile([FromBody] UpdateProfileRequest request)
@@ -82,6 +91,9 @@ public class AuthController : BaseController
         return ApiResponse<AuthUserDTO>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tải lên ảnh đại diện mới cho người dùng hiện tại.
+    /// </summary>
     [Authorize]
     [HttpPost("me/avatar")]
     public async Task<ApiResponse<AuthUserDTO>> UploadAvatar([FromForm] UploadAvatarFormRequest request, CancellationToken cancellationToken)
@@ -100,6 +112,9 @@ public class AuthController : BaseController
         return ApiResponse<AuthUserDTO>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Đổi mật khẩu cho người dùng hiện tại.
+    /// </summary>
     [Authorize]
     [HttpPatch("change-password")]
     public async Task<ApiResponse<bool>> ChangePassword([FromBody] ChangePasswordRequest request)
@@ -112,7 +127,6 @@ public class AuthController : BaseController
     /// <summary>
     /// Đăng xuất
     /// </summary>
-    /// <returns></returns>
     [Authorize]
     [HttpPost("logout")]
     public async Task<ApiResponse<bool>> Logout()
