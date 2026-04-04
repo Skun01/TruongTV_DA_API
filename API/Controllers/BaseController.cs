@@ -11,4 +11,14 @@ public class BaseController : ControllerBase
 
         return userId != null ? userId : throw new Exception("Token Không chứa user id");
     }
+
+    protected string? GetCurrentUserIdOrNull()
+    {
+        return User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    protected bool IsEditorOrAdmin()
+    {
+        return User.IsInRole("editor") || User.IsInRole("admin");
+    }
 }

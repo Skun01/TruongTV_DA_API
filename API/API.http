@@ -54,3 +54,88 @@ Accept: application/json
 Authorization: Bearer {{accessToken}}
 
 ###
+
+### Vocabulary - Search (Editor/Admin)
+GET {{API_HostAddress}}/api/vocabulary?q=食べる&level=N5&page=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### Vocabulary - Search Admin/Editor (with status filter)
+GET {{API_HostAddress}}/api/vocabulary?q=食べる&status=Draft&page=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### Vocabulary - Get Detail
+GET {{API_HostAddress}}/api/vocabulary/card-001
+Accept: application/json
+
+###
+
+### Vocabulary - Create (Editor/Admin)
+POST {{API_HostAddress}}/api/vocabulary
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+	"title": "食べる",
+	"summary": "Dong tu an.",
+	"level": "N5",
+	"tags": ["daily", "verb"],
+	"status": "Draft",
+	"writing": "食べる",
+	"reading": "たべる",
+	"pitchPattern": [0, 2],
+	"audioUrl": "https://example.com/audio/taberu.mp3",
+	"wordType": "Native",
+	"meanings": [
+		{
+			"partOfSpeech": "VerbRu",
+			"definitions": ["An", "Tieu thu"]
+		}
+	],
+	"synonyms": ["食す"],
+	"antonyms": ["断食する"],
+	"relatedPhrases": ["朝ご飯を食べる"]
+}
+
+###
+
+### Vocabulary - Update (Editor/Admin)
+PATCH {{API_HostAddress}}/api/vocabulary/card-001
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+	"title": "食べる",
+	"summary": "Dong tu an (cap nhat).",
+	"level": "N5",
+	"tags": ["daily", "verb", "basic"],
+	"status": "Published",
+	"writing": "食べる",
+	"reading": "たべる",
+	"pitchPattern": [0, 2],
+	"audioUrl": "https://example.com/audio/taberu-v2.mp3",
+	"wordType": "Native",
+	"meanings": [
+		{
+			"partOfSpeech": "VerbRu",
+			"definitions": ["An", "Dung bua"]
+		}
+	],
+	"synonyms": ["食す"],
+	"antonyms": ["断食する"],
+	"relatedPhrases": ["夕飯を食べる"]
+}
+
+###
+
+### Vocabulary - Soft Delete (Editor/Admin)
+DELETE {{API_HostAddress}}/api/vocabulary/card-001
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
