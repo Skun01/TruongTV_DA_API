@@ -1,5 +1,6 @@
 using Application.Common;
 using Application.DTOs.CardNotes;
+using Application.Helper;
 using Application.IRepositories;
 using Application.IServices;
 using Application.Mappings;
@@ -26,8 +27,7 @@ public class CardNoteService : ICardNoteService
 
         EnsureCardReadable(card, currentUserId);
 
-        page = page <= 0 ? 1 : page;
-        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        (page, pageSize) = PagingHelper.Normalize(page, pageSize, 10, 100);
 
         var (notes, total) = await _unitOfWork.UserCardNotes.GetCommunityByCardIdAsync(cardId, currentUserId, page, pageSize);
         var mappedNotes = notes.Select(n => n.ToCardNoteResponse(currentUserId)).ToList();

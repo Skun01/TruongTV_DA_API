@@ -1,5 +1,6 @@
 using Application.DTOs.Auth;
 using Application.DTOs.Internal;
+using Application.Helper;
 using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
@@ -9,8 +10,6 @@ using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.Extensions.Options;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Application.Services;
 
@@ -247,7 +246,7 @@ public class AuthService : IAuthService
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
     {
-        var tokenHash = HashToken(request.Token);
+        var tokenHash = SecurityHelper.HashSha256Token(request.Token);
         var user = await _unitOfWork.Users.GetByPasswordResetTokenAsync(tokenHash);
 
         if(user == null)
@@ -273,7 +272,7 @@ public class AuthService : IAuthService
         if(user != null)
         {
             var rawToken = _tokenService.GenerateRandomToken();
-            user.PasswordResetToken = HashToken(rawToken);
+            user.PasswordResetToken = SecurityHelper.HashSha256Token(rawToken);
             user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(_jwtSettings.ResetPasswordTokenExpireMinutes);
             
             _unitOfWork.Users.UpdateAsync(user);
@@ -291,11 +290,4 @@ public class AuthService : IAuthService
 
         return true;
     }
-
-    private static string HashToken(string token)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
-        return Convert.ToHexString(hash);
-    }
-
 }

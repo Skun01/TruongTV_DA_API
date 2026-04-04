@@ -1,11 +1,11 @@
 using Application.Common;
+using Application.Helper;
 using Application.Mappings;
 using Application.DTOs.Sentences;
 using Application.IRepositories;
 using Application.IServices;
 using Domain.Constants;
 using Domain.Entities;
-using Domain.Enums;
 
 namespace Application.Services;
 
@@ -26,7 +26,7 @@ public class SentenceService : ISentenceService
             Text = request.Text.Trim(),
             Meaning = request.Meaning.Trim(),
             AudioUrl = string.IsNullOrWhiteSpace(request.AudioUrl) ? null : request.AudioUrl.Trim(),
-            Level = ParseLevel(request.Level),
+            Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level),
         };
 
         await _unitOfWork.Sentences.AddAsync(sentence);
@@ -46,12 +46,9 @@ public class SentenceService : ISentenceService
 
     public async Task<(List<SentenceResponse> Items, MetaData Meta)> SearchAsync(SentenceSearchQuery query)
     {
-        var page = query.Page;
-        var pageSize = query.PageSize;
-        page = page <= 0 ? 1 : page;
-        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+        var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
 
-        var levelEnum = ParseLevel(query.Level);
+        var levelEnum = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(query.Level);
 
         var (items, total) = await _unitOfWork.Sentences.SearchAsync(query.Q, levelEnum, page, pageSize);
 
@@ -75,7 +72,7 @@ public class SentenceService : ISentenceService
         sentence.Text = request.Text.Trim();
         sentence.Meaning = request.Meaning.Trim();
         sentence.AudioUrl = string.IsNullOrWhiteSpace(request.AudioUrl) ? null : request.AudioUrl.Trim();
-        sentence.Level = ParseLevel(request.Level);
+        sentence.Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level);
         sentence.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Sentences.UpdateAsync(sentence);
@@ -94,16 +91,5 @@ public class SentenceService : ISentenceService
         await _unitOfWork.SaveChangesAsync();
 
         return true;
-    }
-
-    private static JlptLevel? ParseLevel(string? level)
-    {
-        if (string.IsNullOrWhiteSpace(level))
-            return null;
-
-        if (Enum.TryParse<JlptLevel>(level.Trim(), true, out var parsed))
-            return parsed;
-
-        throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
     }
 }

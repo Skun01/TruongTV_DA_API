@@ -1,5 +1,6 @@
 using Application.DTOs.CardNotes;
 using Application.DTOs.Vocabulary;
+using Application.Helper;
 using Domain.Entities;
 
 namespace Application.Mappings;
@@ -21,7 +22,7 @@ public static class VocabularyMappings
             UpdatedAt = card.UpdatedAt,
             Writing = card.VocabularyDetail?.Writing ?? string.Empty,
             Reading = card.VocabularyDetail?.Reading,
-            PitchPattern = ParsePitchPattern(card.VocabularyDetail?.PitchAccent),
+            PitchPattern = VocabularyHelper.ParsePitchPattern(card.VocabularyDetail?.PitchAccent),
             AudioUrl = card.VocabularyDetail?.AudioUrl,
             WordType = card.VocabularyDetail?.WordType?.ToString(),
             Meanings = card.VocabularyDetail?.Meanings
@@ -66,25 +67,5 @@ public static class VocabularyMappings
             Reading = card.VocabularyDetail?.Reading,
             WordType = card.VocabularyDetail?.WordType?.ToString(),
         };
-    }
-
-    private static List<int>? ParsePitchPattern(string? pitchAccent)
-    {
-        if (string.IsNullOrWhiteSpace(pitchAccent))
-            return null;
-
-        var normalized = pitchAccent
-            .Replace("[", string.Empty)
-            .Replace("]", string.Empty)
-            .Trim();
-
-        var parsed = normalized
-            .Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => int.TryParse(value, out var number) ? number : (int?)null)
-            .Where(number => number.HasValue)
-            .Select(number => number!.Value)
-            .ToList();
-
-        return parsed.Count == 0 ? null : parsed;
     }
 }

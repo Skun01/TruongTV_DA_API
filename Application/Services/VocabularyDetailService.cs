@@ -1,13 +1,13 @@
 using Application.Common;
 using Application.DTOs.CardNotes;
 using Application.DTOs.Vocabulary;
+using Application.Helper;
 using Application.IRepositories;
 using Application.IServices;
 using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
-using Domain.ValueObjects;
 
 namespace Application.Services;
 
@@ -35,13 +35,10 @@ public class VocabularyDetailService : IVocabularyDetailService
 
     public async Task<(List<VocabularyListItemResponse> Items, MetaData Meta)> SearchAsync(VocabularySearchQuery query, string currentUserId)
     {
-        var page = query.Page;
-        var pageSize = query.PageSize;
-        page = page <= 0 ? 1 : page;
-        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+        var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
 
-        var levelEnum = ParseLevel(query.Level);
-        var statusEnum = ParseStatus(query.Status);
+        var levelEnum = EnumParsingHelper.ParseNullable<JlptLevel>(query.Level);
+        var statusEnum = EnumParsingHelper.ParseNullable<PublishStatus>(query.Status);
         var createdBy = query.CreatedByMe ? currentUserId : null;
 
         var (items, total) = await _unitOfWork.Cards.SearchVocabularyAsync(
@@ -74,9 +71,9 @@ public class VocabularyDetailService : IVocabularyDetailService
             CardType = CardType.Vocab,
             Title = request.Title.Trim(),
             Summary = request.Summary.Trim(),
-            Level = ParseLevel(request.Level),
-            Tags = NormalizeStringList(request.Tags),
-            Status = ParseStatus(request.Status) ?? PublishStatus.Draft,
+            Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
+            Tags = StringHelper.NormalizeList(request.Tags),
+            Status = EnumParsingHelper.ParseNullable<PublishStatus>(request.Status) ?? PublishStatus.Draft,
             CreatedBy = currentUserId,
         };
 
@@ -84,14 +81,14 @@ public class VocabularyDetailService : IVocabularyDetailService
         {
             CardId = cardId,
             Writing = request.Writing.Trim(),
-            Reading = NormalizeOptionalText(request.Reading),
-            PitchAccent = SerializePitchPattern(request.PitchPattern),
-            AudioUrl = NormalizeOptionalText(request.AudioUrl),
-            WordType = ParseWordType(request.WordType),
-            Meanings = MapMeaningItems(request.Meanings),
-            Synonyms = NormalizeStringList(request.Synonyms),
-            Antonyms = NormalizeStringList(request.Antonyms),
-            RelatedPhrases = NormalizeStringList(request.RelatedPhrases),
+            Reading = StringHelper.NormalizeOptional(request.Reading),
+            PitchAccent = VocabularyHelper.SerializePitchPattern(request.PitchPattern),
+            AudioUrl = StringHelper.NormalizeOptional(request.AudioUrl),
+            WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType),
+            Meanings = VocabularyHelper.MapMeaningItems(request.Meanings),
+            Synonyms = StringHelper.NormalizeList(request.Synonyms),
+            Antonyms = StringHelper.NormalizeList(request.Antonyms),
+            RelatedPhrases = StringHelper.NormalizeList(request.RelatedPhrases),
         };
 
         await _unitOfWork.Cards.AddAsync(card);
@@ -115,20 +112,20 @@ public class VocabularyDetailService : IVocabularyDetailService
 
         card.Title = request.Title.Trim();
         card.Summary = request.Summary.Trim();
-        card.Level = ParseLevel(request.Level);
-        card.Tags = NormalizeStringList(request.Tags);
-        card.Status = ParseStatus(request.Status) ?? card.Status;
+        card.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
+        card.Tags = StringHelper.NormalizeList(request.Tags);
+        card.Status = EnumParsingHelper.ParseNullable<PublishStatus>(request.Status) ?? card.Status;
         card.UpdatedAt = DateTime.UtcNow;
 
         detail.Writing = request.Writing.Trim();
-        detail.Reading = NormalizeOptionalText(request.Reading);
-        detail.PitchAccent = SerializePitchPattern(request.PitchPattern);
-        detail.AudioUrl = NormalizeOptionalText(request.AudioUrl);
-        detail.WordType = ParseWordType(request.WordType);
-        detail.Meanings = MapMeaningItems(request.Meanings);
-        detail.Synonyms = NormalizeStringList(request.Synonyms);
-        detail.Antonyms = NormalizeStringList(request.Antonyms);
-        detail.RelatedPhrases = NormalizeStringList(request.RelatedPhrases);
+        detail.Reading = StringHelper.NormalizeOptional(request.Reading);
+        detail.PitchAccent = VocabularyHelper.SerializePitchPattern(request.PitchPattern);
+        detail.AudioUrl = StringHelper.NormalizeOptional(request.AudioUrl);
+        detail.WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType);
+        detail.Meanings = VocabularyHelper.MapMeaningItems(request.Meanings);
+        detail.Synonyms = StringHelper.NormalizeList(request.Synonyms);
+        detail.Antonyms = StringHelper.NormalizeList(request.Antonyms);
+        detail.RelatedPhrases = StringHelper.NormalizeList(request.RelatedPhrases);
 
         _unitOfWork.Cards.UpdateAsync(card);
         _unitOfWork.VocabularyDetails.UpdateAsync(detail);
@@ -160,86 +157,5 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         if (card.Status != PublishStatus.Published && (string.IsNullOrWhiteSpace(currentUserId) || card.CreatedBy != currentUserId))
             throw new ApplicationException(MessageConstants.CommonMessage.UNAUTHORIZED);
-    }
-
-    private static List<MeaningItem> MapMeaningItems(List<VocabularyMeaningRequest> meanings)
-    {
-        return meanings
-            .Select(m => new MeaningItem
-            {
-                PartOfSpeech = ParsePartOfSpeech(m.PartOfSpeech),
-                Definitions = NormalizeStringList(m.Definitions),
-            })
-            .ToList();
-    }
-
-    private static string? NormalizeOptionalText(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        return value.Trim();
-    }
-
-    private static List<string> NormalizeStringList(List<string>? values)
-    {
-        if (values == null || values.Count == 0)
-            return new List<string>();
-
-        return values
-            .Select(v => v?.Trim())
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-            .Select(v => v!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string? SerializePitchPattern(List<int>? pitchPattern)
-    {
-        if (pitchPattern == null || pitchPattern.Count == 0)
-            return null;
-
-        return string.Join(",", pitchPattern);
-    }
-
-    private static JlptLevel? ParseLevel(string? level)
-    {
-        if (string.IsNullOrWhiteSpace(level))
-            return null;
-
-        if (Enum.TryParse<JlptLevel>(level.Trim(), true, out var parsed))
-            return parsed;
-
-        throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
-    }
-
-    private static PublishStatus? ParseStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return null;
-
-        if (Enum.TryParse<PublishStatus>(status.Trim(), true, out var parsed))
-            return parsed;
-
-        throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
-    }
-
-    private static WordType? ParseWordType(string? wordType)
-    {
-        if (string.IsNullOrWhiteSpace(wordType))
-            return null;
-
-        if (Enum.TryParse<WordType>(wordType.Trim(), true, out var parsed))
-            return parsed;
-
-        throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
-    }
-
-    private static PartOfSpeech ParsePartOfSpeech(string partOfSpeech)
-    {
-        if (Enum.TryParse<PartOfSpeech>(partOfSpeech.Trim(), true, out var parsed))
-            return parsed;
-
-        throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
     }
 }
