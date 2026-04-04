@@ -3,6 +3,7 @@ using Application.DTOs.Resources;
 using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
+using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
@@ -56,14 +57,6 @@ public class ResourceService : IResourceService
         await _unitOfWork.MediaAssets.AddAsync(mediaAsset);
         await _unitOfWork.SaveChangesAsync();
 
-        return new UploadAudioResponse
-        {
-            Id = mediaAsset.Id,
-            FileUrl = mediaAsset.FileUrl,
-            FileType = mediaAsset.FileType.ToString().ToLowerInvariant(),
-            UsageType = mediaAsset.UsageType.ToString().ToLowerInvariant(),
-            SizeInBytes = mediaAsset.SizeInBytes,
-            CreatedAt = mediaAsset.CreatedAt,
-        };
+        return mediaAsset.ToUploadAudioResponse();
     }
 }

@@ -2,6 +2,7 @@ using Application.Common;
 using Application.DTOs.CardNotes;
 using Application.IRepositories;
 using Application.IServices;
+using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
@@ -29,7 +30,7 @@ public class CardNoteService : ICardNoteService
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
         var (notes, total) = await _unitOfWork.UserCardNotes.GetCommunityByCardIdAsync(cardId, currentUserId, page, pageSize);
-        var mappedNotes = notes.Select(n => MapToNoteResponse(n, currentUserId)).ToList();
+        var mappedNotes = notes.Select(n => n.ToCardNoteResponse(currentUserId)).ToList();
 
         var meta = new MetaData
         {
@@ -76,7 +77,7 @@ public class CardNoteService : ICardNoteService
         if (savedNote == null)
             throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
 
-        return MapToNoteResponse(savedNote, userId);
+        return savedNote.ToCardNoteResponse(userId);
     }
 
     public async Task<bool> DeleteMyCardNoteAsync(string cardId, string userId)
@@ -123,11 +124,7 @@ public class CardNoteService : ICardNoteService
         _unitOfWork.UserCardNotes.UpdateAsync(note);
         await _unitOfWork.SaveChangesAsync();
 
-        return new ToggleCardNoteLikeResponse
-        {
-            IsLiked = isLiked,
-            LikesCount = note.LikesCount,
-        };
+        return note.ToToggleLikeResponse(isLiked);
     }
 
     private static void EnsureCardReadable(Card card, string currentUserId)
@@ -136,17 +133,4 @@ public class CardNoteService : ICardNoteService
             throw new ApplicationException(MessageConstants.CommonMessage.UNAUTHORIZED);
     }
 
-    private static CardNoteResponse MapToNoteResponse(UserCardNote note, string currentUserId)
-    {
-        return new CardNoteResponse
-        {
-            Id = note.Id,
-            UserId = note.UserId,
-            UserName = note.User?.Username ?? string.Empty,
-            Content = note.Content,
-            LikesCount = note.LikesCount,
-            IsLikedByMe = note.NoteLikes.Any(l => l.UserId == currentUserId),
-            CreatedAt = note.CreatedAt,
-        };
-    }
 }

@@ -3,6 +3,7 @@ using Application.DTOs.Internal;
 using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
+using Application.Mappings;
 using Application.Settings;
 using Domain.Constants;
 using Domain.Entities;
@@ -56,7 +57,7 @@ public class AuthService : IAuthService
         {
             AccessToken = accessToken,
             RefreshToken = userRefreshToken.Token,
-            User = MapToAuthUser(user),
+            User = user.ToAuthUserDto(),
         };
     }
 
@@ -66,7 +67,7 @@ public class AuthService : IAuthService
         if (user == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
-        return MapToAuthUser(user);
+        return user.ToAuthUserDto();
     }
 
     public async Task<bool> LogoutAsync(string? refreshToken)
@@ -120,7 +121,7 @@ public class AuthService : IAuthService
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken.Token,
-            User = MapToAuthUser(user),
+            User = user.ToAuthUserDto(),
         };
     }
 
@@ -160,7 +161,7 @@ public class AuthService : IAuthService
         {
             AccessToken = accessToken,
             RefreshToken = userRefreshToken.Token,
-            User = MapToAuthUser(newUser),
+            User = newUser.ToAuthUserDto(),
         };
     }
 
@@ -175,7 +176,7 @@ public class AuthService : IAuthService
         _unitOfWork.Users.UpdateAsync(user);
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToAuthUser(user);
+        return user.ToAuthUserDto();
     }
 
     public async Task<AuthUserDTO> UploadAvatarAsync(string userId, UploadAvatarRequest request, CancellationToken cancellationToken = default)
@@ -225,7 +226,7 @@ public class AuthService : IAuthService
 
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToAuthUser(user);
+        return user.ToAuthUserDto();
     }
 
     public async Task<bool> ChangePasswordAsync(string userId, ChangePasswordRequest request)
@@ -297,16 +298,4 @@ public class AuthService : IAuthService
         return Convert.ToHexString(hash);
     }
 
-    private static AuthUserDTO MapToAuthUser(User user)
-    {
-        return new AuthUserDTO
-        {
-            Id = user.Id,
-            Email = user.Email,
-            DisplayName = user.Username,
-            AvatarUrl = user.AvatarUrl,
-            Role = user.Role.ToString().ToLowerInvariant(),
-            CreatedAt = user.CreatedAt,
-        };
-    }
 }

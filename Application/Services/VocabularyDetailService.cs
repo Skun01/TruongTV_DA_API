@@ -3,6 +3,7 @@ using Application.DTOs.CardNotes;
 using Application.DTOs.Vocabulary;
 using Application.IRepositories;
 using Application.IServices;
+using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
@@ -29,34 +30,29 @@ public class VocabularyDetailService : IVocabularyDetailService
 
         var notes = await _unitOfWork.UserCardNotes.GetByCardIdWithRelationsAsync(cardId);
 
-        return MapToDetailResponse(card, notes, currentUserId);
+        return card.ToDetailResponse(notes, currentUserId);
     }
 
-    public async Task<(List<VocabularyListItemResponse> Items, MetaData Meta)> SearchAsync(
-        string? q,
-        string? level,
-        string? status,
-        bool createdByMe,
-        int page,
-        int pageSize,
-        string currentUserId)
+    public async Task<(List<VocabularyListItemResponse> Items, MetaData Meta)> SearchAsync(VocabularySearchQuery query, string currentUserId)
     {
+        var page = query.Page;
+        var pageSize = query.PageSize;
         page = page <= 0 ? 1 : page;
         pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 
-        var levelEnum = ParseLevel(level);
-        var statusEnum = ParseStatus(status);
-        var createdBy = createdByMe ? currentUserId : null;
+        var levelEnum = ParseLevel(query.Level);
+        var statusEnum = ParseStatus(query.Status);
+        var createdBy = query.CreatedByMe ? currentUserId : null;
 
         var (items, total) = await _unitOfWork.Cards.SearchVocabularyAsync(
-            q,
+            query.Q,
             levelEnum,
             statusEnum,
             createdBy,
             page,
             pageSize);
 
-        var mapped = items.Select(MapToListItemResponse).ToList();
+        var mapped = items.Select(item => item.ToListItemResponse()).ToList();
 
         var meta = new MetaData
         {
@@ -104,7 +100,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         var created = await _unitOfWork.Cards.GetVocabularyDetailByIdAsync(cardId)
             ?? throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
-        return MapToDetailResponse(created, new List<UserCardNote>(), currentUserId);
+        return created.ToDetailResponse(new List<UserCardNote>(), currentUserId);
     }
 
     public async Task<VocabularyDetailResponse> UpdateAsync(string cardId, UpdateVocabularyCardRequest request, string currentUserId)
@@ -142,7 +138,7 @@ public class VocabularyDetailService : IVocabularyDetailService
             ?? throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         var notes = await _unitOfWork.UserCardNotes.GetByCardIdWithRelationsAsync(cardId);
-        return MapToDetailResponse(updated, notes, currentUserId);
+        return updated.ToDetailResponse(notes, currentUserId);
     }
 
     public async Task<bool> SoftDeleteAsync(string cardId, string currentUserId)
@@ -160,87 +156,10 @@ public class VocabularyDetailService : IVocabularyDetailService
         return true;
     }
 
-    private static VocabularyDetailResponse MapToDetailResponse(Card card, List<UserCardNote> notes, string? currentUserId)
-    {
-        return new VocabularyDetailResponse
-        {
-            Id = card.Id,
-            CardType = card.CardType.ToString(),
-            Title = card.Title,
-            Summary = card.Summary,
-            Level = card.Level?.ToString(),
-            Tags = card.Tags,
-            Status = card.Status.ToString(),
-            CreatedAt = card.CreatedAt,
-            UpdatedAt = card.UpdatedAt,
-            Writing = card.VocabularyDetail?.Writing ?? string.Empty,
-            Reading = card.VocabularyDetail?.Reading,
-            PitchPattern = ParsePitchPattern(card.VocabularyDetail?.PitchAccent),
-            AudioUrl = card.VocabularyDetail?.AudioUrl,
-            WordType = card.VocabularyDetail?.WordType?.ToString(),
-            Meanings = card.VocabularyDetail?.Meanings
-                .Select(m => new VocabularyMeaningResponse
-                {
-                    PartOfSpeech = m.PartOfSpeech.ToString(),
-                    Definitions = m.Definitions,
-                })
-                .ToList() ?? new List<VocabularyMeaningResponse>(),
-            Synonyms = card.VocabularyDetail?.Synonyms ?? new List<string>(),
-            Antonyms = card.VocabularyDetail?.Antonyms ?? new List<string>(),
-            RelatedPhrases = card.VocabularyDetail?.RelatedPhrases ?? new List<string>(),
-            Sentences = card.CardSentences
-                .Select(cs => cs.Sentence)
-                .Where(s => s != null)
-                .Select(s => new VocabularySentenceResponse
-                {
-                    Id = s!.Id,
-                    Text = s.Text,
-                    Meaning = s.Meaning,
-                    AudioUrl = s.AudioUrl,
-                    Level = s.Level?.ToString(),
-                })
-                .ToList(),
-            UserNotes = notes.Select(n => MapToNoteResponse(n, currentUserId)).ToList(),
-        };
-    }
-
-    private static VocabularyListItemResponse MapToListItemResponse(Card card)
-    {
-        return new VocabularyListItemResponse
-        {
-            Id = card.Id,
-            Title = card.Title,
-            Summary = card.Summary,
-            Level = card.Level?.ToString(),
-            Tags = card.Tags,
-            Status = card.Status.ToString(),
-            CreatedAt = card.CreatedAt,
-            UpdatedAt = card.UpdatedAt,
-            Writing = card.VocabularyDetail?.Writing ?? string.Empty,
-            Reading = card.VocabularyDetail?.Reading,
-            WordType = card.VocabularyDetail?.WordType?.ToString(),
-        };
-    }
-
     private static void EnsureCardReadable(Card card, string? currentUserId)
     {
         if (card.Status != PublishStatus.Published && (string.IsNullOrWhiteSpace(currentUserId) || card.CreatedBy != currentUserId))
             throw new ApplicationException(MessageConstants.CommonMessage.UNAUTHORIZED);
-    }
-
-    private static CardNoteResponse MapToNoteResponse(UserCardNote note, string? currentUserId)
-    {
-        return new CardNoteResponse
-        {
-            Id = note.Id,
-            UserId = note.UserId,
-            UserName = note.User?.Username ?? string.Empty,
-            Content = note.Content,
-            LikesCount = note.LikesCount,
-            IsLikedByMe = !string.IsNullOrWhiteSpace(currentUserId)
-                && note.NoteLikes.Any(l => l.UserId == currentUserId),
-            CreatedAt = note.CreatedAt,
-        };
     }
 
     private static List<MeaningItem> MapMeaningItems(List<VocabularyMeaningRequest> meanings)
@@ -281,26 +200,6 @@ public class VocabularyDetailService : IVocabularyDetailService
             return null;
 
         return string.Join(",", pitchPattern);
-    }
-
-    private static List<int>? ParsePitchPattern(string? pitchAccent)
-    {
-        if (string.IsNullOrWhiteSpace(pitchAccent))
-            return null;
-
-        var normalized = pitchAccent
-            .Replace("[", string.Empty)
-            .Replace("]", string.Empty)
-            .Trim();
-
-        var parsed = normalized
-            .Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => int.TryParse(value, out var number) ? number : (int?)null)
-            .Where(number => number.HasValue)
-            .Select(number => number!.Value)
-            .ToList();
-
-        return parsed.Count == 0 ? null : parsed;
     }
 
     private static JlptLevel? ParseLevel(string? level)

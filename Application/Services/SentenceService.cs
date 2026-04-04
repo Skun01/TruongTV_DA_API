@@ -1,4 +1,5 @@
 using Application.Common;
+using Application.Mappings;
 using Application.DTOs.Sentences;
 using Application.IRepositories;
 using Application.IServices;
@@ -31,7 +32,7 @@ public class SentenceService : ISentenceService
         await _unitOfWork.Sentences.AddAsync(sentence);
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToResponse(sentence);
+        return sentence.ToResponse();
     }
 
     public async Task<SentenceResponse> GetByIdAsync(string id)
@@ -40,19 +41,21 @@ public class SentenceService : ISentenceService
         if (sentence == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
-        return MapToResponse(sentence);
+        return sentence.ToResponse();
     }
 
-    public async Task<(List<SentenceResponse> Items, MetaData Meta)> SearchAsync(string? q, string? level, int page, int pageSize)
+    public async Task<(List<SentenceResponse> Items, MetaData Meta)> SearchAsync(SentenceSearchQuery query)
     {
+        var page = query.Page;
+        var pageSize = query.PageSize;
         page = page <= 0 ? 1 : page;
         pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 
-        var levelEnum = ParseLevel(level);
+        var levelEnum = ParseLevel(query.Level);
 
-        var (items, total) = await _unitOfWork.Sentences.SearchAsync(q, levelEnum, page, pageSize);
+        var (items, total) = await _unitOfWork.Sentences.SearchAsync(query.Q, levelEnum, page, pageSize);
 
-        var mappedItems = items.Select(MapToResponse).ToList();
+        var mappedItems = items.Select(item => item.ToResponse()).ToList();
         var meta = new MetaData
         {
             Page = page,
@@ -78,7 +81,7 @@ public class SentenceService : ISentenceService
         _unitOfWork.Sentences.UpdateAsync(sentence);
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToResponse(sentence);
+        return sentence.ToResponse();
     }
 
     public async Task<bool> DeleteAsync(string id)
@@ -91,20 +94,6 @@ public class SentenceService : ISentenceService
         await _unitOfWork.SaveChangesAsync();
 
         return true;
-    }
-
-    private static SentenceResponse MapToResponse(Sentence sentence)
-    {
-        return new SentenceResponse
-        {
-            Id = sentence.Id,
-            Text = sentence.Text,
-            Meaning = sentence.Meaning,
-            AudioUrl = sentence.AudioUrl,
-            Level = sentence.Level?.ToString(),
-            CreatedAt = sentence.CreatedAt,
-            UpdatedAt = sentence.UpdatedAt,
-        };
     }
 
     private static JlptLevel? ParseLevel(string? level)

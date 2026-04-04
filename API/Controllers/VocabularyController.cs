@@ -20,24 +20,11 @@ public class VocabularyController : BaseController
 
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet]
-    public async Task<ApiResponse<List<VocabularyListItemResponse>>> Search(
-        [FromQuery] string? q,
-        [FromQuery] string? level,
-        [FromQuery] string? status,
-        [FromQuery] bool createdByMe = false,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+    public async Task<ApiResponse<List<VocabularyListItemResponse>>> Search([FromQuery] VocabularySearchQuery query)
     {
         var userId = GetCurrentUserId();
 
-        var (items, meta) = await _vocabularyDetailService.SearchAsync(
-            q,
-            level,
-            status,
-            createdByMe,
-            page,
-            pageSize,
-            userId);
+        var (items, meta) = await _vocabularyDetailService.SearchAsync(query, userId);
 
         return ApiResponse<List<VocabularyListItemResponse>>.SuccessResponse(items, meta);
     }

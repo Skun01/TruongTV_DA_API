@@ -20,13 +20,9 @@ public class SentencesController : BaseController
     }
 
     [HttpGet]
-    public async Task<ApiResponse<List<SentenceResponse>>> Search(
-        [FromQuery] string? q,
-        [FromQuery] string? level,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+    public async Task<ApiResponse<List<SentenceResponse>>> Search([FromQuery] SentenceSearchQuery query)
     {
-        var (items, meta) = await _sentenceService.SearchAsync(q, level, page, pageSize);
+        var (items, meta) = await _sentenceService.SearchAsync(query);
         return ApiResponse<List<SentenceResponse>>.SuccessResponse(items, meta);
     }
 
