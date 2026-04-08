@@ -18,7 +18,7 @@ public class SentenceService : ISentenceService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<SentenceResponse> CreateAsync(CreateSentenceRequest request)
+    public async Task<SentenceResponse> CreateAsync(CreateSentenceRequest request, string currentUserId)
     {
         var sentence = new Sentence
         {
@@ -27,6 +27,7 @@ public class SentenceService : ISentenceService
             Meaning = request.Meaning.Trim(),
             AudioUrl = string.IsNullOrWhiteSpace(request.AudioUrl) ? null : request.AudioUrl.Trim(),
             Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level),
+            CreatedBy = currentUserId,
         };
 
         await _unitOfWork.Sentences.AddAsync(sentence);
@@ -44,13 +45,20 @@ public class SentenceService : ISentenceService
         return sentence.ToResponse();
     }
 
-    public async Task<(List<SentenceResponse> Items, MetaData Meta)> SearchAsync(SentenceSearchQuery query)
+    public async Task<(List<SentenceResponse> Items, MetaData Meta)> SearchAsync(SentenceSearchQuery query, string currentUserId)
     {
         var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
 
         var levelEnum = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(query.Level);
+        var createdBy = query.CreatedByMe ? currentUserId : null;
 
-        var (items, total) = await _unitOfWork.Sentences.SearchAsync(query.Q, levelEnum, page, pageSize);
+        var (items, total) = await _unitOfWork.Sentences.SearchAsync(
+            query.Q,
+            levelEnum,
+            createdBy,
+            query.HasAudio,
+            page,
+            pageSize);
 
         var mappedItems = items.Select(item => item.ToResponse()).ToList();
         var meta = new MetaData

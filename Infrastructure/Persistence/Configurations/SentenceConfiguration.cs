@@ -14,5 +14,8 @@ public class SentenceConfiguration : IEntityTypeConfiguration<Sentence>
         
         builder.Property(s => s.Text).IsRequired();
         builder.Property(s => s.Meaning).IsRequired();
+        builder.Property(s => s.CreatedBy).IsRequired().HasMaxLength(50);
+
+        builder.HasIndex(s => s.CreatedBy);
     }
 }

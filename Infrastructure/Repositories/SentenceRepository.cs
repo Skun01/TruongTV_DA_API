@@ -12,24 +12,46 @@ public class SentenceRepository : Repository<Sentence>, ISentenceRepository
     {
     }
 
-    public async Task<(List<Sentence> Items, int Total)> SearchAsync(string? query, JlptLevel? level, int page, int pageSize)
+    public async Task<(List<Sentence> Items, int Total)> SearchAsync(
+        string? query,
+        JlptLevel? level,
+        string? createdBy,
+        bool? hasAudio,
+        int page,
+        int pageSize)
     {
-        var normalized = query?.Trim().ToLowerInvariant();
-
         var sentenceQuery = _context.Sentences
             .AsNoTracking()
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(normalized))
+        if (!string.IsNullOrWhiteSpace(query))
         {
+            var pattern = $"%{query.Trim()}%";
             sentenceQuery = sentenceQuery.Where(s =>
-                s.Text.ToLower().Contains(normalized) ||
-                s.Meaning.ToLower().Contains(normalized));
+                EF.Functions.ILike(s.Text, pattern)
+                || EF.Functions.ILike(s.Meaning, pattern));
         }
 
         if (level.HasValue)
         {
             sentenceQuery = sentenceQuery.Where(s => s.Level == level.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(createdBy))
+        {
+            sentenceQuery = sentenceQuery.Where(s => s.CreatedBy == createdBy);
+        }
+
+        if (hasAudio.HasValue)
+        {
+            if (hasAudio.Value)
+            {
+                sentenceQuery = sentenceQuery.Where(s => !string.IsNullOrWhiteSpace(s.AudioUrl));
+            }
+            else
+            {
+                sentenceQuery = sentenceQuery.Where(s => string.IsNullOrWhiteSpace(s.AudioUrl));
+            }
         }
 
         var total = await sentenceQuery.CountAsync();

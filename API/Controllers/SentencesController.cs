@@ -25,7 +25,8 @@ public class SentencesController : BaseController
     [HttpGet]
     public async Task<ApiResponse<List<SentenceResponse>>> Search([FromQuery] SentenceSearchQuery query)
     {
-        var (items, meta) = await _sentenceService.SearchAsync(query);
+        var userId = GetCurrentUserId();
+        var (items, meta) = await _sentenceService.SearchAsync(query, userId);
         return ApiResponse<List<SentenceResponse>>.SuccessResponse(items, meta);
     }
 
@@ -45,7 +46,8 @@ public class SentencesController : BaseController
     [HttpPost]
     public async Task<ApiResponse<SentenceResponse>> Create([FromBody] CreateSentenceRequest request)
     {
-        var item = await _sentenceService.CreateAsync(request);
+        var userId = GetCurrentUserId();
+        var item = await _sentenceService.CreateAsync(request, userId);
         return ApiResponse<SentenceResponse>.SuccessResponse(item);
     }
 

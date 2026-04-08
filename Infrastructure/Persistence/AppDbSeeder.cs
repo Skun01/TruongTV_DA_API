@@ -145,6 +145,7 @@ public static class AppDbSeeder
                 Meaning = "Moi sang toi an banh mi.",
                 AudioUrl = "https://example.com/audio/s001.mp3",
                 Level = JlptLevel.N5,
+                CreatedBy = owner.Id,
             },
             new()
             {
@@ -153,6 +154,7 @@ public static class AppDbSeeder
                 Meaning = "Can phong nay rat yen tinh.",
                 AudioUrl = "https://example.com/audio/s002.mp3",
                 Level = JlptLevel.N5,
+                CreatedBy = owner.Id,
             },
             new()
             {
@@ -161,6 +163,7 @@ public static class AppDbSeeder
                 Meaning = "Phan giai thich cua anh ay rat tuyet voi.",
                 AudioUrl = "https://example.com/audio/s003.mp3",
                 Level = JlptLevel.N3,
+                CreatedBy = owner.Id,
             },
             new()
             {
@@ -169,6 +172,7 @@ public static class AppDbSeeder
                 Meaning = "An com toi o nha.",
                 AudioUrl = "https://example.com/audio/s004.mp3",
                 Level = JlptLevel.N5,
+                CreatedBy = owner.Id,
             },
         };
 

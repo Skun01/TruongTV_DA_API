@@ -39,12 +39,15 @@ public class VocabularyDetailService : IVocabularyDetailService
 
         var levelEnum = EnumParsingHelper.ParseNullable<JlptLevel>(query.Level);
         var statusEnum = EnumParsingHelper.ParseNullable<PublishStatus>(query.Status);
+        var wordTypeEnum = EnumParsingHelper.ParseNullable<WordType>(query.WordType);
         var createdBy = query.CreatedByMe ? currentUserId : null;
 
         var (items, total) = await _unitOfWork.Cards.SearchVocabularyAsync(
             query.Q,
             levelEnum,
             statusEnum,
+            wordTypeEnum,
+            query.HasAudio,
             createdBy,
             page,
             pageSize);

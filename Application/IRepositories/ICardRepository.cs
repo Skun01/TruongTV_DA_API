@@ -10,7 +10,16 @@ public interface ICardRepository : IRepository<Card>
 		string? query,
 		JlptLevel? level,
 		PublishStatus? status,
+		WordType? wordType,
+		bool? hasAudio,
 		string? createdBy,
+		int page,
+		int pageSize);
+
+	Task<(List<Card> Items, int Total)> SearchCardsAsync(
+		CardType? cardType,
+		string? query,
+		JlptLevel? level,
 		int page,
 		int pageSize);
 }

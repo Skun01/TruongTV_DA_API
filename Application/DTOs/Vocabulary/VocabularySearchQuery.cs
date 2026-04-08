@@ -7,5 +7,7 @@ public class VocabularySearchQuery : PagingQuery
     public string? Q { get; set; }
     public string? Level { get; set; }
     public string? Status { get; set; }
+    public string? WordType { get; set; }
+    public bool? HasAudio { get; set; }
     public bool CreatedByMe { get; set; } = false;
 }
