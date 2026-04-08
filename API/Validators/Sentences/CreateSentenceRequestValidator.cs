@@ -19,6 +19,10 @@ public class CreateSentenceRequestValidator : AbstractValidator<CreateSentenceRe
             .MaximumLength(1000)
             .When(x => !string.IsNullOrWhiteSpace(x.AudioUrl));
 
+        RuleFor(x => x.SpeakerId)
+            .GreaterThan(0)
+            .When(x => x.SpeakerId.HasValue);
+
         RuleFor(x => x.Level)
             .Must(level => level is "N5" or "N4" or "N3" or "N2" or "N1")
             .When(x => !string.IsNullOrWhiteSpace(x.Level));

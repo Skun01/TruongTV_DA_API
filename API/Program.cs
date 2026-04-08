@@ -35,6 +35,7 @@ using (var scope = app.Services.CreateScope())
 app.UseSerilogRequestLogging();
 app.UseGlobalExceptionHandling();
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 app.UseCors(CorsConfigurationExtension.FrontendPolicyName);
 

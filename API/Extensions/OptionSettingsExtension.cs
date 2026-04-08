@@ -26,6 +26,11 @@ public static class OptionSettingsExtension
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<VoicevoxSettings>()
+            .Bind(configuration.GetSection(VoicevoxSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         return services;
     }
 }

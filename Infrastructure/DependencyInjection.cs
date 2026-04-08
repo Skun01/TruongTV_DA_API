@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailSenderService, EmailSenderService>();
         services.AddScoped<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IFileUploadService, FileUploadService>();
+        services.AddHttpClient<IVoicevoxService, VoicevoxService>();
         
         return services;
     }

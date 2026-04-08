@@ -13,6 +13,7 @@ public static class SentenceMappings
             Text = sentence.Text,
             Meaning = sentence.Meaning,
             AudioUrl = sentence.AudioUrl,
+            SpeakerId = sentence.SpeakerId,
             Level = sentence.Level?.ToString(),
             CreatedAt = sentence.CreatedAt,
             UpdatedAt = sentence.UpdatedAt,

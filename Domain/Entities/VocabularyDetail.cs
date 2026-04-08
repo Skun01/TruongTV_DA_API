@@ -12,6 +12,7 @@ public class VocabularyDetail
     public string? Reading { get; set; }
     public string? PitchAccent { get; set; }
     public string? AudioUrl { get; set; }
+    public int? SpeakerId { get; set; }
     public WordType? WordType { get; set; }
     
     // JSONB Mapping

@@ -4,6 +4,7 @@ using Application.DTOs.Vocabulary;
 using Application.Helper;
 using Application.IRepositories;
 using Application.IServices;
+using Application.IServices.IInternal;
 using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
@@ -14,10 +15,12 @@ namespace Application.Services;
 public class VocabularyDetailService : IVocabularyDetailService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IVoicevoxService _voicevoxService;
 
-    public VocabularyDetailService(IUnitOfWork unitOfWork)
+    public VocabularyDetailService(IUnitOfWork unitOfWork, IVoicevoxService voicevoxService)
     {
         _unitOfWork = unitOfWork;
+        _voicevoxService = voicevoxService;
     }
 
     public async Task<VocabularyDetailResponse> GetDetailAsync(string cardId, string? currentUserId)
@@ -67,6 +70,18 @@ public class VocabularyDetailService : IVocabularyDetailService
     public async Task<VocabularyDetailResponse> CreateAsync(CreateVocabularyCardRequest request, string currentUserId)
     {
         var cardId = Guid.NewGuid().ToString();
+        var writing = request.Writing.Trim();
+        var inputAudioUrl = StringHelper.NormalizeOptional(request.AudioUrl);
+        var shouldGenerateAudio = string.IsNullOrWhiteSpace(inputAudioUrl);
+        var synthesisResult = shouldGenerateAudio
+            ? await _voicevoxService.SynthesizeAsync(writing, request.SpeakerId)
+            : null;
+
+        var audioUrl = inputAudioUrl ?? synthesisResult?.AudioUrl;
+        var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
+            ? synthesisResult?.PitchPattern
+            : request.PitchPattern;
+        var speakerId = request.SpeakerId ?? synthesisResult?.SpeakerId;
 
         var card = new Card
         {
@@ -83,10 +98,11 @@ public class VocabularyDetailService : IVocabularyDetailService
         card.VocabularyDetail = new VocabularyDetail
         {
             CardId = cardId,
-            Writing = request.Writing.Trim(),
+            Writing = writing,
             Reading = StringHelper.NormalizeOptional(request.Reading),
-            PitchAccent = VocabularyHelper.SerializePitchPattern(request.PitchPattern),
-            AudioUrl = StringHelper.NormalizeOptional(request.AudioUrl),
+            PitchAccent = VocabularyHelper.SerializePitchPattern(finalPitchPattern),
+            AudioUrl = audioUrl,
+            SpeakerId = speakerId,
             WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType),
             Meanings = VocabularyHelper.MapMeaningItems(request.Meanings),
             Synonyms = StringHelper.NormalizeList(request.Synonyms),
@@ -113,6 +129,19 @@ public class VocabularyDetailService : IVocabularyDetailService
         if (detail == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
+        var writing = request.Writing.Trim();
+        var inputAudioUrl = StringHelper.NormalizeOptional(request.AudioUrl);
+        var shouldGenerateAudio = string.IsNullOrWhiteSpace(inputAudioUrl);
+        var synthesisResult = shouldGenerateAudio
+            ? await _voicevoxService.SynthesizeAsync(writing, request.SpeakerId)
+            : null;
+
+        var audioUrl = inputAudioUrl ?? synthesisResult?.AudioUrl;
+        var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
+            ? synthesisResult?.PitchPattern
+            : request.PitchPattern;
+        var speakerId = request.SpeakerId ?? synthesisResult?.SpeakerId ?? detail.SpeakerId;
+
         card.Title = request.Title.Trim();
         card.Summary = request.Summary.Trim();
         card.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
@@ -120,10 +149,11 @@ public class VocabularyDetailService : IVocabularyDetailService
         card.Status = EnumParsingHelper.ParseNullable<PublishStatus>(request.Status) ?? card.Status;
         card.UpdatedAt = DateTime.UtcNow;
 
-        detail.Writing = request.Writing.Trim();
+        detail.Writing = writing;
         detail.Reading = StringHelper.NormalizeOptional(request.Reading);
-        detail.PitchAccent = VocabularyHelper.SerializePitchPattern(request.PitchPattern);
-        detail.AudioUrl = StringHelper.NormalizeOptional(request.AudioUrl);
+        detail.PitchAccent = VocabularyHelper.SerializePitchPattern(finalPitchPattern);
+        detail.AudioUrl = audioUrl;
+        detail.SpeakerId = speakerId;
         detail.WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType);
         detail.Meanings = VocabularyHelper.MapMeaningItems(request.Meanings);
         detail.Synonyms = StringHelper.NormalizeList(request.Synonyms);
