@@ -108,6 +108,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         };
 
         await _unitOfWork.Cards.AddAsync(card);
+        await SyncVocabularySentencesAsync(cardId, request.Sentences, currentUserId);
         await _unitOfWork.SaveChangesAsync();
 
         var created = await _unitOfWork.Cards.GetVocabularyDetailByIdAsync(cardId)
@@ -154,6 +155,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         detail.Antonyms = StringHelper.NormalizeList(request.Antonyms);
         detail.RelatedPhrases = StringHelper.NormalizeList(request.RelatedPhrases);
 
+        await SyncVocabularySentencesAsync(cardId, request.Sentences, currentUserId);
         _unitOfWork.Cards.UpdateAsync(card);
         _unitOfWork.VocabularyDetails.UpdateAsync(detail);
         await _unitOfWork.SaveChangesAsync();
@@ -189,5 +191,75 @@ public class VocabularyDetailService : IVocabularyDetailService
     private static string ResolveVocabularySynthesisText(string writing, string? reading)
     {
         return string.IsNullOrWhiteSpace(reading) ? writing : reading;
+    }
+
+    private async Task SyncVocabularySentencesAsync(
+        string cardId,
+        List<VocabularySentenceUpsertRequest> requests,
+        string currentUserId)
+    {
+        var existingLinks = await _unitOfWork.CardSentences.GetByCardIdAsync(cardId);
+        var keptSentenceIds = new HashSet<string>();
+
+        foreach (var request in requests)
+        {
+            var sentence = await UpsertVocabularySentenceAsync(request, currentUserId);
+            if (!keptSentenceIds.Add(sentence.Id))
+                continue;
+
+            if (existingLinks.Any(link => link.SentenceId == sentence.Id))
+                continue;
+
+            await _unitOfWork.CardSentences.AddAsync(new CardSentence
+            {
+                CardId = cardId,
+                SentenceId = sentence.Id,
+            });
+        }
+
+        foreach (var link in existingLinks.Where(link => !keptSentenceIds.Contains(link.SentenceId)))
+        {
+            _unitOfWork.CardSentences.DeleteAsync(link);
+        }
+    }
+
+    private async Task<Sentence> UpsertVocabularySentenceAsync(
+        VocabularySentenceUpsertRequest request,
+        string currentUserId)
+    {
+        var text = request.Text.Trim();
+        var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
+            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+
+        if (string.IsNullOrWhiteSpace(request.Id))
+        {
+            var sentence = new Sentence
+            {
+                Id = Guid.NewGuid().ToString(),
+                Text = text,
+                Meaning = request.Meaning.Trim(),
+                AudioUrl = synthesisResult.AudioUrl,
+                SpeakerId = synthesisResult.SpeakerId,
+                Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
+                CreatedBy = currentUserId,
+            };
+
+            await _unitOfWork.Sentences.AddAsync(sentence);
+            return sentence;
+        }
+
+        var existingSentence = await _unitOfWork.Sentences.GetByIdAsync(request.Id);
+        if (existingSentence == null)
+            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+
+        existingSentence.Text = text;
+        existingSentence.Meaning = request.Meaning.Trim();
+        existingSentence.AudioUrl = synthesisResult.AudioUrl;
+        existingSentence.SpeakerId = synthesisResult.SpeakerId;
+        existingSentence.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
+        existingSentence.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Sentences.UpdateAsync(existingSentence);
+        return existingSentence;
     }
 }

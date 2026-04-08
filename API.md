@@ -195,6 +195,10 @@ Từ ngày 2026-04-09, `vocabulary` chuyển sang luồng **VOICEVOX-only** cho 
 - Backend ưu tiên dùng `reading` để generate audio; nếu `reading` trống thì fallback sang `writing`.
 - `speakerId` là speaker dùng để generate audio và được lưu lại trong DB.
 - `pitchPattern` vẫn được phép gửi để frontend-admin override thủ công nếu pitch từ VOICEVOX chưa chuẩn.
+- `sentences` trong request là danh sách nested upsert cho example sentences của vocabulary.
+- Nếu một sentence item có `id`, backend sẽ update sentence đó rồi giữ/gắn association vào vocabulary.
+- Nếu một sentence item không có `id`, backend sẽ tạo sentence mới, generate audio bằng VOICEVOX, rồi gắn vào vocabulary.
+- Với `PATCH /api/vocabulary/{cardId}`, danh sách `sentences` gửi lên được xem là trạng thái cuối cùng; association nào không còn trong request sẽ bị gỡ khỏi vocabulary.
 
 Request body cho `POST /api/vocabulary` và `PATCH /api/vocabulary/{cardId}`:
 
@@ -218,7 +222,22 @@ Request body cho `POST /api/vocabulary` và `PATCH /api/vocabulary/{cardId}`:
   ],
   "synonyms": [],
   "antonyms": [],
-  "relatedPhrases": []
+  "relatedPhrases": [],
+  "sentences": [
+    {
+      "id": "optional-existing-sentence-id",
+      "text": "毎朝パンを食べる。",
+      "meaning": "Mỗi sáng tôi ăn bánh mì.",
+      "speakerId": 3,
+      "level": "N5"
+    },
+    {
+      "text": "野菜をもっと食べたほうがいい。",
+      "meaning": "Bạn nên ăn rau nhiều hơn.",
+      "speakerId": 8,
+      "level": "N4"
+    }
+  ]
 }
 ```
 

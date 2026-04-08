@@ -60,5 +60,12 @@ public class UpdateVocabularyCardRequestValidator : AbstractValidator<UpdateVoca
         RuleForEach(x => x.RelatedPhrases)
             .NotEmpty()
             .MaximumLength(200);
+
+        RuleFor(x => x.Sentences)
+            .Must(sentences => sentences.Count <= 20)
+            .WithMessage("Sentences cannot exceed 20 items.");
+
+        RuleForEach(x => x.Sentences)
+            .SetValidator(new VocabularySentenceUpsertRequestValidator());
     }
 }

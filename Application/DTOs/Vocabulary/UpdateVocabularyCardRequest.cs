@@ -18,4 +18,5 @@ public class UpdateVocabularyCardRequest
     public List<string> Synonyms { get; set; } = new();
     public List<string> Antonyms { get; set; } = new();
     public List<string> RelatedPhrases { get; set; } = new();
+    public List<VocabularySentenceUpsertRequest> Sentences { get; set; } = new();
 }

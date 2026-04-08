@@ -1,0 +1,30 @@
+using Application.DTOs.Vocabulary;
+using FluentValidation;
+
+namespace API.Validators.Vocabulary;
+
+public class VocabularySentenceUpsertRequestValidator : AbstractValidator<VocabularySentenceUpsertRequest>
+{
+    public VocabularySentenceUpsertRequestValidator()
+    {
+        RuleFor(x => x.Id)
+            .MaximumLength(100)
+            .When(x => !string.IsNullOrWhiteSpace(x.Id));
+
+        RuleFor(x => x.Text)
+            .NotEmpty()
+            .MaximumLength(500);
+
+        RuleFor(x => x.Meaning)
+            .NotEmpty()
+            .MaximumLength(500);
+
+        RuleFor(x => x.SpeakerId)
+            .GreaterThan(0)
+            .When(x => x.SpeakerId.HasValue);
+
+        RuleFor(x => x.Level)
+            .Must(level => level is "N5" or "N4" or "N3" or "N2" or "N1")
+            .When(x => !string.IsNullOrWhiteSpace(x.Level));
+    }
+}
