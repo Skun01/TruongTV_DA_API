@@ -1,6 +1,6 @@
 # Tacho Learning API - Implemented API Documentation
 
-> **Last updated:** 2026-04-02
+> **Last updated:** 2026-04-09
 
 ## Response Contract
 
@@ -90,3 +90,136 @@ Response data:
 ```
 
 ---
+
+## Voicevox Module
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/voicevox/speakers` | Yes | Lấy danh sách speaker VOICEVOX được cho phép |
+| POST | `/api/voicevox/preview` | Yes | Generate preview audio theo `speakerId` |
+
+### POST `/api/voicevox/preview`
+
+Generate audio preview để frontend phát thử khi admin đổi speaker.
+
+Request body:
+
+```json
+{
+  "speakerId": 3,
+  "text": "こんにちは。こちらは音声プレビューです。"
+}
+```
+
+- `speakerId`: bắt buộc
+- `text`: tùy chọn, nếu bỏ trống backend dùng sample text mặc định
+
+Response data:
+
+```json
+{
+  "speakerId": 3,
+  "text": "こんにちは。こちらは音声プレビューです。",
+  "audioUrl": "/audio-cache/example.wav"
+}
+```
+
+---
+
+## Sentences Module
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/sentences` | Editor/Admin | Tìm kiếm sentence có phân trang |
+| GET | `/api/sentences/{id}` | Editor/Admin | Lấy chi tiết sentence |
+| POST | `/api/sentences` | Editor/Admin | Tạo sentence mới |
+| PATCH | `/api/sentences/{id}` | Editor/Admin | Cập nhật sentence |
+| DELETE | `/api/sentences/{id}` | Editor/Admin | Xóa sentence |
+
+### Sentence create/update note
+
+Từ ngày 2026-04-09, `sentence` chuyển sang luồng **VOICEVOX-only**:
+
+- Client **không gửi** `audioUrl` nữa.
+- Backend luôn tự generate `audioUrl` từ VOICEVOX dựa trên `text` và `speakerId`.
+- `speakerId` là speaker dùng để generate audio và được lưu lại trong DB.
+
+Request body cho `POST /api/sentences` và `PATCH /api/sentences/{id}`:
+
+```json
+{
+  "text": "日本へ行きたいです。",
+  "meaning": "Tôi muốn đi Nhật.",
+  "speakerId": 3,
+  "level": "N5"
+}
+```
+
+Response data:
+
+```json
+{
+  "id": "string",
+  "text": "string",
+  "meaning": "string",
+  "audioUrl": "string | null",
+  "speakerId": 3,
+  "level": "N5 | N4 | N3 | N2 | N1 | null"
+}
+```
+
+---
+
+## Vocabulary Module
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/vocabulary` | Editor/Admin | Tìm kiếm vocabulary có phân trang |
+| GET | `/api/vocabulary/{cardId}` | Public | Lấy chi tiết vocabulary |
+| POST | `/api/vocabulary` | Editor/Admin | Tạo vocabulary mới |
+| PATCH | `/api/vocabulary/{cardId}` | Editor/Admin | Cập nhật vocabulary |
+| DELETE | `/api/vocabulary/{cardId}` | Editor/Admin | Soft delete vocabulary |
+
+### Vocabulary create/update note
+
+Từ ngày 2026-04-09, `vocabulary` chuyển sang luồng **VOICEVOX-only** cho audio:
+
+- Client **không gửi** `audioUrl` nữa.
+- Backend luôn tự generate `audioUrl` từ VOICEVOX.
+- Backend ưu tiên dùng `reading` để generate audio; nếu `reading` trống thì fallback sang `writing`.
+- `speakerId` là speaker dùng để generate audio và được lưu lại trong DB.
+- `pitchPattern` vẫn được phép gửi để frontend-admin override thủ công nếu pitch từ VOICEVOX chưa chuẩn.
+
+Request body cho `POST /api/vocabulary` và `PATCH /api/vocabulary/{cardId}`:
+
+```json
+{
+  "title": "食べる",
+  "summary": "Động từ ăn",
+  "level": "N5",
+  "tags": ["verb"],
+  "status": "Draft",
+  "writing": "食べる",
+  "reading": "たべる",
+  "pitchPattern": [0, 1, 0],
+  "speakerId": 3,
+  "wordType": "Verb",
+  "meanings": [
+    {
+      "languageCode": "vi",
+      "definition": "ăn"
+    }
+  ],
+  "synonyms": [],
+  "antonyms": [],
+  "relatedPhrases": []
+}
+```
+
+Response detail vẫn trả `audioUrl`, `speakerId`, `pitchPattern` như trước để frontend phát audio và hiển thị accent.

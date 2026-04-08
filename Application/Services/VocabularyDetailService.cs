@@ -71,17 +71,14 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         var cardId = Guid.NewGuid().ToString();
         var writing = request.Writing.Trim();
-        var inputAudioUrl = StringHelper.NormalizeOptional(request.AudioUrl);
-        var shouldGenerateAudio = string.IsNullOrWhiteSpace(inputAudioUrl);
-        var synthesisResult = shouldGenerateAudio
-            ? await _voicevoxService.SynthesizeAsync(writing, request.SpeakerId)
-            : null;
+        var reading = StringHelper.NormalizeOptional(request.Reading);
+        var synthesisText = ResolveVocabularySynthesisText(writing, reading);
+        var synthesisResult = await _voicevoxService.SynthesizeAsync(synthesisText, request.SpeakerId)
+            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
 
-        var audioUrl = inputAudioUrl ?? synthesisResult?.AudioUrl;
         var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
-            ? synthesisResult?.PitchPattern
+            ? synthesisResult.PitchPattern
             : request.PitchPattern;
-        var speakerId = request.SpeakerId ?? synthesisResult?.SpeakerId;
 
         var card = new Card
         {
@@ -99,10 +96,10 @@ public class VocabularyDetailService : IVocabularyDetailService
         {
             CardId = cardId,
             Writing = writing,
-            Reading = StringHelper.NormalizeOptional(request.Reading),
+            Reading = reading,
             PitchAccent = VocabularyHelper.SerializePitchPattern(finalPitchPattern),
-            AudioUrl = audioUrl,
-            SpeakerId = speakerId,
+            AudioUrl = synthesisResult.AudioUrl,
+            SpeakerId = synthesisResult.SpeakerId,
             WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType),
             Meanings = VocabularyHelper.MapMeaningItems(request.Meanings),
             Synonyms = StringHelper.NormalizeList(request.Synonyms),
@@ -130,17 +127,14 @@ public class VocabularyDetailService : IVocabularyDetailService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         var writing = request.Writing.Trim();
-        var inputAudioUrl = StringHelper.NormalizeOptional(request.AudioUrl);
-        var shouldGenerateAudio = string.IsNullOrWhiteSpace(inputAudioUrl);
-        var synthesisResult = shouldGenerateAudio
-            ? await _voicevoxService.SynthesizeAsync(writing, request.SpeakerId)
-            : null;
+        var reading = StringHelper.NormalizeOptional(request.Reading);
+        var synthesisText = ResolveVocabularySynthesisText(writing, reading);
+        var synthesisResult = await _voicevoxService.SynthesizeAsync(synthesisText, request.SpeakerId)
+            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
 
-        var audioUrl = inputAudioUrl ?? synthesisResult?.AudioUrl;
         var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
-            ? synthesisResult?.PitchPattern
+            ? synthesisResult.PitchPattern
             : request.PitchPattern;
-        var speakerId = request.SpeakerId ?? synthesisResult?.SpeakerId ?? detail.SpeakerId;
 
         card.Title = request.Title.Trim();
         card.Summary = request.Summary.Trim();
@@ -150,10 +144,10 @@ public class VocabularyDetailService : IVocabularyDetailService
         card.UpdatedAt = DateTime.UtcNow;
 
         detail.Writing = writing;
-        detail.Reading = StringHelper.NormalizeOptional(request.Reading);
+        detail.Reading = reading;
         detail.PitchAccent = VocabularyHelper.SerializePitchPattern(finalPitchPattern);
-        detail.AudioUrl = audioUrl;
-        detail.SpeakerId = speakerId;
+        detail.AudioUrl = synthesisResult.AudioUrl;
+        detail.SpeakerId = synthesisResult.SpeakerId;
         detail.WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType);
         detail.Meanings = VocabularyHelper.MapMeaningItems(request.Meanings);
         detail.Synonyms = StringHelper.NormalizeList(request.Synonyms);
@@ -190,5 +184,10 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         if (card.Status != PublishStatus.Published && (string.IsNullOrWhiteSpace(currentUserId) || card.CreatedBy != currentUserId))
             throw new ApplicationException(MessageConstants.CommonMessage.UNAUTHORIZED);
+    }
+
+    private static string ResolveVocabularySynthesisText(string writing, string? reading)
+    {
+        return string.IsNullOrWhiteSpace(reading) ? writing : reading;
     }
 }

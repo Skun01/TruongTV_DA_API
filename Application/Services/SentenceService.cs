@@ -24,20 +24,16 @@ public class SentenceService : ISentenceService
     public async Task<SentenceResponse> CreateAsync(CreateSentenceRequest request, string currentUserId)
     {
         var text = request.Text.Trim();
-        var shouldGenerateAudio = string.IsNullOrWhiteSpace(request.AudioUrl);
-        var synthesisResult = shouldGenerateAudio
-            ? await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
-            : null;
-        var audioUrl = shouldGenerateAudio ? synthesisResult?.AudioUrl : request.AudioUrl!.Trim();
-        var speakerId = request.SpeakerId ?? synthesisResult?.SpeakerId;
+        var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
+            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
 
         var sentence = new Sentence
         {
             Id = Guid.NewGuid().ToString(),
             Text = text,
             Meaning = request.Meaning.Trim(),
-            AudioUrl = audioUrl,
-            SpeakerId = speakerId,
+            AudioUrl = synthesisResult.AudioUrl,
+            SpeakerId = synthesisResult.SpeakerId,
             Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level),
             CreatedBy = currentUserId,
         };
@@ -90,17 +86,13 @@ public class SentenceService : ISentenceService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         var text = request.Text.Trim();
-        var shouldGenerateAudio = string.IsNullOrWhiteSpace(request.AudioUrl);
-        var synthesisResult = shouldGenerateAudio
-            ? await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
-            : null;
-        var audioUrl = shouldGenerateAudio ? synthesisResult?.AudioUrl : request.AudioUrl!.Trim();
-        var speakerId = request.SpeakerId ?? synthesisResult?.SpeakerId ?? sentence.SpeakerId;
+        var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
+            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
 
         sentence.Text = text;
         sentence.Meaning = request.Meaning.Trim();
-        sentence.AudioUrl = audioUrl;
-        sentence.SpeakerId = speakerId;
+        sentence.AudioUrl = synthesisResult.AudioUrl;
+        sentence.SpeakerId = synthesisResult.SpeakerId;
         sentence.Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level);
         sentence.UpdatedAt = DateTime.UtcNow;
 

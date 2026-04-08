@@ -22,9 +22,6 @@ public class CreateVocabularyCardRequestValidator : AbstractValidator<CreateVoca
         RuleFor(x => x.Reading)
             .MaximumLength(200);
 
-        RuleFor(x => x.AudioUrl)
-            .MaximumLength(1000);
-
         RuleFor(x => x.SpeakerId)
             .GreaterThan(0)
             .When(x => x.SpeakerId.HasValue);

@@ -15,10 +15,6 @@ public class UpdateSentenceRequestValidator : AbstractValidator<UpdateSentenceRe
             .NotEmpty()
             .MaximumLength(500);
 
-        RuleFor(x => x.AudioUrl)
-            .MaximumLength(1000)
-            .When(x => !string.IsNullOrWhiteSpace(x.AudioUrl));
-
         RuleFor(x => x.SpeakerId)
             .GreaterThan(0)
             .When(x => x.SpeakerId.HasValue);
