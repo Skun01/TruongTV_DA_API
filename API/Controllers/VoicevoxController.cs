@@ -24,4 +24,13 @@ public class VoicevoxController : ControllerBase
         var speakers = await _voicevoxService.GetSpeakersAsync(cancellationToken);
         return ApiResponse<List<VoicevoxSpeakerResponse>>.SuccessResponse(speakers);
     }
+
+    [HttpPost("preview")]
+    public async Task<ApiResponse<VoicevoxPreviewResponse>> Preview(
+        [FromBody] VoicevoxPreviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        var preview = await _voicevoxService.PreviewAsync(request, cancellationToken);
+        return ApiResponse<VoicevoxPreviewResponse>.SuccessResponse(preview);
+    }
 }

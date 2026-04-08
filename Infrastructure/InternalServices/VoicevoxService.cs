@@ -12,6 +12,7 @@ namespace Infrastructure.InternalServices;
 
 public class VoicevoxService : IVoicevoxService
 {
+    private const string DefaultPreviewText = "\u3053\u3093\u306B\u3061\u306F\u3002\u3053\u3061\u3089\u306F\u97F3\u58F0\u30D7\u30EC\u30D3\u30E5\u30FC\u3067\u3059\u3002";
     private readonly HttpClient _httpClient;
     private readonly VoicevoxSettings _settings;
 
@@ -114,6 +115,23 @@ public class VoicevoxService : IVoicevoxService
         }
 
         return results;
+    }
+
+    public async Task<VoicevoxPreviewResponse> PreviewAsync(VoicevoxPreviewRequest request, CancellationToken cancellationToken = default)
+    {
+        var previewText = string.IsNullOrWhiteSpace(request.Text)
+            ? DefaultPreviewText
+            : request.Text.Trim();
+
+        var synthesisResult = await SynthesizeAsync(previewText, request.SpeakerId, cancellationToken)
+            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+
+        return new VoicevoxPreviewResponse
+        {
+            SpeakerId = synthesisResult.SpeakerId,
+            Text = previewText,
+            AudioUrl = synthesisResult.AudioUrl,
+        };
     }
 
     private async Task<string> GetAudioQueryJsonAsync(string text, int speakerId, CancellationToken cancellationToken)
