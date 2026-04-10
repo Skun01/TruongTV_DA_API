@@ -4,6 +4,9 @@ using Application.IServices;
 using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Encodings.Web;
+using System.Text;
+using System.Text.Json;
 
 namespace API.Controllers;
 
@@ -44,6 +47,40 @@ public class VocabularyController : BaseController
         return ApiResponse<VocabularyDetailResponse>.SuccessResponse(result);
     }
 
+    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [HttpGet("import-template")]
+    public async Task<IActionResult> DownloadImportTemplate()
+    {
+        var result = await _vocabularyDetailService.GetImportTemplateAsync();
+        return CreateJsonFileResult(result, "vocabulary-import-template.json");
+    }
+
+    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [HttpGet("export")]
+    public async Task<IActionResult> Export([FromQuery] VocabularyExportQuery query)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _vocabularyDetailService.ExportAsync(query, userId);
+        return CreateJsonFileResult(result, $"vocabulary-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+    }
+
+    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [HttpPost("import/preview")]
+    public async Task<ApiResponse<VocabularyImportPreviewResponse>> PreviewImport([FromBody] ImportVocabularyRequest request)
+    {
+        var result = await _vocabularyDetailService.PreviewImportAsync(request);
+        return ApiResponse<VocabularyImportPreviewResponse>.SuccessResponse(result);
+    }
+
+    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [HttpPost("import/commit")]
+    public async Task<ApiResponse<VocabularyImportCommitResponse>> CommitImport([FromBody] ImportVocabularyRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _vocabularyDetailService.CommitImportAsync(request, userId);
+        return ApiResponse<VocabularyImportCommitResponse>.SuccessResponse(result);
+    }
+
     /// <summary>
     /// Tạo mới một vocabulary card.
     /// </summary>
@@ -78,5 +115,19 @@ public class VocabularyController : BaseController
         var userId = GetCurrentUserId();
         var result = await _vocabularyDetailService.SoftDeleteAsync(cardId, userId);
         return ApiResponse<bool>.SuccessResponse(result);
+    }
+
+    private static FileContentResult CreateJsonFileResult<T>(T data, string fileName)
+    {
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        });
+
+        return new FileContentResult(Encoding.UTF8.GetBytes(json), "application/json")
+        {
+            FileDownloadName = fileName,
+        };
     }
 }

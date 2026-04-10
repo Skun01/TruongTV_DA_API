@@ -16,6 +16,14 @@ public interface ICardRepository : IRepository<Card>
 		int page,
 		int pageSize);
 
+	Task<List<Card>> GetVocabularyExportAsync(
+		string? query,
+		JlptLevel? level,
+		PublishStatus? status,
+		WordType? wordType,
+		bool? hasAudio,
+		string? createdBy);
+
 	Task<(List<Card> Items, int Total)> SearchCardsAsync(
 		CardType? cardType,
 		string? query,

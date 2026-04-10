@@ -79,6 +79,57 @@ public class CardRepository : Repository<Card>, ICardRepository
         return (items, total);
     }
 
+    public async Task<List<Card>> GetVocabularyExportAsync(
+        string? query,
+        JlptLevel? level,
+        PublishStatus? status,
+        WordType? wordType,
+        bool? hasAudio,
+        string? createdBy)
+    {
+        var cardsQuery = _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .Include(c => c.CardSentences)
+                .ThenInclude(cs => cs.Sentence)
+            .Where(c => c.CardType == CardType.Vocab);
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var pattern = $"%{query.Trim()}%";
+            cardsQuery = cardsQuery.Where(c =>
+                EF.Functions.ILike(c.Title, pattern)
+                || EF.Functions.ILike(c.Summary, pattern)
+                || (c.VocabularyDetail != null
+                    && (EF.Functions.ILike(c.VocabularyDetail.Writing, pattern)
+                        || (c.VocabularyDetail.Reading != null && EF.Functions.ILike(c.VocabularyDetail.Reading, pattern)))));
+        }
+
+        if (level.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Level == level.Value);
+
+        if (status.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Status == status.Value);
+
+        if (wordType.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.VocabularyDetail != null && c.VocabularyDetail.WordType == wordType.Value);
+
+        if (hasAudio.HasValue)
+        {
+            if (hasAudio.Value)
+                cardsQuery = cardsQuery.Where(c => c.VocabularyDetail != null && !string.IsNullOrWhiteSpace(c.VocabularyDetail.AudioUrl));
+            else
+                cardsQuery = cardsQuery.Where(c => c.VocabularyDetail == null || string.IsNullOrWhiteSpace(c.VocabularyDetail.AudioUrl));
+        }
+
+        if (!string.IsNullOrWhiteSpace(createdBy))
+            cardsQuery = cardsQuery.Where(c => c.CreatedBy == createdBy);
+
+        return await cardsQuery
+            .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<(List<Card> Items, int Total)> SearchCardsAsync(
         CardType? cardType,
         string? query,
