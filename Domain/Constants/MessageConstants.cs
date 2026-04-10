@@ -48,6 +48,16 @@ public static class MessageConstants
         public const string IMPORT_SPEAKER_ID_NOT_SUPPORTED = "Sentence_ImportSpeakerIdNotSupported_400";
     }
 
+    public static class GrammarMessage
+    {
+        public const string CARD_NOT_FOUND = "Grammar_CardNotFound_404";
+        public const string DETAIL_NOT_FOUND = "Grammar_DetailNotFound_404";
+        public const string READ_FORBIDDEN = "Grammar_ReadForbidden_401";
+        public const string INVALID_RELATION = "Grammar_InvalidRelation_400";
+        public const string RELATED_CARD_NOT_FOUND = "Grammar_RelatedCardNotFound_404";
+        public const string INVALID_RICH_TEXT = "Grammar_InvalidRichText_400";
+    }
+
     public static class AuthMessage
     {
         public const string INVALID_LOGIN = "Invalid_400";

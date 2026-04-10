@@ -12,6 +12,9 @@ public class UnitOfWork : IUnitOfWork
     
     private ICardRepository? _cards;
     private IVocabularyDetailRepository? _vocabularyDetails;
+    private IGrammarDetailRepository? _grammarDetails;
+    private IGrammarRelationRepository? _grammarRelations;
+    private IGrammarResourceRepository? _grammarResources;
     private ISentenceRepository? _sentences;
     private ICardSentenceRepository? _cardSentences;
     private IUserCardNoteRepository? _userCardNotes;
@@ -28,6 +31,9 @@ public class UnitOfWork : IUnitOfWork
     
     public ICardRepository Cards => _cards ??= new CardRepository(_context);
     public IVocabularyDetailRepository VocabularyDetails => _vocabularyDetails ??= new VocabularyDetailRepository(_context);
+    public IGrammarDetailRepository GrammarDetails => _grammarDetails ??= new GrammarDetailRepository(_context);
+    public IGrammarRelationRepository GrammarRelations => _grammarRelations ??= new GrammarRelationRepository(_context);
+    public IGrammarResourceRepository GrammarResources => _grammarResources ??= new GrammarResourceRepository(_context);
     public ISentenceRepository Sentences => _sentences ??= new SentenceRepository(_context);
     public ICardSentenceRepository CardSentences => _cardSentences ??= new CardSentenceRepository(_context);
     public IUserCardNoteRepository UserCardNotes => _userCardNotes ??= new UserCardNoteRepository(_context);

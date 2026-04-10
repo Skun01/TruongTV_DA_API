@@ -345,6 +345,106 @@ Response data:
 
 ---
 
+## Grammar Module
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/grammar` | Editor/Admin | Tìm kiếm grammar có phân trang |
+| GET | `/api/grammar/{cardId}` | Public | Lấy chi tiết grammar |
+| POST | `/api/grammar` | Editor/Admin | Tạo grammar mới |
+| PATCH | `/api/grammar/{cardId}` | Editor/Admin | Cập nhật grammar |
+| DELETE | `/api/grammar/{cardId}` | Editor/Admin | Soft delete grammar (Archived) |
+
+### Search query (`GET /api/grammar`)
+
+Hỗ trợ các query params:
+
+- `q`
+- `level`
+- `status`
+- `register`
+- `createdByMe`
+- `page`
+- `pageSize`
+
+`q` hiện tìm theo:
+
+- `title`
+- `summary`
+- `alternateForms`
+- `structures.pattern`
+
+`q` **không** tìm trong `explanation`.
+
+### Rich text rule (Markdown subset)
+
+Các field rich text:
+
+- `structures[].pattern`
+- `structures[].annotations[*]` (nếu có)
+- `explanation`
+- `caution`
+
+Cho phép:
+
+- `**bold**`
+- `*italic*`
+- `~~strikethrough~~`
+- Underline custom token: `{u}text{/u}`
+- Color custom token (whitelist): `{red|blue|green|yellow|orange|purple|gray}text{/<color>}`
+
+Không cho phép:
+
+- Raw HTML (`<tag>...</tag>`)
+- Token sai cú pháp hoặc không đóng cặp
+- Token màu ngoài whitelist
+
+Giới hạn độ dài:
+
+- `structures[].pattern`: tối đa 1000 ký tự
+- `structures[].annotations[*]`: tối đa 1000 ký tự/value
+- `explanation`: tối đa 10000 ký tự
+- `caution`: tối đa 5000 ký tự
+
+### Request body (`POST`/`PATCH`)
+
+```json
+{
+  "title": "〜てから",
+  "summary": "Diễn tả hành động B xảy ra sau khi làm A",
+  "level": "N5",
+  "tags": ["grammar", "sequence"],
+  "status": "Draft",
+  "structures": [
+    {
+      "pattern": "V1(1) + ながら + V2(2)",
+      "annotations": {
+        "1": "Hành động phụ, có thể nhấn bằng {green}màu{/green}",
+        "2": "{u}Hành động chính{/u}"
+      }
+    },
+    {
+      "pattern": "**V[て形]** + から"
+    }
+  ],
+  "explanation": "Dùng khi hành động sau xảy ra sau khi hành động trước hoàn tất. Có thể nhấn mạnh bằng **bold**.",
+  "caution": "~~Không~~ dùng cho hai hành động đồng thời.",
+  "register": "Standard",
+  "alternateForms": ["〜てからです"],
+  "relations": [
+    { "relatedId": "grammar-card-id-1", "relationType": "Similar" },
+    { "relatedId": "grammar-card-id-2", "relationType": "Contrasting" }
+  ],
+  "resources": [
+    { "title": "Bài giảng", "url": "https://example.com/te-kara" }
+  ]
+}
+```
+
+---
+
 ## Vocabulary Module
 
 ### Endpoints

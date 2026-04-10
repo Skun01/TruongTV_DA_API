@@ -6,6 +6,7 @@ namespace Application.IRepositories;
 public interface ICardRepository : IRepository<Card>
 {
 	Task<Card?> GetVocabularyDetailByIdAsync(string cardId);
+	Task<Card?> GetGrammarDetailByIdAsync(string cardId);
 	Task<(List<Card> Items, int Total)> SearchVocabularyAsync(
 		string? query,
 		JlptLevel? level,
@@ -23,6 +24,15 @@ public interface ICardRepository : IRepository<Card>
 		WordType? wordType,
 		bool? hasAudio,
 		string? createdBy);
+
+	Task<(List<Card> Items, int Total)> SearchGrammarAsync(
+		string? query,
+		JlptLevel? level,
+		PublishStatus? status,
+		RegisterType? register,
+		string? createdBy,
+		int page,
+		int pageSize);
 
 	Task<bool> ExistsVocabularyByWritingAsync(string writing);
 

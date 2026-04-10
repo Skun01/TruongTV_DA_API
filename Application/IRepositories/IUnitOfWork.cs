@@ -8,6 +8,9 @@ public interface IUnitOfWork
     
     ICardRepository Cards { get; }
     IVocabularyDetailRepository VocabularyDetails { get; }
+    IGrammarDetailRepository GrammarDetails { get; }
+    IGrammarRelationRepository GrammarRelations { get; }
+    IGrammarResourceRepository GrammarResources { get; }
     ISentenceRepository Sentences { get; }
     ICardSentenceRepository CardSentences { get; }
     IUserCardNoteRepository UserCardNotes { get; }

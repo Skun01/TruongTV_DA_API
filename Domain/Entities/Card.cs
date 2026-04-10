@@ -17,8 +17,10 @@ public class Card : BaseEntity
     public string CreatedBy { get; set; }
     public User Creator { get; set; } = null!;
     
-    // Navigation
-    public VocabularyDetail? VocabularyDetail { get; set; }
-    public ICollection<CardSentence> CardSentences { get; set; } = new List<CardSentence>();
-    public ICollection<UserCardNote> UserCardNotes { get; set; } = new List<UserCardNote>();
+     // Navigation
+     public VocabularyDetail? VocabularyDetail { get; set; }
+     public GrammarDetail? GrammarDetail { get; set; }
+     public ICollection<CardSentence> CardSentences { get; set; } = new List<CardSentence>();
+     public ICollection<UserCardNote> UserCardNotes { get; set; } = new List<UserCardNote>();
+     public ICollection<GrammarResource> GrammarResources { get; set; } = new List<GrammarResource>();
 }

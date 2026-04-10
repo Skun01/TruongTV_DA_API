@@ -22,6 +22,15 @@ public class CardRepository : Repository<Card>, ICardRepository
             .FirstOrDefaultAsync(c => c.Id == cardId);
     }
 
+    public async Task<Card?> GetGrammarDetailByIdAsync(string cardId)
+    {
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.GrammarDetail)
+            .Include(c => c.GrammarResources)
+            .FirstOrDefaultAsync(c => c.Id == cardId);
+    }
+
     public async Task<(List<Card> Items, int Total)> SearchVocabularyAsync(
         string? query,
         JlptLevel? level,
@@ -128,6 +137,70 @@ public class CardRepository : Repository<Card>, ICardRepository
         return await cardsQuery
             .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<(List<Card> Items, int Total)> SearchGrammarAsync(
+        string? query,
+        JlptLevel? level,
+        PublishStatus? status,
+        RegisterType? register,
+        string? createdBy,
+        int page,
+        int pageSize)
+    {
+        var cardsQuery = _context.Cards
+            .AsNoTracking()
+            .Include(c => c.GrammarDetail)
+            .Where(c => c.CardType == CardType.Grammar);
+
+        if (level.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Level == level.Value);
+
+        if (status.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Status == status.Value);
+
+        if (register.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.GrammarDetail != null && c.GrammarDetail.Register == register.Value);
+
+        if (!string.IsNullOrWhiteSpace(createdBy))
+            cardsQuery = cardsQuery.Where(c => c.CreatedBy == createdBy);
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            var totalWithoutQuery = await cardsQuery.CountAsync();
+
+            var pagedWithoutQuery = await cardsQuery
+                .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (pagedWithoutQuery, totalWithoutQuery);
+        }
+
+        var normalizedQuery = query.Trim();
+        var allItems = await cardsQuery
+            .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+            .ToListAsync();
+
+        var filtered = allItems
+            .Where(c =>
+                c.Title.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase)
+                || c.Summary.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase)
+                || (c.GrammarDetail != null
+                    && (
+                        c.GrammarDetail.AlternateForms.Any(form => form.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase))
+                        || c.GrammarDetail.Structures.Any(s => s.Pattern.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase))
+                    )))
+            .ToList();
+
+        var total = filtered.Count;
+        var items = filtered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return (items, total);
     }
 
     public async Task<bool> ExistsVocabularyByWritingAsync(string writing)
