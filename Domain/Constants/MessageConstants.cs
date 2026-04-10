@@ -25,6 +25,8 @@ public static class MessageConstants
     {
         public const string NOT_FOUND = "Sentence_NotFound_404";
         public const string AUDIO_SYNTHESIS_FAILED = "Sentence_AudioSynthesisFailed_500";
+        public const string IMPORT_INVALID_PAYLOAD = "Sentence_ImportInvalidPayload_400";
+        public const string IMPORT_BATCH_HAS_ERRORS = "Sentence_ImportBatchHasErrors_400";
     }
 
     public static class AuthMessage

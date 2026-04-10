@@ -134,6 +134,10 @@ Response data:
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/sentences` | Editor/Admin | Tìm kiếm sentence có phân trang |
+| GET | `/api/sentences/import-template` | Editor/Admin | Tải JSON template cho import sentences |
+| GET | `/api/sentences/export` | Editor/Admin | Tải JSON export sentences theo bộ lọc |
+| POST | `/api/sentences/import/preview` | Editor/Admin | Preview file import sentences, chưa ghi DB |
+| POST | `/api/sentences/import/commit` | Editor/Admin | Commit batch import sentences |
 | GET | `/api/sentences/{id}` | Editor/Admin | Lấy chi tiết sentence |
 | POST | `/api/sentences` | Editor/Admin | Tạo sentence mới |
 | PATCH | `/api/sentences/{id}` | Editor/Admin | Cập nhật sentence |
@@ -168,6 +172,140 @@ Response data:
   "audioUrl": "string | null",
   "speakerId": 3,
   "level": "N5 | N4 | N3 | N2 | N1 | null"
+}
+```
+
+### Sentences import/export note
+
+- Sentence import/export dùng JSON file tương tự vocabulary nhưng đơn giản hơn.
+- Import sentence hiện tại là **create-only**.
+- Backend không nhận `audioUrl`; khi commit import, backend sẽ tự synth audio bằng VOICEVOX từ `text` và `speakerId`.
+- Export sentence trả về đúng shape import để frontend có thể chỉnh sửa rồi import tạo mới hàng loạt.
+
+### GET `/api/sentences/import-template`
+
+Trả về file `application/json` theo đúng shape import sentence.
+
+Response file body:
+
+```json
+{
+  "items": [
+    {
+      "rowNumber": 1,
+      "text": "日本へ行きたいです。",
+      "meaning": "Tôi muốn đi Nhật.",
+      "speakerId": 3,
+      "level": "N5"
+    }
+  ]
+}
+```
+
+### GET `/api/sentences/export`
+
+Tải file `application/json` cùng shape với payload import, để có thể chỉnh sửa và import tạo mới hàng loạt.
+
+Query params hỗ trợ:
+
+- `q`
+- `level`
+- `hasAudio`
+- `createdByMe`
+
+Response file body:
+
+```json
+{
+  "items": [
+    {
+      "rowNumber": null,
+      "text": "日本へ行きたいです。",
+      "meaning": "Tôi muốn đi Nhật.",
+      "speakerId": 3,
+      "level": "N5"
+    }
+  ]
+}
+```
+
+### POST `/api/sentences/import/preview`
+
+Preview payload import, validate theo từng item và trả về danh sách lỗi/cảnh báo, chưa ghi DB.
+
+Request body:
+
+```json
+{
+  "items": [
+    {
+      "rowNumber": 1,
+      "text": "日本へ行きたいです。",
+      "meaning": "Tôi muốn đi Nhật.",
+      "speakerId": 3,
+      "level": "N5"
+    }
+  ]
+}
+```
+
+Response data:
+
+```json
+{
+  "totalItems": 1,
+  "validItems": 1,
+  "invalidItems": 0,
+  "items": [
+    {
+      "rowNumber": 1,
+      "text": "日本へ行きたいです。",
+      "isValid": true,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}
+```
+
+### POST `/api/sentences/import/commit`
+
+Commit batch import sau khi payload đã hợp lệ. Endpoint này sẽ:
+
+- chạy `preview` nội bộ trước
+- nếu còn item invalid thì không ghi DB
+- nếu hợp lệ thì xử lý tuần tự từng item
+- mỗi item hợp lệ sẽ tạo sentence mới
+- mỗi sentence mới sẽ được generate audio bằng VOICEVOX như `POST /api/sentences`
+
+Request body cùng shape với `import/preview`.
+
+Response data:
+
+```json
+{
+  "totalItems": 2,
+  "successfulItems": 2,
+  "failedItems": 0,
+  "hasValidationErrors": false,
+  "items": [
+    {
+      "rowNumber": 1,
+      "text": "日本へ行きたいです。",
+      "isSuccess": true,
+      "action": "created",
+      "sentenceId": "new-sentence-id-1",
+      "errors": []
+    },
+    {
+      "rowNumber": 2,
+      "text": "毎日日本語を勉強します。",
+      "isSuccess": true,
+      "action": "created",
+      "sentenceId": "new-sentence-id-2",
+      "errors": []
+    }
+  ]
 }
 ```
 

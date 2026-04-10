@@ -4,6 +4,9 @@ using Application.IServices;
 using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace API.Controllers;
 
@@ -28,6 +31,36 @@ public class SentencesController : BaseController
         var userId = GetCurrentUserId();
         var (items, meta) = await _sentenceService.SearchAsync(query, userId);
         return ApiResponse<List<SentenceResponse>>.SuccessResponse(items, meta);
+    }
+
+    [HttpGet("import-template")]
+    public async Task<IActionResult> DownloadImportTemplate()
+    {
+        var result = await _sentenceService.GetImportTemplateAsync();
+        return CreateJsonFileResult(result, "sentence-import-template.json");
+    }
+
+    [HttpGet("export")]
+    public async Task<IActionResult> Export([FromQuery] SentenceExportQuery query)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _sentenceService.ExportAsync(query, userId);
+        return CreateJsonFileResult(result, $"sentence-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+    }
+
+    [HttpPost("import/preview")]
+    public async Task<ApiResponse<SentenceImportPreviewResponse>> PreviewImport([FromBody] ImportSentenceRequest request)
+    {
+        var result = await _sentenceService.PreviewImportAsync(request);
+        return ApiResponse<SentenceImportPreviewResponse>.SuccessResponse(result);
+    }
+
+    [HttpPost("import/commit")]
+    public async Task<ApiResponse<SentenceImportCommitResponse>> CommitImport([FromBody] ImportSentenceRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _sentenceService.CommitImportAsync(request, userId);
+        return ApiResponse<SentenceImportCommitResponse>.SuccessResponse(result);
     }
 
     /// <summary>
@@ -69,5 +102,19 @@ public class SentencesController : BaseController
     {
         var deleted = await _sentenceService.DeleteAsync(id);
         return ApiResponse<bool>.SuccessResponse(deleted);
+    }
+
+    private static FileContentResult CreateJsonFileResult<T>(T data, string fileName)
+    {
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        });
+
+        return new FileContentResult(Encoding.UTF8.GetBytes(json), "application/json")
+        {
+            FileDownloadName = fileName,
+        };
     }
 }
