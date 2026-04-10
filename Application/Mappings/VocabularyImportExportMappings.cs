@@ -12,8 +12,6 @@ public static class VocabularyImportExportMappings
 
         return new ImportVocabularyItemRequest
         {
-            Mode = "upsert",
-            ExistingCardId = card.Id,
             Title = card.Title,
             Summary = card.Summary,
             Level = card.Level?.ToString(),
@@ -38,7 +36,6 @@ public static class VocabularyImportExportMappings
                 .Where(cs => cs.Sentence != null)
                 .Select(cs => new VocabularySentenceUpsertRequest
                 {
-                    Id = cs.Sentence!.Id,
                     Text = cs.Sentence.Text,
                     Meaning = cs.Sentence.Meaning,
                     SpeakerId = cs.Sentence.SpeakerId,
@@ -75,7 +72,6 @@ public static class VocabularyImportExportMappings
             Sentences = (item.Sentences ?? new List<VocabularySentenceUpsertRequest>())
                 .Select(sentence => new VocabularySentenceUpsertRequest
                 {
-                    Id = sentence.Id,
                     Text = sentence.Text,
                     Meaning = sentence.Meaning,
                     SpeakerId = sentence.SpeakerId,
@@ -85,40 +81,4 @@ public static class VocabularyImportExportMappings
         };
     }
 
-    public static UpdateVocabularyCardRequest ToUpdateRequest(this ImportVocabularyItemRequest item)
-    {
-        return new UpdateVocabularyCardRequest
-        {
-            Title = item.Title,
-            Summary = item.Summary,
-            Level = item.Level,
-            Tags = item.Tags?.ToList() ?? new List<string>(),
-            Status = item.Status,
-            Writing = item.Writing,
-            Reading = item.Reading,
-            PitchPattern = item.PitchPattern?.ToList(),
-            SpeakerId = item.SpeakerId,
-            WordType = item.WordType,
-            Meanings = (item.Meanings ?? new List<VocabularyMeaningRequest>())
-                .Select(meaning => new VocabularyMeaningRequest
-                {
-                    PartOfSpeech = meaning.PartOfSpeech,
-                    Definitions = meaning.Definitions?.ToList() ?? new List<string>(),
-                })
-                .ToList(),
-            Synonyms = item.Synonyms?.ToList() ?? new List<string>(),
-            Antonyms = item.Antonyms?.ToList() ?? new List<string>(),
-            RelatedPhrases = item.RelatedPhrases?.ToList() ?? new List<string>(),
-            Sentences = (item.Sentences ?? new List<VocabularySentenceUpsertRequest>())
-                .Select(sentence => new VocabularySentenceUpsertRequest
-                {
-                    Id = sentence.Id,
-                    Text = sentence.Text,
-                    Meaning = sentence.Meaning,
-                    SpeakerId = sentence.SpeakerId,
-                    Level = sentence.Level,
-                })
-                .ToList(),
-        };
-    }
 }

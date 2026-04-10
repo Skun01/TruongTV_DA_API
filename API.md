@@ -233,6 +233,17 @@ Response file body:
 
 Preview payload import, validate theo từng item và trả về danh sách lỗi/cảnh báo, chưa ghi DB.
 
+Với lỗi field-level, backend trả theo format:
+
+- `<MessageCode>:<fieldPath>`
+
+Ví dụ:
+
+- `Sentence_ImportFieldRequired_400:text`
+- `Sentence_ImportFieldTooLong_400:meaning`
+- `Sentence_ImportFieldInvalid_400:level`
+- `Sentence_ImportSpeakerIdNotSupported_400:speakerId`
+
 Request body:
 
 ```json
@@ -262,6 +273,29 @@ Response data:
       "text": "日本へ行きたいです。",
       "isValid": true,
       "errors": [],
+      "warnings": []
+    }
+  ]
+}
+```
+
+Ví dụ response khi payload không hợp lệ:
+
+```json
+{
+  "totalItems": 1,
+  "validItems": 0,
+  "invalidItems": 1,
+  "items": [
+    {
+      "rowNumber": 1,
+      "text": "",
+      "isValid": false,
+      "errors": [
+        "Sentence_ImportFieldRequired_400:text",
+        "Sentence_ImportFieldInvalid_400:level",
+        "Sentence_ImportSpeakerIdNotSupported_400:speakerId"
+      ],
       "warnings": []
     }
   ]
@@ -386,7 +420,7 @@ Response detail vẫn trả `audioUrl`, `speakerId`, `pitchPattern` như trướ
 
 ### GET `/api/vocabulary/import-template`
 
-Trả về file `application/json` theo đúng shape import. File mẫu hiện tại gồm 1 item sample, có thể tải về, sửa dữ liệu rồi gọi preview/import sau.
+Trả về file `application/json` theo đúng shape import create-only. File mẫu hiện tại gồm 1 item sample, có thể tải về, sửa dữ liệu rồi gọi preview/import sau.
 
 Response file body:
 
@@ -395,8 +429,6 @@ Response file body:
   "items": [
     {
       "rowNumber": 1,
-      "mode": "create",
-      "existingCardId": null,
       "title": "食べる",
       "summary": "Động từ ăn",
       "level": "N5",
@@ -418,7 +450,6 @@ Response file body:
       "relatedPhrases": ["ご飯を食べる"],
       "sentences": [
         {
-          "id": null,
           "text": "毎朝パンを食べる。",
           "meaning": "Mỗi sáng tôi ăn bánh mì.",
           "speakerId": 3,
@@ -432,7 +463,7 @@ Response file body:
 
 ### GET `/api/vocabulary/export`
 
-Tải file `application/json` cùng shape với payload import, để có thể round-trip chỉnh sửa và import lại.
+Tải file `application/json` cùng shape với payload import create-only, để frontend có thể chỉnh sửa và import tạo vocabulary mới hàng loạt.
 
 Query params hỗ trợ:
 
@@ -443,11 +474,6 @@ Query params hỗ trợ:
 - `hasAudio`
 - `createdByMe`
 
-Export item có:
-
-- `mode = "upsert"`
-- `existingCardId = <id của vocabulary>`
-
 Response file body:
 
 ```json
@@ -455,8 +481,6 @@ Response file body:
   "items": [
     {
       "rowNumber": null,
-      "mode": "upsert",
-      "existingCardId": "ebc8715e-0ea7-40cf-9930-093d4b74afee",
       "title": "断る",
       "summary": "động từ từ chối",
       "level": "N5",
@@ -486,6 +510,28 @@ Response file body:
 
 Preview payload import, validate theo từng item và trả về danh sách lỗi/cảnh báo, chưa ghi DB.
 
+Ngoài validation field thông thường, backend còn kiểm tra:
+
+- `writing` không được trùng trong chính batch import
+- `writing` không được trùng với vocabulary đã có trong database
+- `sentences[*].id` không được gửi trong vocabulary import vì import này là create-only
+
+Các message code quan trọng frontend nên bắt:
+
+- `Vocabulary_ImportDuplicateWritingInBatch_400`
+- `Vocabulary_ImportWritingAlreadyExists_400`
+
+Với lỗi field-level còn lại, backend trả theo format:
+
+- `<MessageCode>:<fieldPath>`
+
+Ví dụ:
+
+- `Vocabulary_ImportFieldRequired_400:title`
+- `Vocabulary_ImportFieldTooLong_400:summary`
+- `Vocabulary_ImportFieldInvalid_400:meanings[0].partOfSpeech`
+- `Vocabulary_ImportSentenceIdNotAllowed_400:sentences[0].id`
+
 Request body:
 
 ```json
@@ -493,8 +539,6 @@ Request body:
   "items": [
     {
       "rowNumber": 1,
-      "mode": "create",
-      "existingCardId": null,
       "title": "食べる",
       "summary": "Động từ ăn",
       "level": "N5",
@@ -516,7 +560,6 @@ Request body:
       "relatedPhrases": ["ご飯を食べる"],
       "sentences": [
         {
-          "id": null,
           "text": "毎朝パンを食べる。",
           "meaning": "Mỗi sáng tôi ăn bánh mì.",
           "speakerId": 3,
@@ -538,12 +581,33 @@ Response data:
   "items": [
     {
       "rowNumber": 1,
-      "mode": "create",
-      "existingCardId": null,
       "title": "食べる",
       "writing": "食べる",
       "isValid": true,
       "errors": [],
+      "warnings": []
+    }
+  ]
+}
+```
+
+Ví dụ response khi payload không hợp lệ:
+
+```json
+{
+  "totalItems": 1,
+  "validItems": 0,
+  "invalidItems": 1,
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "食べる",
+      "writing": "食べる",
+      "isValid": false,
+      "errors": [
+        "Vocabulary_ImportWritingAlreadyExists_400",
+        "Vocabulary_ImportSentenceIdNotAllowed_400:sentences[0].id"
+      ],
       "warnings": []
     }
   ]
@@ -557,8 +621,7 @@ Commit batch import sau khi payload đã hợp lệ. Endpoint này sẽ:
 - chạy `preview` nội bộ trước
 - nếu còn item invalid thì không ghi DB
 - nếu hợp lệ thì xử lý tuần tự từng item
-- `mode = create` sẽ tạo card mới
-- `mode = upsert` sẽ update theo `existingCardId`
+- mỗi item hợp lệ sẽ tạo vocabulary card mới
 
 Request body cùng shape với `import/preview`.
 
@@ -573,24 +636,11 @@ Response data:
   "items": [
     {
       "rowNumber": 1,
-      "mode": "create",
-      "existingCardId": null,
       "title": "食べる",
       "writing": "食べる",
       "isSuccess": true,
       "action": "created",
       "cardId": "new-card-id",
-      "errors": []
-    },
-    {
-      "rowNumber": 2,
-      "mode": "upsert",
-      "existingCardId": "existing-card-id",
-      "title": "断る",
-      "writing": "断る",
-      "isSuccess": true,
-      "action": "updated",
-      "cardId": "existing-card-id",
       "errors": []
     }
   ]

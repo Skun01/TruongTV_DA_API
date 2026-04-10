@@ -10,12 +10,5 @@ public class ImportVocabularyItemRequestValidator : AbstractValidator<ImportVoca
         RuleFor(x => x.RowNumber)
             .GreaterThan(0)
             .When(x => x.RowNumber.HasValue);
-
-        RuleFor(x => x.Mode)
-            .MaximumLength(20);
-
-        RuleFor(x => x.ExistingCardId)
-            .MaximumLength(100)
-            .When(x => !string.IsNullOrWhiteSpace(x.ExistingCardId));
     }
 }

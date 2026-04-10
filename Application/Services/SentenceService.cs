@@ -1,13 +1,13 @@
 using Application.Common;
-using Application.Helper;
-using Application.Mappings;
 using Application.DTOs.Sentences;
+using Application.Helper;
 using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
+using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
-using Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
@@ -15,36 +15,23 @@ public class SentenceService : ISentenceService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVoicevoxService _voicevoxService;
+    private readonly ILogger<SentenceService> _logger;
 
-    public SentenceService(IUnitOfWork unitOfWork, IVoicevoxService voicevoxService)
+    public SentenceService(IUnitOfWork unitOfWork, IVoicevoxService voicevoxService, ILogger<SentenceService> logger)
     {
         _unitOfWork = unitOfWork;
         _voicevoxService = voicevoxService;
+        _logger = logger;
     }
 
     public Task<ImportSentenceRequest> GetImportTemplateAsync()
     {
-        var template = new ImportSentenceRequest
-        {
-            Items = new List<ImportSentenceItemRequest>
-            {
-                new()
-                {
-                    RowNumber = 1,
-                    Text = "日本へ行きたいです。",
-                    Meaning = "Tôi muốn đi Nhật.",
-                    SpeakerId = 3,
-                    Level = "N5",
-                },
-            },
-        };
-
-        return Task.FromResult(template);
+        return Task.FromResult(SentenceImportHelper.CreateTemplate());
     }
 
     public async Task<ImportSentenceRequest> ExportAsync(SentenceExportQuery query, string currentUserId)
     {
-        var levelEnum = EnumParsingHelper.ParseNullable<JlptLevel>(query.Level);
+        var levelEnum = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(query.Level);
         var createdBy = query.CreatedByMe ? currentUserId : null;
 
         var (items, _) = await _unitOfWork.Sentences.SearchAsync(
@@ -77,7 +64,7 @@ public class SentenceService : ISentenceService
                 Text = item.Text?.Trim() ?? string.Empty,
             };
 
-            ValidateImportItem(item, previewItem);
+            SentenceImportHelper.ValidateImportItem(item, previewItem);
             previewItem.IsValid = previewItem.Errors.Count == 0;
             previewItems.Add(previewItem);
         }
@@ -95,7 +82,7 @@ public class SentenceService : ISentenceService
     {
         var preview = await PreviewImportAsync(request);
         if (preview.InvalidItems > 0)
-            return BuildBlockedCommitResponse(preview);
+            return SentenceImportHelper.BuildBlockedCommitResponse(preview);
 
         var commitItems = new List<SentenceImportCommitItemResponse>();
 
@@ -122,10 +109,20 @@ public class SentenceService : ISentenceService
             catch (ApplicationException ex)
             {
                 commitItem.Errors.Add(ex.Message);
+                _logger.LogError(
+                    ex,
+                    "Sentence import failed with application error at row {RowNumber}. Text: {Text}",
+                    commitItem.RowNumber,
+                    commitItem.Text);
             }
-            catch
+            catch (Exception ex)
             {
                 commitItem.Errors.Add(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+                _logger.LogError(
+                    ex,
+                    "Sentence import failed with unexpected error at row {RowNumber}. Text: {Text}",
+                    commitItem.RowNumber,
+                    commitItem.Text);
             }
 
             commitItems.Add(commitItem);
@@ -144,8 +141,7 @@ public class SentenceService : ISentenceService
     public async Task<SentenceResponse> CreateAsync(CreateSentenceRequest request, string currentUserId)
     {
         var text = request.Text.Trim();
-        var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
 
         var sentence = new Sentence
         {
@@ -206,8 +202,7 @@ public class SentenceService : ISentenceService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         var text = request.Text.Trim();
-        var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
 
         sentence.Text = text;
         sentence.Meaning = request.Meaning.Trim();
@@ -232,77 +227,5 @@ public class SentenceService : ISentenceService
         await _unitOfWork.SaveChangesAsync();
 
         return true;
-    }
-
-    private static SentenceImportCommitResponse BuildBlockedCommitResponse(SentenceImportPreviewResponse preview)
-    {
-        var items = preview.Items.Select(item => new SentenceImportCommitItemResponse
-        {
-            RowNumber = item.RowNumber,
-            Text = item.Text,
-            IsSuccess = false,
-            Action = "skipped",
-            Errors = item.IsValid
-                ? new List<string> { MessageConstants.SentenceMessage.IMPORT_BATCH_HAS_ERRORS }
-                : item.Errors.ToList(),
-        }).ToList();
-
-        return new SentenceImportCommitResponse
-        {
-            TotalItems = preview.TotalItems,
-            SuccessfulItems = 0,
-            FailedItems = items.Count,
-            HasValidationErrors = true,
-            Items = items,
-        };
-    }
-
-    private static void ValidateImportItem(
-        ImportSentenceItemRequest item,
-        SentenceImportPreviewItemResponse previewItem)
-    {
-        if (previewItem.RowNumber <= 0)
-            previewItem.Errors.Add("rowNumber must be greater than 0.");
-
-        ValidateRequiredText(item.Text, "text", 500, previewItem.Errors);
-        ValidateRequiredText(item.Meaning, "meaning", 500, previewItem.Errors);
-        ValidateOptionalText(item.Level, "level", 10, previewItem.Errors);
-        ValidateOptionalEnum<JlptLevel>(item.Level, "level", previewItem.Errors);
-
-        if (item.SpeakerId.HasValue && item.SpeakerId.Value <= 0)
-            previewItem.Errors.Add("speakerId must be greater than 0.");
-    }
-
-    private static void ValidateRequiredText(string? value, string fieldName, int maxLength, List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errors.Add($"{fieldName} is required.");
-            return;
-        }
-
-        if (value.Trim().Length > maxLength)
-            errors.Add($"{fieldName} must not exceed {maxLength} characters.");
-    }
-
-    private static void ValidateOptionalText(string? value, string fieldName, int maxLength, List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return;
-
-        if (value.Trim().Length > maxLength)
-            errors.Add($"{fieldName} must not exceed {maxLength} characters.");
-    }
-
-    private static void ValidateOptionalEnum<TEnum>(
-        string? value,
-        string fieldName,
-        List<string> errors) where TEnum : struct, Enum
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return;
-
-        if (!Enum.TryParse<TEnum>(value.Trim(), true, out _))
-            errors.Add($"{fieldName} is invalid.");
     }
 }

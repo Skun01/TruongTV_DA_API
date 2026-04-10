@@ -130,6 +130,19 @@ public class CardRepository : Repository<Card>, ICardRepository
             .ToListAsync();
     }
 
+    public async Task<bool> ExistsVocabularyByWritingAsync(string writing)
+    {
+        var normalizedWriting = writing.Trim();
+
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .AnyAsync(c =>
+                c.CardType == CardType.Vocab
+                && c.VocabularyDetail != null
+                && c.VocabularyDetail.Writing == normalizedWriting);
+    }
+
     public async Task<(List<Card> Items, int Total)> SearchCardsAsync(
         CardType? cardType,
         string? query,

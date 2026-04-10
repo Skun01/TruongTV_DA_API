@@ -3,8 +3,6 @@ namespace Application.DTOs.Vocabulary;
 public class ImportVocabularyItemRequest
 {
     public int? RowNumber { get; set; }
-    public string? Mode { get; set; } = "create";
-    public string? ExistingCardId { get; set; }
 
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;

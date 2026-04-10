@@ -24,6 +24,8 @@ public interface ICardRepository : IRepository<Card>
 		bool? hasAudio,
 		string? createdBy);
 
+	Task<bool> ExistsVocabularyByWritingAsync(string writing);
+
 	Task<(List<Card> Items, int Total)> SearchCardsAsync(
 		CardType? cardType,
 		string? query,

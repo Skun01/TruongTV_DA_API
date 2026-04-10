@@ -19,6 +19,19 @@ public static class MessageConstants
         public const string IMPORT_INVALID_PAYLOAD = "Vocabulary_ImportInvalidPayload_400";
         public const string IMPORT_EXISTING_CARD_NOT_FOUND = "Vocabulary_ImportExistingCardNotFound_404";
         public const string IMPORT_BATCH_HAS_ERRORS = "Vocabulary_ImportBatchHasErrors_400";
+        public const string IMPORT_DUPLICATE_WRITING_IN_BATCH = "Vocabulary_ImportDuplicateWritingInBatch_400";
+        public const string IMPORT_WRITING_ALREADY_EXISTS = "Vocabulary_ImportWritingAlreadyExists_400";
+        public const string IMPORT_ROW_NUMBER_INVALID = "Vocabulary_ImportRowNumberInvalid_400";
+        public const string IMPORT_FIELD_REQUIRED = "Vocabulary_ImportFieldRequired_400";
+        public const string IMPORT_FIELD_TOO_LONG = "Vocabulary_ImportFieldTooLong_400";
+        public const string IMPORT_FIELD_INVALID = "Vocabulary_ImportFieldInvalid_400";
+        public const string IMPORT_SPEAKER_ID_INVALID = "Vocabulary_ImportSpeakerIdInvalid_400";
+        public const string IMPORT_SPEAKER_ID_NOT_SUPPORTED = "Vocabulary_ImportSpeakerIdNotSupported_400";
+        public const string IMPORT_LIST_TOO_MANY_ITEMS = "Vocabulary_ImportListTooManyItems_400";
+        public const string IMPORT_MEANINGS_REQUIRED = "Vocabulary_ImportMeaningsRequired_400";
+        public const string IMPORT_DEFINITIONS_REQUIRED = "Vocabulary_ImportDefinitionsRequired_400";
+        public const string IMPORT_SENTENCES_TOO_MANY = "Vocabulary_ImportSentencesTooMany_400";
+        public const string IMPORT_SENTENCE_ID_NOT_ALLOWED = "Vocabulary_ImportSentenceIdNotAllowed_400";
     }
 
     public static class SentenceMessage
@@ -27,6 +40,12 @@ public static class MessageConstants
         public const string AUDIO_SYNTHESIS_FAILED = "Sentence_AudioSynthesisFailed_500";
         public const string IMPORT_INVALID_PAYLOAD = "Sentence_ImportInvalidPayload_400";
         public const string IMPORT_BATCH_HAS_ERRORS = "Sentence_ImportBatchHasErrors_400";
+        public const string IMPORT_ROW_NUMBER_INVALID = "Sentence_ImportRowNumberInvalid_400";
+        public const string IMPORT_FIELD_REQUIRED = "Sentence_ImportFieldRequired_400";
+        public const string IMPORT_FIELD_TOO_LONG = "Sentence_ImportFieldTooLong_400";
+        public const string IMPORT_FIELD_INVALID = "Sentence_ImportFieldInvalid_400";
+        public const string IMPORT_SPEAKER_ID_INVALID = "Sentence_ImportSpeakerIdInvalid_400";
+        public const string IMPORT_SPEAKER_ID_NOT_SUPPORTED = "Sentence_ImportSpeakerIdNotSupported_400";
     }
 
     public static class AuthMessage

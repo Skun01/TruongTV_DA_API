@@ -9,6 +9,7 @@ using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
@@ -16,11 +17,16 @@ public class VocabularyDetailService : IVocabularyDetailService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVoicevoxService _voicevoxService;
+    private readonly ILogger<VocabularyDetailService> _logger;
 
-    public VocabularyDetailService(IUnitOfWork unitOfWork, IVoicevoxService voicevoxService)
+    public VocabularyDetailService(
+        IUnitOfWork unitOfWork,
+        IVoicevoxService voicevoxService,
+        ILogger<VocabularyDetailService> logger)
     {
         _unitOfWork = unitOfWork;
         _voicevoxService = voicevoxService;
+        _logger = logger;
     }
 
     public async Task<VocabularyDetailResponse> GetDetailAsync(string cardId, string? currentUserId)
@@ -32,7 +38,6 @@ public class VocabularyDetailService : IVocabularyDetailService
         EnsureCardReadable(card, currentUserId);
 
         var notes = await _unitOfWork.UserCardNotes.GetByCardIdWithRelationsAsync(cardId);
-
         return card.ToDetailResponse(notes, currentUserId);
     }
 
@@ -69,50 +74,7 @@ public class VocabularyDetailService : IVocabularyDetailService
 
     public Task<ImportVocabularyRequest> GetImportTemplateAsync()
     {
-        var template = new ImportVocabularyRequest
-        {
-            Items = new List<ImportVocabularyItemRequest>
-            {
-                new()
-                {
-                    RowNumber = 1,
-                    Mode = "create",
-                    Title = "食べる",
-                    Summary = "Động từ ăn",
-                    Level = "N5",
-                    Tags = new List<string> { "verb", "daily-life" },
-                    Status = "Draft",
-                    Writing = "食べる",
-                    Reading = "たべる",
-                    PitchPattern = new List<int> { 0, 1, 0 },
-                    SpeakerId = 3,
-                    WordType = "Native",
-                    Meanings = new List<VocabularyMeaningRequest>
-                    {
-                        new()
-                        {
-                            PartOfSpeech = "VerbRu",
-                            Definitions = new List<string> { "ăn", "dùng bữa" },
-                        },
-                    },
-                    Synonyms = new List<string> { "食事する" },
-                    Antonyms = new List<string>(),
-                    RelatedPhrases = new List<string> { "ご飯を食べる" },
-                    Sentences = new List<VocabularySentenceUpsertRequest>
-                    {
-                        new()
-                        {
-                            Text = "毎朝パンを食べる。",
-                            Meaning = "Mỗi sáng tôi ăn bánh mì.",
-                            SpeakerId = 3,
-                            Level = "N5",
-                        },
-                    },
-                },
-            },
-        };
-
-        return Task.FromResult(template);
+        return Task.FromResult(VocabularyImportHelper.CreateTemplate());
     }
 
     public async Task<ImportVocabularyRequest> ExportAsync(VocabularyExportQuery query, string currentUserId)
@@ -142,6 +104,7 @@ public class VocabularyDetailService : IVocabularyDetailService
             throw new AppException(MessageConstants.VocabularyMessage.IMPORT_INVALID_PAYLOAD, 400);
 
         var previewItems = new List<VocabularyImportPreviewItemResponse>();
+        var batchWritingSet = new HashSet<string>(StringComparer.Ordinal);
 
         for (var index = 0; index < request.Items.Count; index++)
         {
@@ -149,15 +112,12 @@ public class VocabularyDetailService : IVocabularyDetailService
             var previewItem = new VocabularyImportPreviewItemResponse
             {
                 RowNumber = item.RowNumber.GetValueOrDefault(index + 1),
-                Mode = NormalizeMode(item.Mode),
-                ExistingCardId = StringHelper.NormalizeOptional(item.ExistingCardId),
                 Title = item.Title?.Trim() ?? string.Empty,
                 Writing = item.Writing?.Trim() ?? string.Empty,
             };
 
-            await ValidateImportItemAsync(item, previewItem);
+            await VocabularyImportHelper.ValidateImportItemAsync(_unitOfWork, item, previewItem, batchWritingSet);
             previewItem.IsValid = previewItem.Errors.Count == 0;
-
             previewItems.Add(previewItem);
         }
 
@@ -174,38 +134,24 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         var preview = await PreviewImportAsync(request);
         if (preview.InvalidItems > 0)
-            return BuildBlockedCommitResponse(preview);
+            return VocabularyImportHelper.BuildBlockedCommitResponse(preview);
 
         var commitItems = new List<VocabularyImportCommitItemResponse>();
 
         for (var index = 0; index < request.Items.Count; index++)
         {
             var item = request.Items[index];
-            var mode = NormalizeMode(item.Mode);
-            var existingCardId = StringHelper.NormalizeOptional(item.ExistingCardId);
             var commitItem = new VocabularyImportCommitItemResponse
             {
                 RowNumber = item.RowNumber.GetValueOrDefault(index + 1),
-                Mode = mode,
-                ExistingCardId = existingCardId,
                 Title = item.Title?.Trim() ?? string.Empty,
                 Writing = item.Writing?.Trim() ?? string.Empty,
             };
 
             try
             {
-                VocabularyDetailResponse result;
-
-                if (mode == "upsert")
-                {
-                    result = await UpdateAsync(existingCardId!, item.ToUpdateRequest(), currentUserId);
-                    commitItem.Action = "updated";
-                }
-                else
-                {
-                    result = await CreateAsync(item.ToCreateRequest(), currentUserId);
-                    commitItem.Action = "created";
-                }
+                var result = await CreateAsync(item.ToCreateRequest(), currentUserId);
+                commitItem.Action = "created";
 
                 commitItem.IsSuccess = true;
                 commitItem.CardId = result.Id;
@@ -217,10 +163,20 @@ public class VocabularyDetailService : IVocabularyDetailService
             catch (ApplicationException ex)
             {
                 commitItem.Errors.Add(ex.Message);
+                _logger.LogError(
+                    ex,
+                    "Vocabulary import failed with application error at row {RowNumber}. Writing: {Writing}",
+                    commitItem.RowNumber,
+                    commitItem.Writing);
             }
-            catch
+            catch (Exception ex)
             {
                 commitItem.Errors.Add(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+                _logger.LogError(
+                    ex,
+                    "Vocabulary import failed with unexpected error at row {RowNumber}. Writing: {Writing}",
+                    commitItem.RowNumber,
+                    commitItem.Writing);
             }
 
             commitItems.Add(commitItem);
@@ -242,8 +198,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         var writing = request.Writing.Trim();
         var reading = StringHelper.NormalizeOptional(request.Reading);
         var synthesisText = ResolveVocabularySynthesisText(writing, reading);
-        var synthesisResult = await _voicevoxService.SynthesizeAsync(synthesisText, request.SpeakerId)
-            ?? throw new AppException(MessageConstants.VocabularyMessage.AUDIO_SYNTHESIS_FAILED, 500);
+        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeVocabularyAsync(_voicevoxService, synthesisText, request.SpeakerId);
 
         var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
             ? synthesisResult.PitchPattern
@@ -299,8 +254,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         var writing = request.Writing.Trim();
         var reading = StringHelper.NormalizeOptional(request.Reading);
         var synthesisText = ResolveVocabularySynthesisText(writing, reading);
-        var synthesisResult = await _voicevoxService.SynthesizeAsync(synthesisText, request.SpeakerId)
-            ?? throw new AppException(MessageConstants.VocabularyMessage.AUDIO_SYNTHESIS_FAILED, 500);
+        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeVocabularyAsync(_voicevoxService, synthesisText, request.SpeakerId);
 
         var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
             ? synthesisResult.PitchPattern
@@ -362,204 +316,6 @@ public class VocabularyDetailService : IVocabularyDetailService
         return string.IsNullOrWhiteSpace(reading) ? writing : reading;
     }
 
-    private static VocabularyImportCommitResponse BuildBlockedCommitResponse(VocabularyImportPreviewResponse preview)
-    {
-        var items = preview.Items.Select(item => new VocabularyImportCommitItemResponse
-        {
-            RowNumber = item.RowNumber,
-            Mode = item.Mode,
-            ExistingCardId = item.ExistingCardId,
-            Title = item.Title,
-            Writing = item.Writing,
-            IsSuccess = false,
-            Action = "skipped",
-            Errors = item.IsValid
-                ? new List<string> { MessageConstants.VocabularyMessage.IMPORT_BATCH_HAS_ERRORS }
-                : item.Errors.ToList(),
-        }).ToList();
-
-        return new VocabularyImportCommitResponse
-        {
-            TotalItems = preview.TotalItems,
-            SuccessfulItems = 0,
-            FailedItems = items.Count,
-            HasValidationErrors = true,
-            Items = items,
-        };
-    }
-
-    private async Task ValidateImportItemAsync(
-        ImportVocabularyItemRequest item,
-        VocabularyImportPreviewItemResponse previewItem)
-    {
-        if (previewItem.RowNumber <= 0)
-            previewItem.Errors.Add("rowNumber must be greater than 0.");
-
-        if (previewItem.Mode is not ("create" or "upsert"))
-            previewItem.Errors.Add("mode must be either 'create' or 'upsert'.");
-
-        if (previewItem.Mode == "upsert")
-        {
-            if (string.IsNullOrWhiteSpace(previewItem.ExistingCardId))
-            {
-                previewItem.Errors.Add("existingCardId is required when mode is 'upsert'.");
-            }
-            else
-            {
-                var existingCard = await _unitOfWork.Cards.GetByIdAsync(previewItem.ExistingCardId);
-                if (existingCard == null || existingCard.CardType != CardType.Vocab)
-                    previewItem.Errors.Add("existingCardId does not match an existing vocabulary card.");
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(previewItem.ExistingCardId))
-        {
-            previewItem.Warnings.Add("existingCardId is ignored when mode is 'create'.");
-        }
-
-        ValidateRequiredText(item.Title, "title", 200, previewItem.Errors);
-        ValidateRequiredText(item.Summary, "summary", 2000, previewItem.Errors);
-        ValidateRequiredText(item.Writing, "writing", 200, previewItem.Errors);
-        ValidateOptionalText(item.Reading, "reading", 200, previewItem.Errors);
-        ValidateOptionalText(item.Level, "level", 10, previewItem.Errors);
-        ValidateOptionalText(item.Status, "status", 20, previewItem.Errors);
-        ValidateOptionalText(item.WordType, "wordType", 50, previewItem.Errors);
-
-        ValidateOptionalEnum<JlptLevel>(item.Level, "level", previewItem.Errors);
-        ValidateOptionalEnum<PublishStatus>(item.Status, "status", previewItem.Errors);
-        ValidateOptionalEnum<WordType>(item.WordType, "wordType", previewItem.Errors);
-
-        if (item.SpeakerId.HasValue && item.SpeakerId.Value <= 0)
-            previewItem.Errors.Add("speakerId must be greater than 0.");
-
-        ValidateListItems(item.Tags, "tags", 20, 100, previewItem.Errors);
-        ValidateListItems(item.Synonyms, "synonyms", null, 200, previewItem.Errors);
-        ValidateListItems(item.Antonyms, "antonyms", null, 200, previewItem.Errors);
-        ValidateListItems(item.RelatedPhrases, "relatedPhrases", null, 200, previewItem.Errors);
-
-        ValidateMeanings(item.Meanings, previewItem.Errors);
-        ValidateSentences(item.Sentences, previewItem.Errors);
-    }
-
-    private static void ValidateMeanings(List<VocabularyMeaningRequest>? meanings, List<string> errors)
-    {
-        if (meanings == null || meanings.Count == 0)
-        {
-            errors.Add("meanings must contain at least one item.");
-            return;
-        }
-
-        for (var index = 0; index < meanings.Count; index++)
-        {
-            var meaning = meanings[index];
-            var path = $"meanings[{index}]";
-
-            ValidateRequiredText(meaning.PartOfSpeech, $"{path}.partOfSpeech", 100, errors);
-            ValidateOptionalEnum<PartOfSpeech>(meaning.PartOfSpeech, $"{path}.partOfSpeech", errors, required: true);
-
-            if (meaning.Definitions == null || meaning.Definitions.Count == 0)
-            {
-                errors.Add($"{path}.definitions must contain at least one item.");
-                continue;
-            }
-
-            for (var definitionIndex = 0; definitionIndex < meaning.Definitions.Count; definitionIndex++)
-            {
-                ValidateRequiredText(
-                    meaning.Definitions[definitionIndex],
-                    $"{path}.definitions[{definitionIndex}]",
-                    500,
-                    errors);
-            }
-        }
-    }
-
-    private static void ValidateSentences(List<VocabularySentenceUpsertRequest>? sentences, List<string> errors)
-    {
-        if (sentences == null)
-            return;
-
-        if (sentences.Count > 20)
-            errors.Add("sentences cannot exceed 20 items.");
-
-        for (var index = 0; index < sentences.Count; index++)
-        {
-            var sentence = sentences[index];
-            var path = $"sentences[{index}]";
-
-            ValidateOptionalText(sentence.Id, $"{path}.id", 100, errors);
-            ValidateRequiredText(sentence.Text, $"{path}.text", 500, errors);
-            ValidateRequiredText(sentence.Meaning, $"{path}.meaning", 500, errors);
-            ValidateOptionalText(sentence.Level, $"{path}.level", 10, errors);
-            ValidateOptionalEnum<JlptLevel>(sentence.Level, $"{path}.level", errors);
-
-            if (sentence.SpeakerId.HasValue && sentence.SpeakerId.Value <= 0)
-                errors.Add($"{path}.speakerId must be greater than 0.");
-        }
-    }
-
-    private static void ValidateListItems(
-        List<string>? values,
-        string fieldName,
-        int? maxItems,
-        int maxLength,
-        List<string> errors)
-    {
-        if (values == null)
-            return;
-
-        if (maxItems.HasValue && values.Count > maxItems.Value)
-            errors.Add($"{fieldName} cannot exceed {maxItems.Value} items.");
-
-        for (var index = 0; index < values.Count; index++)
-        {
-            ValidateRequiredText(values[index], $"{fieldName}[{index}]", maxLength, errors);
-        }
-    }
-
-    private static void ValidateRequiredText(string? value, string fieldName, int maxLength, List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errors.Add($"{fieldName} is required.");
-            return;
-        }
-
-        if (value.Trim().Length > maxLength)
-            errors.Add($"{fieldName} must not exceed {maxLength} characters.");
-    }
-
-    private static void ValidateOptionalText(string? value, string fieldName, int maxLength, List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return;
-
-        if (value.Trim().Length > maxLength)
-            errors.Add($"{fieldName} must not exceed {maxLength} characters.");
-    }
-
-    private static void ValidateOptionalEnum<TEnum>(
-        string? value,
-        string fieldName,
-        List<string> errors,
-        bool required = false) where TEnum : struct, Enum
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            if (required)
-                errors.Add($"{fieldName} is required.");
-
-            return;
-        }
-
-        if (!Enum.TryParse<TEnum>(value.Trim(), true, out _))
-            errors.Add($"{fieldName} is invalid.");
-    }
-
-    private static string NormalizeMode(string? mode)
-    {
-        return string.IsNullOrWhiteSpace(mode) ? "create" : mode.Trim().ToLowerInvariant();
-    }
-
     private async Task SyncVocabularySentencesAsync(
         string cardId,
         List<VocabularySentenceUpsertRequest> requests,
@@ -595,8 +351,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         string currentUserId)
     {
         var text = request.Text.Trim();
-        var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
-            ?? throw new AppException(MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED, 500);
+        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
 
         if (string.IsNullOrWhiteSpace(request.Id))
         {
