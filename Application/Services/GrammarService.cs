@@ -7,16 +7,19 @@ using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
 public class GrammarService : IGrammarService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<GrammarService> _logger;
 
-    public GrammarService(IUnitOfWork unitOfWork)
+    public GrammarService(IUnitOfWork unitOfWork, ILogger<GrammarService> logger)
     {
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<GrammarDetailResponse> GetDetailAsync(string cardId, string? currentUserId)
@@ -61,6 +64,134 @@ public class GrammarService : IGrammarService
         };
 
         return (mapped, meta);
+    }
+
+    public Task<ImportGrammarRequest> GetImportTemplateAsync()
+    {
+        return Task.FromResult(GrammarImportHelper.CreateTemplate());
+    }
+
+    public async Task<ImportGrammarRequest> ExportAsync(GrammarExportQuery query, string currentUserId)
+    {
+        var searchQuery = new GrammarSearchQuery
+        {
+            Q = query.Q,
+            Level = query.Level,
+            Status = query.Status,
+            Register = query.Register,
+            CreatedByMe = query.CreatedByMe,
+            Page = 1,
+            PageSize = int.MaxValue,
+        };
+
+        var (items, _) = await SearchAsync(searchQuery, currentUserId);
+        var resultItems = new List<ImportGrammarItemRequest>();
+
+        foreach (var item in items)
+        {
+            var card = await _unitOfWork.Cards.GetGrammarDetailByIdAsync(item.Id);
+            if (card == null || card.GrammarDetail == null || card.CardType != CardType.Grammar)
+                continue;
+
+            var relations = await _unitOfWork.GrammarRelations.GetByGrammarIdAsync(item.Id);
+            var resources = await _unitOfWork.GrammarResources.GetByCardIdAsync(item.Id);
+            resultItems.Add(card.ToImportItem(relations, resources));
+        }
+
+        return new ImportGrammarRequest
+        {
+            Items = resultItems,
+        };
+    }
+
+    public async Task<GrammarImportPreviewResponse> PreviewImportAsync(ImportGrammarRequest request)
+    {
+        if (request.Items == null || request.Items.Count == 0)
+            throw new AppException(MessageConstants.GrammarMessage.IMPORT_INVALID_PAYLOAD, 400);
+
+        var previewItems = new List<GrammarImportPreviewItemResponse>();
+
+        for (var index = 0; index < request.Items.Count; index++)
+        {
+            var item = request.Items[index];
+            var previewItem = new GrammarImportPreviewItemResponse
+            {
+                RowNumber = item.RowNumber.GetValueOrDefault(index + 1),
+                Title = item.Title?.Trim() ?? string.Empty,
+            };
+
+            await GrammarImportHelper.ValidateImportItemAsync(_unitOfWork, item, previewItem);
+            previewItem.IsValid = previewItem.Errors.Count == 0;
+            previewItems.Add(previewItem);
+        }
+
+        return new GrammarImportPreviewResponse
+        {
+            TotalItems = previewItems.Count,
+            ValidItems = previewItems.Count(item => item.IsValid),
+            InvalidItems = previewItems.Count(item => !item.IsValid),
+            Items = previewItems,
+        };
+    }
+
+    public async Task<GrammarImportCommitResponse> CommitImportAsync(ImportGrammarRequest request, string currentUserId)
+    {
+        var preview = await PreviewImportAsync(request);
+        if (preview.InvalidItems > 0)
+            return GrammarImportHelper.BuildBlockedCommitResponse(preview);
+
+        var commitItems = new List<GrammarImportCommitItemResponse>();
+
+        for (var index = 0; index < request.Items.Count; index++)
+        {
+            var item = request.Items[index];
+            var commitItem = new GrammarImportCommitItemResponse
+            {
+                RowNumber = item.RowNumber.GetValueOrDefault(index + 1),
+                Title = item.Title?.Trim() ?? string.Empty,
+            };
+
+            try
+            {
+                var result = await CreateAsync(item.ToCreateRequest(), currentUserId);
+                commitItem.IsSuccess = true;
+                commitItem.Action = "created";
+                commitItem.CardId = result.Id;
+            }
+            catch (AppException ex)
+            {
+                commitItem.Errors.Add(ex.ErrorCode);
+            }
+            catch (ApplicationException ex)
+            {
+                commitItem.Errors.Add(ex.Message);
+                _logger.LogError(
+                    ex,
+                    "Grammar import failed with application error at row {RowNumber}. Title: {Title}",
+                    commitItem.RowNumber,
+                    commitItem.Title);
+            }
+            catch (Exception ex)
+            {
+                commitItem.Errors.Add(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+                _logger.LogError(
+                    ex,
+                    "Grammar import failed with unexpected error at row {RowNumber}. Title: {Title}",
+                    commitItem.RowNumber,
+                    commitItem.Title);
+            }
+
+            commitItems.Add(commitItem);
+        }
+
+        return new GrammarImportCommitResponse
+        {
+            TotalItems = commitItems.Count,
+            SuccessfulItems = commitItems.Count(item => item.IsSuccess),
+            FailedItems = commitItems.Count(item => !item.IsSuccess),
+            HasValidationErrors = false,
+            Items = commitItems,
+        };
     }
 
     public async Task<GrammarDetailResponse> CreateAsync(CreateGrammarCardRequest request, string currentUserId)

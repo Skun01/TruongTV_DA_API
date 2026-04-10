@@ -7,6 +7,59 @@ namespace Application.Mappings;
 
 public static class GrammarMappings
 {
+    public static ImportGrammarItemRequest ToImportItem(
+        this Card card,
+        List<GrammarRelation> relations,
+        List<GrammarResource> resources)
+    {
+        return new ImportGrammarItemRequest
+        {
+            Title = card.Title,
+            Summary = card.Summary,
+            Level = card.Level?.ToString(),
+            Tags = card.Tags,
+            Status = card.Status.ToString(),
+            Structures = card.GrammarDetail?.Structures.Select(s => new GrammarStructureRequest
+            {
+                Pattern = s.Pattern,
+                Annotations = s.Annotations,
+            }).ToList() ?? new List<GrammarStructureRequest>(),
+            Explanation = card.GrammarDetail?.Explanation,
+            Caution = card.GrammarDetail?.Caution,
+            Register = card.GrammarDetail?.Register?.ToString(),
+            AlternateForms = card.GrammarDetail?.AlternateForms ?? new List<string>(),
+            Relations = relations.Select(r => new GrammarRelationUpsertRequest
+            {
+                RelatedId = r.RelatedId,
+                RelationType = r.RelationType.ToString(),
+            }).ToList(),
+            Resources = resources.Select(r => new GrammarResourceUpsertRequest
+            {
+                Title = r.Title,
+                Url = r.Url,
+            }).ToList(),
+        };
+    }
+
+    public static CreateGrammarCardRequest ToCreateRequest(this ImportGrammarItemRequest item)
+    {
+        return new CreateGrammarCardRequest
+        {
+            Title = item.Title,
+            Summary = item.Summary,
+            Level = item.Level,
+            Tags = item.Tags,
+            Status = item.Status,
+            Structures = item.Structures,
+            Explanation = item.Explanation,
+            Caution = item.Caution,
+            Register = item.Register,
+            AlternateForms = item.AlternateForms,
+            Relations = item.Relations,
+            Resources = item.Resources,
+        };
+    }
+
     public static GrammarDetailResponse ToGrammarDetailResponse(
         this Card card,
         List<GrammarRelation> relations,

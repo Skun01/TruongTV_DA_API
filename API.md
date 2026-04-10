@@ -353,6 +353,10 @@ Response data:
 |--------|----------|------|-------------|
 | GET | `/api/grammar` | Editor/Admin | Tìm kiếm grammar có phân trang |
 | GET | `/api/grammar/{cardId}` | Public | Lấy chi tiết grammar |
+| GET | `/api/grammar/import-template` | Editor/Admin | Tải JSON template cho import grammar |
+| GET | `/api/grammar/export` | Editor/Admin | Tải JSON export grammar theo bộ lọc |
+| POST | `/api/grammar/import/preview` | Editor/Admin | Preview payload import grammar, chưa ghi DB |
+| POST | `/api/grammar/import/commit` | Editor/Admin | Commit batch import grammar |
 | POST | `/api/grammar` | Editor/Admin | Tạo grammar mới |
 | PATCH | `/api/grammar/{cardId}` | Editor/Admin | Cập nhật grammar |
 | DELETE | `/api/grammar/{cardId}` | Editor/Admin | Soft delete grammar (Archived) |
@@ -377,6 +381,13 @@ Hỗ trợ các query params:
 - `structures.pattern`
 
 `q` **không** tìm trong `explanation`.
+
+### Import/export note
+
+- Grammar import hiện tại là **create-only**.
+- `import/preview` chỉ validate payload theo item, không ghi DB.
+- `import/commit` luôn chạy preview nội bộ trước; nếu còn item invalid sẽ block commit.
+- `export` trả đúng shape với payload import để frontend có thể chỉnh sửa rồi import lại.
 
 ### Rich text rule (Markdown subset)
 
@@ -407,6 +418,114 @@ Giới hạn độ dài:
 - `structures[].annotations[*]`: tối đa 1000 ký tự/value
 - `explanation`: tối đa 10000 ký tự
 - `caution`: tối đa 5000 ký tự
+
+### GET `/api/grammar/import-template`
+
+Trả về file JSON sample đúng shape import grammar.
+
+### GET `/api/grammar/export`
+
+Query params hỗ trợ:
+
+- `q`
+- `level`
+- `status`
+- `register`
+- `createdByMe`
+
+Response file body cùng shape với import request.
+
+### POST `/api/grammar/import/preview`
+
+Request body:
+
+```json
+{
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "〜ながら",
+      "summary": "Vừa làm A vừa làm B.",
+      "level": "N4",
+      "tags": ["grammar", "simultaneous"],
+      "status": "Draft",
+      "structures": [
+        {
+          "pattern": "V1(1) + ながら + V2(2)",
+          "annotations": {
+            "1": "Hành động phụ diễn ra đồng thời",
+            "2": "Hành động chính"
+          }
+        }
+      ],
+      "explanation": "Dùng khi chủ thể vừa làm A vừa làm B.",
+      "caution": "Hai hành động cần cùng chủ thể.",
+      "register": "Standard",
+      "alternateForms": ["〜つつ"],
+      "relations": [
+        { "relatedId": "grammar-card-001", "relationType": "Similar" }
+      ],
+      "resources": [
+        { "title": "Bài giảng", "url": "https://example.com/grammar/nagara" }
+      ]
+    }
+  ]
+}
+```
+
+Response data:
+
+```json
+{
+  "totalItems": 1,
+  "validItems": 1,
+  "invalidItems": 0,
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "〜ながら",
+      "isValid": true,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}
+```
+
+### POST `/api/grammar/import/commit`
+
+Request body cùng shape với `import/preview`.
+
+Response data:
+
+```json
+{
+  "totalItems": 1,
+  "successfulItems": 1,
+  "failedItems": 0,
+  "hasValidationErrors": false,
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "〜ながら",
+      "isSuccess": true,
+      "action": "created",
+      "cardId": "new-grammar-card-id",
+      "errors": []
+    }
+  ]
+}
+```
+
+Một số message code frontend cần bắt:
+
+- `Grammar_ImportInvalidPayload_400`
+- `Grammar_ImportBatchHasErrors_400`
+- `Grammar_ImportFieldRequired_400:<fieldPath>`
+- `Grammar_ImportFieldTooLong_400:<fieldPath>`
+- `Grammar_ImportFieldInvalid_400:<fieldPath>`
+- `Grammar_ImportRelatedGrammarNotFound_404:<fieldPath>`
+- `Grammar_ImportDuplicateRelation_400:<fieldPath>`
 
 ### Request body (`POST`/`PATCH`)
 

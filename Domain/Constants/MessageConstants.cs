@@ -56,6 +56,15 @@ public static class MessageConstants
         public const string INVALID_RELATION = "Grammar_InvalidRelation_400";
         public const string RELATED_CARD_NOT_FOUND = "Grammar_RelatedCardNotFound_404";
         public const string INVALID_RICH_TEXT = "Grammar_InvalidRichText_400";
+        public const string IMPORT_INVALID_PAYLOAD = "Grammar_ImportInvalidPayload_400";
+        public const string IMPORT_BATCH_HAS_ERRORS = "Grammar_ImportBatchHasErrors_400";
+        public const string IMPORT_ROW_NUMBER_INVALID = "Grammar_ImportRowNumberInvalid_400";
+        public const string IMPORT_FIELD_REQUIRED = "Grammar_ImportFieldRequired_400";
+        public const string IMPORT_FIELD_TOO_LONG = "Grammar_ImportFieldTooLong_400";
+        public const string IMPORT_FIELD_INVALID = "Grammar_ImportFieldInvalid_400";
+        public const string IMPORT_LIST_TOO_MANY_ITEMS = "Grammar_ImportListTooManyItems_400";
+        public const string IMPORT_RELATED_GRAMMAR_NOT_FOUND = "Grammar_ImportRelatedGrammarNotFound_404";
+        public const string IMPORT_DUPLICATE_RELATION = "Grammar_ImportDuplicateRelation_400";
     }
 
     public static class AuthMessage
