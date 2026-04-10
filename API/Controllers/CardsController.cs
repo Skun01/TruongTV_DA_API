@@ -18,6 +18,7 @@ public class CardsController : BaseController
         _cardService = cardService;
     }
 
+    [AllowAnonymous]
     [HttpGet("search")]
     public async Task<ApiResponse<List<CardListItemResponse>>> Search([FromQuery] CardSearchQuery query)
     {

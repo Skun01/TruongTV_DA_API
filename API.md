@@ -883,3 +883,43 @@ Response data:
   ]
 }
 ```
+
+---
+
+## Cards Module
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/cards/search` | No | Search đơn giản cho frontend user, gộp Vocabulary + Grammar |
+
+### GET `/api/cards/search`
+
+API search tổng hợp cho frontend user, tái sử dụng cùng logic search của Vocabulary và Grammar.
+
+Query params hỗ trợ:
+
+- `cardType`: `Vocab` hoặc `Grammar` (bỏ trống để tìm cả 2 loại)
+- `q`
+- `level`
+- `page`
+- `pageSize`
+
+Rule:
+
+- Backend luôn chỉ trả card có `status = Published`.
+- Nếu không truyền `cardType`, kết quả Vocabulary và Grammar được gộp rồi sort theo `updatedAt ?? createdAt` giảm dần.
+
+Response data item:
+
+```json
+{
+  "id": "string",
+  "cardType": "Vocab | Grammar",
+  "title": "string",
+  "summary": "string",
+  "level": "N5 | N4 | N3 | N2 | N1 | null",
+  "alternateForms": ["〜てからです"]
+}
+```
