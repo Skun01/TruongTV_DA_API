@@ -38,6 +38,17 @@ public static class GrammarMappings
                 Title = r.Title,
                 Url = r.Url,
             }).ToList(),
+            Sentences = card.CardSentences
+                .Select(cs => cs.Sentence)
+                .Where(s => s != null)
+                .Select(s => new GrammarSentenceUpsertRequest
+                {
+                    Text = s!.Text,
+                    Meaning = s.Meaning,
+                    SpeakerId = s.SpeakerId,
+                    Level = s.Level?.ToString(),
+                })
+                .ToList(),
         };
     }
 
@@ -57,6 +68,7 @@ public static class GrammarMappings
             AlternateForms = item.AlternateForms,
             Relations = item.Relations,
             Resources = item.Resources,
+            Sentences = item.Sentences,
         };
     }
 
@@ -94,6 +106,18 @@ public static class GrammarMappings
                 Title = r.Title,
                 Url = r.Url,
             }).ToList(),
+            Sentences = card.CardSentences
+                .Select(cs => cs.Sentence)
+                .Where(s => s != null)
+                .Select(s => new GrammarSentenceResponse
+                {
+                    Id = s!.Id,
+                    Text = s.Text,
+                    Meaning = s.Meaning,
+                    AudioUrl = s.AudioUrl,
+                    Level = s.Level?.ToString(),
+                })
+                .ToList(),
             UserNotes = notes.Select(n => n.ToCardNoteResponse(currentUserId ?? string.Empty)).ToList(),
         };
     }

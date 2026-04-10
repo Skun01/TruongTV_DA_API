@@ -21,5 +21,6 @@ public class GrammarDetailResponse
     public List<string> AlternateForms { get; set; } = new();
     public List<GrammarRelationResponse> Relations { get; set; } = new();
     public List<GrammarResourceResponse> Resources { get; set; } = new();
+    public List<GrammarSentenceResponse> Sentences { get; set; } = new();
     public List<CardNoteResponse> UserNotes { get; set; } = new();
 }

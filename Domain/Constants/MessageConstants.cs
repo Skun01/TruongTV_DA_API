@@ -65,6 +65,10 @@ public static class MessageConstants
         public const string IMPORT_LIST_TOO_MANY_ITEMS = "Grammar_ImportListTooManyItems_400";
         public const string IMPORT_RELATED_GRAMMAR_NOT_FOUND = "Grammar_ImportRelatedGrammarNotFound_404";
         public const string IMPORT_DUPLICATE_RELATION = "Grammar_ImportDuplicateRelation_400";
+        public const string IMPORT_SENTENCES_TOO_MANY = "Grammar_ImportSentencesTooMany_400";
+        public const string IMPORT_SENTENCE_ID_NOT_ALLOWED = "Grammar_ImportSentenceIdNotAllowed_400";
+        public const string IMPORT_SPEAKER_ID_INVALID = "Grammar_ImportSpeakerIdInvalid_400";
+        public const string IMPORT_SPEAKER_ID_NOT_SUPPORTED = "Grammar_ImportSpeakerIdNotSupported_400";
     }
 
     public static class AuthMessage

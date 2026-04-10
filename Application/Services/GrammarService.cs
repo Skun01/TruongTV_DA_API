@@ -3,6 +3,7 @@ using Application.DTOs.Grammar;
 using Application.Helper;
 using Application.IRepositories;
 using Application.IServices;
+using Application.IServices.IInternal;
 using Application.Mappings;
 using Domain.Constants;
 using Domain.Entities;
@@ -14,11 +15,16 @@ namespace Application.Services;
 public class GrammarService : IGrammarService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IVoicevoxService _voicevoxService;
     private readonly ILogger<GrammarService> _logger;
 
-    public GrammarService(IUnitOfWork unitOfWork, ILogger<GrammarService> logger)
+    public GrammarService(
+        IUnitOfWork unitOfWork,
+        IVoicevoxService voicevoxService,
+        ILogger<GrammarService> logger)
     {
         _unitOfWork = unitOfWork;
+        _voicevoxService = voicevoxService;
         _logger = logger;
     }
 
@@ -223,6 +229,7 @@ public class GrammarService : IGrammarService
         await SyncResourcesAsync(cardId, request.Resources);
 
         await _unitOfWork.Cards.AddAsync(card);
+        await SyncGrammarSentencesAsync(cardId, request.Sentences, currentUserId);
         await _unitOfWork.SaveChangesAsync();
 
         var created = await _unitOfWork.Cards.GetGrammarDetailByIdAsync(cardId)
@@ -260,6 +267,7 @@ public class GrammarService : IGrammarService
 
         await ValidateAndSyncRelationsAsync(cardId, request.Relations);
         await SyncResourcesAsync(cardId, request.Resources);
+        await SyncGrammarSentencesAsync(cardId, request.Sentences, currentUserId);
 
         _unitOfWork.Cards.UpdateAsync(card);
         _unitOfWork.GrammarDetails.UpdateAsync(detail);
@@ -392,5 +400,74 @@ public class GrammarService : IGrammarService
                 Url = resource.Url.Trim(),
             });
         }
+    }
+
+    private async Task SyncGrammarSentencesAsync(
+        string cardId,
+        List<GrammarSentenceUpsertRequest> requests,
+        string currentUserId)
+    {
+        var existingLinks = await _unitOfWork.CardSentences.GetByCardIdAsync(cardId);
+        var keptSentenceIds = new HashSet<string>();
+
+        foreach (var request in requests)
+        {
+            var sentence = await UpsertGrammarSentenceAsync(request, currentUserId);
+            if (!keptSentenceIds.Add(sentence.Id))
+                continue;
+
+            if (existingLinks.Any(link => link.SentenceId == sentence.Id))
+                continue;
+
+            await _unitOfWork.CardSentences.AddAsync(new CardSentence
+            {
+                CardId = cardId,
+                SentenceId = sentence.Id,
+            });
+        }
+
+        foreach (var link in existingLinks.Where(link => !keptSentenceIds.Contains(link.SentenceId)))
+        {
+            _unitOfWork.CardSentences.DeleteAsync(link);
+        }
+    }
+
+    private async Task<Sentence> UpsertGrammarSentenceAsync(
+        GrammarSentenceUpsertRequest request,
+        string currentUserId)
+    {
+        var text = request.Text.Trim();
+        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
+
+        if (string.IsNullOrWhiteSpace(request.Id))
+        {
+            var sentence = new Sentence
+            {
+                Id = Guid.NewGuid().ToString(),
+                Text = text,
+                Meaning = request.Meaning.Trim(),
+                AudioUrl = synthesisResult.AudioUrl,
+                SpeakerId = synthesisResult.SpeakerId,
+                Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
+                CreatedBy = currentUserId,
+            };
+
+            await _unitOfWork.Sentences.AddAsync(sentence);
+            return sentence;
+        }
+
+        var existingSentence = await _unitOfWork.Sentences.GetByIdAsync(request.Id);
+        if (existingSentence == null)
+            throw new AppException(MessageConstants.SentenceMessage.NOT_FOUND, 404);
+
+        existingSentence.Text = text;
+        existingSentence.Meaning = request.Meaning.Trim();
+        existingSentence.AudioUrl = synthesisResult.AudioUrl;
+        existingSentence.SpeakerId = synthesisResult.SpeakerId;
+        existingSentence.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
+        existingSentence.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Sentences.UpdateAsync(existingSentence);
+        return existingSentence;
     }
 }

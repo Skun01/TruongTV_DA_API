@@ -46,6 +46,16 @@ public static class GrammarImportHelper
                             Url = "https://example.com/grammar/nagara",
                         },
                     },
+                    Sentences = new List<GrammarSentenceUpsertRequest>
+                    {
+                        new()
+                        {
+                            Text = "音楽を聞きながら勉強します。",
+                            Meaning = "Tôi vừa nghe nhạc vừa học.",
+                            SpeakerId = 3,
+                            Level = "N4",
+                        },
+                    },
                 },
             },
         };
@@ -97,6 +107,7 @@ public static class GrammarImportHelper
 
         ValidateStructures(item.Structures, previewItem.Errors);
         ValidateResources(item.Resources, previewItem.Errors);
+        ValidateSentences(item.Sentences, previewItem.Errors);
         await ValidateRelationsAsync(unitOfWork, item.Relations, previewItem.Errors);
     }
 
@@ -144,13 +155,17 @@ public static class GrammarImportHelper
         {
             var relation = relations[i];
             var fieldPath = $"relations[{i}]";
+            var localErrors = new List<string>();
 
-            ValidateRequiredText(relation.RelatedId, $"{fieldPath}.relatedId", 50, errors);
-            ValidateRequiredText(relation.RelationType, $"{fieldPath}.relationType", 50, errors);
-            ValidateOptionalEnum<GrammarRelationType>(relation.RelationType, $"{fieldPath}.relationType", errors, true);
+            ValidateRequiredText(relation.RelatedId, $"{fieldPath}.relatedId", 50, localErrors);
+            ValidateRequiredText(relation.RelationType, $"{fieldPath}.relationType", 50, localErrors);
+            ValidateOptionalEnum<GrammarRelationType>(relation.RelationType, $"{fieldPath}.relationType", localErrors, true);
 
-            if (errors.Count > 0)
+            if (localErrors.Count > 0)
+            {
+                errors.AddRange(localErrors);
                 continue;
+            }
 
             var dedupKey = $"{relation.RelatedId.Trim()}:{relation.RelationType.Trim()}";
             if (!relationSet.Add(dedupKey))
@@ -159,6 +174,35 @@ public static class GrammarImportHelper
             var relatedCard = await unitOfWork.Cards.GetByIdAsync(relation.RelatedId.Trim());
             if (relatedCard == null || relatedCard.CardType != CardType.Grammar)
                 errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_RELATED_GRAMMAR_NOT_FOUND, $"{fieldPath}.relatedId"));
+        }
+    }
+
+    private static void ValidateSentences(List<GrammarSentenceUpsertRequest>? sentences, List<string> errors)
+    {
+        if (sentences == null)
+            return;
+
+        if (sentences.Count > 20)
+            errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SENTENCES_TOO_MANY, "sentences"));
+
+        for (var index = 0; index < sentences.Count; index++)
+        {
+            var sentence = sentences[index];
+            var path = $"sentences[{index}]";
+
+            if (!string.IsNullOrWhiteSpace(sentence.Id))
+                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SENTENCE_ID_NOT_ALLOWED, $"{path}.id"));
+
+            ValidateRequiredText(sentence.Text, $"{path}.text", 500, errors);
+            ValidateRequiredText(sentence.Meaning, $"{path}.meaning", 500, errors);
+            ValidateOptionalText(sentence.Level, $"{path}.level", 10, errors);
+            ValidateOptionalEnum<JlptLevel>(sentence.Level, $"{path}.level", errors);
+
+            if (sentence.SpeakerId.HasValue && sentence.SpeakerId.Value <= 0)
+                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SPEAKER_ID_INVALID, $"{path}.speakerId"));
+
+            if (sentence.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(sentence.SpeakerId.Value))
+                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, $"{path}.speakerId"));
         }
     }
 

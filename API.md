@@ -467,6 +467,14 @@ Request body:
       ],
       "resources": [
         { "title": "Bài giảng", "url": "https://example.com/grammar/nagara" }
+      ],
+      "sentences": [
+        {
+          "text": "音楽を聞きながら勉強します。",
+          "meaning": "Tôi vừa nghe nhạc vừa học.",
+          "speakerId": 3,
+          "level": "N4"
+        }
       ]
     }
   ]
@@ -526,6 +534,7 @@ Một số message code frontend cần bắt:
 - `Grammar_ImportFieldInvalid_400:<fieldPath>`
 - `Grammar_ImportRelatedGrammarNotFound_404:<fieldPath>`
 - `Grammar_ImportDuplicateRelation_400:<fieldPath>`
+- `Grammar_ImportSentenceIdNotAllowed_400:<fieldPath>`
 
 ### Request body (`POST`/`PATCH`)
 
@@ -558,6 +567,15 @@ Một số message code frontend cần bắt:
   ],
   "resources": [
     { "title": "Bài giảng", "url": "https://example.com/te-kara" }
+  ],
+  "sentences": [
+    {
+      "id": "optional-existing-sentence-id",
+      "text": "ご飯を食べてから、勉強します。",
+      "meaning": "Tôi ăn cơm xong rồi học.",
+      "speakerId": 3,
+      "level": "N5"
+    }
   ]
 }
 ```

@@ -17,4 +17,5 @@ public class ImportGrammarItemRequest
     public List<string> AlternateForms { get; set; } = new();
     public List<GrammarRelationUpsertRequest> Relations { get; set; } = new();
     public List<GrammarResourceUpsertRequest> Resources { get; set; } = new();
+    public List<GrammarSentenceUpsertRequest> Sentences { get; set; } = new();
 }

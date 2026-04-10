@@ -346,10 +346,18 @@ public static class AppDbSeeder
                 },
             };
 
+            var grammarCardSentences = new List<CardSentence>
+            {
+                new() { CardId = "grammar-card-001", SentenceId = "sentence-001" },
+                new() { CardId = "grammar-card-001", SentenceId = "sentence-004" },
+                new() { CardId = "grammar-card-003", SentenceId = "sentence-003" },
+            };
+
             await context.Cards.AddRangeAsync(grammarCards, cancellationToken);
             await context.GrammarDetails.AddRangeAsync(grammarDetails, cancellationToken);
             await context.GrammarRelations.AddRangeAsync(grammarRelations, cancellationToken);
             await context.GrammarResources.AddRangeAsync(grammarResources, cancellationToken);
+            await context.CardSentences.AddRangeAsync(grammarCardSentences, cancellationToken);
         }
 
         await context.SaveChangesAsync(cancellationToken);

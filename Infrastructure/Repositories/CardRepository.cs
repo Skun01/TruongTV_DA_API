@@ -28,6 +28,8 @@ public class CardRepository : Repository<Card>, ICardRepository
             .AsNoTracking()
             .Include(c => c.GrammarDetail)
             .Include(c => c.GrammarResources)
+            .Include(c => c.CardSentences)
+                .ThenInclude(cs => cs.Sentence)
             .FirstOrDefaultAsync(c => c.Id == cardId);
     }
 

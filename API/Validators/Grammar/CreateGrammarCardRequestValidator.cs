@@ -76,5 +76,12 @@ public class CreateGrammarCardRequestValidator : AbstractValidator<CreateGrammar
 
         RuleForEach(x => x.Resources)
             .SetValidator(new GrammarResourceUpsertRequestValidator());
+
+        RuleFor(x => x.Sentences)
+            .Must(items => items.Count <= 20)
+            .WithMessage("Sentences cannot exceed 20 items.");
+
+        RuleForEach(x => x.Sentences)
+            .SetValidator(new GrammarSentenceUpsertRequestValidator());
     }
 }
