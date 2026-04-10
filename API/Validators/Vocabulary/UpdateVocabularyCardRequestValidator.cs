@@ -1,4 +1,5 @@
 using Application.DTOs.Vocabulary;
+using Domain.Enums;
 using FluentValidation;
 
 namespace API.Validators.Vocabulary;
@@ -29,11 +30,23 @@ public class UpdateVocabularyCardRequestValidator : AbstractValidator<UpdateVoca
         RuleFor(x => x.WordType)
             .MaximumLength(50);
 
+        RuleFor(x => x.WordType)
+            .Must(value => string.IsNullOrWhiteSpace(value) || Enum.TryParse<WordType>(value.Trim(), true, out _))
+            .WithMessage("WordType is invalid.");
+
         RuleFor(x => x.Level)
             .MaximumLength(10);
 
+        RuleFor(x => x.Level)
+            .Must(value => string.IsNullOrWhiteSpace(value) || Enum.TryParse<JlptLevel>(value.Trim(), true, out _))
+            .WithMessage("Level is invalid.");
+
         RuleFor(x => x.Status)
             .MaximumLength(20);
+
+        RuleFor(x => x.Status)
+            .Must(value => string.IsNullOrWhiteSpace(value) || Enum.TryParse<PublishStatus>(value.Trim(), true, out _))
+            .WithMessage("Status is invalid.");
 
         RuleFor(x => x.Tags)
             .Must(tags => tags.Count <= 20)

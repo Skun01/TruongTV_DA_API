@@ -37,6 +37,7 @@ public class GlobalExceptionMiddleware
         var httpStatus = StatusCodes.Status200OK;
         var response = exception switch
         {
+            AppException appEx => BuildAppExceptionResponse(appEx),
             ValidationException validationEx => BuildValidationResponse(validationEx),
             ApplicationException appEx => ApiResponse<object>.FailResponse(appEx.Message, ResolveStatusCode(appEx.Message)),
             UnauthorizedAccessException unauthorizedEx => ApiResponse<object>.FailResponse(unauthorizedEx.Message, 401),
@@ -46,6 +47,13 @@ public class GlobalExceptionMiddleware
 
         context.Response.StatusCode = httpStatus;
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+    }
+
+    private static ApiResponse<object> BuildAppExceptionResponse(AppException exception)
+    {
+        var response = ApiResponse<object>.FailResponse(exception.ErrorCode, exception.StatusCode);
+        response.Data = exception.Details;
+        return response;
     }
 
     private ApiResponse<object> BuildInternalErrorResponse(Exception exception, ref int httpStatus)

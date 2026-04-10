@@ -27,7 +27,7 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         var card = await _unitOfWork.Cards.GetVocabularyDetailByIdAsync(cardId);
         if (card == null || card.VocabularyDetail == null || card.CardType != CardType.Vocab)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            throw new AppException(MessageConstants.VocabularyMessage.CARD_NOT_FOUND, 404);
 
         EnsureCardReadable(card, currentUserId);
 
@@ -139,7 +139,7 @@ public class VocabularyDetailService : IVocabularyDetailService
     public async Task<VocabularyImportPreviewResponse> PreviewImportAsync(ImportVocabularyRequest request)
     {
         if (request.Items == null || request.Items.Count == 0)
-            throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
+            throw new AppException(MessageConstants.VocabularyMessage.IMPORT_INVALID_PAYLOAD, 400);
 
         var previewItems = new List<VocabularyImportPreviewItemResponse>();
 
@@ -210,6 +210,10 @@ public class VocabularyDetailService : IVocabularyDetailService
                 commitItem.IsSuccess = true;
                 commitItem.CardId = result.Id;
             }
+            catch (AppException ex)
+            {
+                commitItem.Errors.Add(ex.ErrorCode);
+            }
             catch (ApplicationException ex)
             {
                 commitItem.Errors.Add(ex.Message);
@@ -239,7 +243,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         var reading = StringHelper.NormalizeOptional(request.Reading);
         var synthesisText = ResolveVocabularySynthesisText(writing, reading);
         var synthesisResult = await _voicevoxService.SynthesizeAsync(synthesisText, request.SpeakerId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+            ?? throw new AppException(MessageConstants.VocabularyMessage.AUDIO_SYNTHESIS_FAILED, 500);
 
         var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
             ? synthesisResult.PitchPattern
@@ -277,7 +281,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         await _unitOfWork.SaveChangesAsync();
 
         var created = await _unitOfWork.Cards.GetVocabularyDetailByIdAsync(cardId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            ?? throw new AppException(MessageConstants.VocabularyMessage.CARD_NOT_FOUND, 404);
 
         return created.ToDetailResponse(new List<UserCardNote>(), currentUserId);
     }
@@ -286,17 +290,17 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         var card = await _unitOfWork.Cards.GetByIdAsync(cardId);
         if (card == null || card.CardType != CardType.Vocab)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            throw new AppException(MessageConstants.VocabularyMessage.CARD_NOT_FOUND, 404);
 
         var detail = await _unitOfWork.VocabularyDetails.GetByIdAsync(cardId);
         if (detail == null)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            throw new AppException(MessageConstants.VocabularyMessage.DETAIL_NOT_FOUND, 404);
 
         var writing = request.Writing.Trim();
         var reading = StringHelper.NormalizeOptional(request.Reading);
         var synthesisText = ResolveVocabularySynthesisText(writing, reading);
         var synthesisResult = await _voicevoxService.SynthesizeAsync(synthesisText, request.SpeakerId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+            ?? throw new AppException(MessageConstants.VocabularyMessage.AUDIO_SYNTHESIS_FAILED, 500);
 
         var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
             ? synthesisResult.PitchPattern
@@ -326,7 +330,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         await _unitOfWork.SaveChangesAsync();
 
         var updated = await _unitOfWork.Cards.GetVocabularyDetailByIdAsync(cardId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            ?? throw new AppException(MessageConstants.VocabularyMessage.CARD_NOT_FOUND, 404);
 
         var notes = await _unitOfWork.UserCardNotes.GetByCardIdWithRelationsAsync(cardId);
         return updated.ToDetailResponse(notes, currentUserId);
@@ -336,7 +340,7 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         var card = await _unitOfWork.Cards.GetByIdAsync(cardId);
         if (card == null || card.CardType != CardType.Vocab)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            throw new AppException(MessageConstants.VocabularyMessage.CARD_NOT_FOUND, 404);
 
         card.Status = PublishStatus.Archived;
         card.UpdatedAt = DateTime.UtcNow;
@@ -350,7 +354,7 @@ public class VocabularyDetailService : IVocabularyDetailService
     private static void EnsureCardReadable(Card card, string? currentUserId)
     {
         if (card.Status != PublishStatus.Published && (string.IsNullOrWhiteSpace(currentUserId) || card.CreatedBy != currentUserId))
-            throw new ApplicationException(MessageConstants.CommonMessage.UNAUTHORIZED);
+            throw new AppException(MessageConstants.VocabularyMessage.READ_FORBIDDEN, 401);
     }
 
     private static string ResolveVocabularySynthesisText(string writing, string? reading)
@@ -370,7 +374,7 @@ public class VocabularyDetailService : IVocabularyDetailService
             IsSuccess = false,
             Action = "skipped",
             Errors = item.IsValid
-                ? new List<string> { "Batch contains invalid items. Fix preview errors before commit." }
+                ? new List<string> { MessageConstants.VocabularyMessage.IMPORT_BATCH_HAS_ERRORS }
                 : item.Errors.ToList(),
         }).ToList();
 
@@ -592,7 +596,7 @@ public class VocabularyDetailService : IVocabularyDetailService
     {
         var text = request.Text.Trim();
         var synthesisResult = await _voicevoxService.SynthesizeAsync(text, request.SpeakerId)
-            ?? throw new ApplicationException(MessageConstants.CommonMessage.INTERNAL_SERVER_ERROR);
+            ?? throw new AppException(MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED, 500);
 
         if (string.IsNullOrWhiteSpace(request.Id))
         {
@@ -613,7 +617,7 @@ public class VocabularyDetailService : IVocabularyDetailService
 
         var existingSentence = await _unitOfWork.Sentences.GetByIdAsync(request.Id);
         if (existingSentence == null)
-            throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
+            throw new AppException(MessageConstants.SentenceMessage.NOT_FOUND, 404);
 
         existingSentence.Text = text;
         existingSentence.Meaning = request.Meaning.Trim();
