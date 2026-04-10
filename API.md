@@ -352,7 +352,7 @@ Response data:
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/grammar` | Editor/Admin | Tìm kiếm grammar có phân trang |
-| GET | `/api/grammar/{cardId}` | Public | Lấy chi tiết grammar |
+| GET | `/api/grammar/{cardId}` | Public | Lấy chi tiết grammar (card chưa Published chỉ owner mới xem được) |
 | GET | `/api/grammar/import-template` | Editor/Admin | Tải JSON template cho import grammar |
 | GET | `/api/grammar/export` | Editor/Admin | Tải JSON export grammar theo bộ lọc |
 | POST | `/api/grammar/import/preview` | Editor/Admin | Preview payload import grammar, chưa ghi DB |
@@ -388,6 +388,7 @@ Hỗ trợ các query params:
 - `import/preview` chỉ validate payload theo item, không ghi DB.
 - `import/commit` luôn chạy preview nội bộ trước; nếu còn item invalid sẽ block commit.
 - `export` trả đúng shape với payload import để frontend có thể chỉnh sửa rồi import lại.
+- Với grammar import create-only, `sentences[*].id` không được phép gửi.
 
 ### Rich text rule (Markdown subset)
 
@@ -579,6 +580,13 @@ Một số message code frontend cần bắt:
   ]
 }
 ```
+
+### Grammar sentences note (`POST`/`PATCH`)
+
+- `sentences` là nested upsert cho example sentences.
+- Nếu `sentences[*].id` có giá trị: backend update sentence đó rồi giữ/gắn vào grammar card.
+- Nếu không có `id`: backend tạo sentence mới (VOICEVOX synth audio theo `text` + `speakerId`) rồi gắn vào grammar card.
+- Với `PATCH /api/grammar/{cardId}`, danh sách `sentences` được xem là trạng thái cuối cùng; association không còn trong request sẽ bị gỡ.
 
 ---
 
@@ -910,6 +918,9 @@ Rule:
 
 - Backend luôn chỉ trả card có `status = Published`.
 - Nếu không truyền `cardType`, kết quả Vocabulary và Grammar được gộp rồi sort theo `updatedAt ?? createdAt` giảm dần.
+- `q` dùng chính logic search của từng module:
+  - Vocabulary: `title`, `summary`, `writing`, `reading`
+  - Grammar: `title`, `summary`, `alternateForms`, `structures.pattern` (không search trong `explanation`)
 
 Response data item:
 
@@ -923,3 +934,8 @@ Response data item:
   "alternateForms": ["〜てからです"]
 }
 ```
+
+Field note cho frontend:
+
+- `alternateForms` chỉ có dữ liệu khi `cardType = Grammar`.
+- Với `cardType = Vocab`, backend luôn trả `alternateForms: []` để giữ response shape ổn định.
