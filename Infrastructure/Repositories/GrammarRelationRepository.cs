@@ -15,6 +15,7 @@ public class GrammarRelationRepository : Repository<GrammarRelation>, IGrammarRe
     {
         return await _context.GrammarRelations
             .Where(r => r.GrammarId == grammarId)
+            .Include(r => r.Related)
             .ToListAsync();
     }
 }

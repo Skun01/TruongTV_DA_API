@@ -1,6 +1,6 @@
 ﻿# Tacho Learning API - Implemented API Documentation
 
-> **Last updated:** 2026-04-10
+> **Last updated:** 2026-04-11
 
 ## Response Contract
 
@@ -382,6 +382,92 @@ Hỗ trợ các query params:
 
 `q` **không** tìm trong `explanation`.
 
+### GET `/api/grammar/{cardId}`
+
+Lấy chi tiết grammar card.
+
+- Card `Published`: public có thể xem.
+- Card chưa `Published`: chỉ user tạo card mới xem được.
+
+Response data:
+
+```json
+{
+  "id": "grammar-card-id",
+  "cardType": "Grammar",
+  "title": "〜ながら",
+  "summary": "Vừa làm A vừa làm B.",
+  "level": "N4",
+  "tags": ["grammar", "simultaneous"],
+  "status": "Published | Draft | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "structures": [
+    {
+      "pattern": "V1(1) + ながら + V2(2)",
+      "annotations": {
+        "1": "Hành động phụ diễn ra đồng thời",
+        "2": "Hành động chính"
+      }
+    }
+  ],
+  "explanation": "Dùng khi chủ thể vừa làm A vừa làm B.",
+  "caution": "Hai hành động cần cùng chủ thể.",
+  "register": "Standard | Formal | Polite | Casual | null",
+  "alternateForms": ["〜つつ"],
+  "relations": [
+    {
+      "relatedId": "grammar-card-001",
+      "title": "〜てから",
+      "summary": "Làm A rồi mới làm B.",
+      "relationType": "Similar | Contrasting"
+    }
+  ],
+  "resources": [
+    {
+      "id": "resource-id",
+      "title": "Bài giảng",
+      "url": "https://example.com/grammar/nagara"
+    }
+  ],
+  "sentences": [
+    {
+      "id": "sentence-id",
+      "text": "音楽を聞きながら勉強します。",
+      "meaning": "Tôi vừa nghe nhạc vừa học.",
+      "audioUrl": "https://cdn.example.com/audio/sentence-1.wav",
+      "level": "N4"
+    }
+  ],
+  "userNotes": [
+    {
+      "id": "note-id",
+      "userId": "user-id",
+      "userName": "Nguyen Van A",
+      "content": "Mẫu này hay đi với hành động kéo dài.",
+      "likesCount": 3,
+      "isLikedByMe": false,
+      "createdAt": "datetime"
+    }
+  ]
+}
+```
+
+Field note cho `relations[*]`:
+
+- `relatedId`: ID card ngữ pháp liên quan.
+- `title`: tiêu đề card liên quan (để frontend hiển thị dễ đọc).
+- `summary`: mô tả ngắn của card liên quan.
+- `relationType`: **enum** `grammar_relation_type_enum` với 2 giá trị:
+  - `Similar`
+  - `Contrasting`
+
+### API update note (Grammar detail)
+
+- Bổ sung `relations[*].title`.
+- Bổ sung `relations[*].summary`.
+- Chuẩn hóa `relations[*].relationType` sang enum `grammar_relation_type_enum` (`Similar`/`Contrasting`).
+
 ### Import/export note
 
 - Grammar import hiện tại là **create-only**.
@@ -605,6 +691,64 @@ Một số message code frontend cần bắt:
 | POST | `/api/vocabulary` | Editor/Admin | Tạo vocabulary mới |
 | PATCH | `/api/vocabulary/{cardId}` | Editor/Admin | Cập nhật vocabulary |
 | DELETE | `/api/vocabulary/{cardId}` | Editor/Admin | Soft delete vocabulary |
+
+### GET `/api/vocabulary/{cardId}`
+
+Lấy chi tiết vocabulary card.
+
+- Card `Published`: public có thể xem.
+- Card chưa `Published`: chỉ user tạo card mới xem được.
+
+Response data:
+
+```json
+{
+  "id": "vocab-card-id",
+  "cardType": "Vocab",
+  "title": "食べる",
+  "summary": "Động từ ăn",
+  "level": "N5",
+  "tags": ["verb"],
+  "status": "Published | Draft | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "writing": "食べる",
+  "reading": "たべる",
+  "pitchPattern": [0, 1, 0],
+  "audioUrl": "https://cdn.example.com/audio/taberu.wav",
+  "speakerId": 3,
+  "wordType": "Native | SinoJapanese | Loanword | null",
+  "meanings": [
+    {
+      "partOfSpeech": "Noun | VerbU | VerbRu | IAdj | NaAdj | Adverb | Particle | Conjunction | Interjection",
+      "definitions": ["ăn", "dùng bữa"]
+    }
+  ],
+  "synonyms": ["食事する"],
+  "antonyms": [],
+  "relatedPhrases": ["ご飯を食べる"],
+  "sentences": [
+    {
+      "id": "sentence-id",
+      "text": "毎朝パンを食べる。",
+      "meaning": "Mỗi sáng tôi ăn bánh mì.",
+      "audioUrl": "https://cdn.example.com/audio/sentence-2.wav",
+      "level": "N5"
+    }
+  ],
+  "userNotes": [
+    {
+      "id": "note-id",
+      "userId": "user-id",
+      "userName": "Tran Thi B",
+      "content": "Từ cơ bản, nên thuộc ở N5.",
+      "likesCount": 5,
+      "isLikedByMe": true,
+      "createdAt": "datetime"
+    }
+  ]
+}
+```
 
 ### Vocabulary create/update note
 

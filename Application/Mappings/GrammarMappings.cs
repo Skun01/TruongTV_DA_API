@@ -31,7 +31,7 @@ public static class GrammarMappings
             Relations = relations.Select(r => new GrammarRelationUpsertRequest
             {
                 RelatedId = r.RelatedId,
-                RelationType = r.RelationType.ToString(),
+                RelationType = r.RelationType.ToString().ToLowerInvariant(),
             }).ToList(),
             Resources = resources.Select(r => new GrammarResourceUpsertRequest
             {
@@ -98,7 +98,9 @@ public static class GrammarMappings
             Relations = relations.Select(r => new GrammarRelationResponse
             {
                 RelatedId = r.RelatedId,
-                RelationType = r.RelationType.ToString(),
+                Title = r.Related?.Title ?? string.Empty,
+                Summary = r.Related?.Summary ?? string.Empty,
+                RelationType = r.RelationType,
             }).ToList(),
             Resources = resources.Select(r => new GrammarResourceResponse
             {
