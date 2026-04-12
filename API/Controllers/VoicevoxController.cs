@@ -18,6 +18,9 @@ public class VoicevoxController : ControllerBase
         _voicevoxService = voicevoxService;
     }
 
+    /// <summary>
+    /// Lấy danh sách speaker VOICEVOX được phép sử dụng.
+    /// </summary>
     [HttpGet("speakers")]
     public async Task<ApiResponse<List<VoicevoxSpeakerResponse>>> GetSpeakers(CancellationToken cancellationToken)
     {
@@ -25,6 +28,9 @@ public class VoicevoxController : ControllerBase
         return ApiResponse<List<VoicevoxSpeakerResponse>>.SuccessResponse(speakers);
     }
 
+    /// <summary>
+    /// Generate audio preview theo speakerId để frontend phát thử.
+    /// </summary>
     [HttpPost("preview")]
     public async Task<ApiResponse<VoicevoxPreviewResponse>> Preview(
         [FromBody] VoicevoxPreviewRequest request,

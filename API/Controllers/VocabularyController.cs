@@ -47,6 +47,9 @@ public class VocabularyController : BaseController
         return ApiResponse<VocabularyDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tải JSON template mẫu cho import vocabulary.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet("import-template")]
     public async Task<IActionResult> DownloadImportTemplate()
@@ -55,6 +58,9 @@ public class VocabularyController : BaseController
         return CreateJsonFileResult(result, "vocabulary-import-template.json");
     }
 
+    /// <summary>
+    /// Tải JSON export vocabulary theo bộ lọc.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] VocabularyExportQuery query)
@@ -64,6 +70,9 @@ public class VocabularyController : BaseController
         return CreateJsonFileResult(result, $"vocabulary-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
     }
 
+    /// <summary>
+    /// Preview payload import vocabulary, validate theo từng item, chưa ghi DB.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost("import/preview")]
     public async Task<ApiResponse<VocabularyImportPreviewResponse>> PreviewImport([FromBody] ImportVocabularyRequest request)
@@ -72,6 +81,9 @@ public class VocabularyController : BaseController
         return ApiResponse<VocabularyImportPreviewResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Commit batch import vocabulary vào DB.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost("import/commit")]
     public async Task<ApiResponse<VocabularyImportCommitResponse>> CommitImport([FromBody] ImportVocabularyRequest request)

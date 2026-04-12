@@ -18,6 +18,9 @@ public class CardsController : BaseController
         _cardService = cardService;
     }
 
+    /// <summary>
+    /// Tìm kiếm card tổng hợp (Vocabulary + Grammar) cho frontend user. Chỉ trả card Published.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("search")]
     public async Task<ApiResponse<List<CardListItemResponse>>> Search([FromQuery] CardSearchQuery query)

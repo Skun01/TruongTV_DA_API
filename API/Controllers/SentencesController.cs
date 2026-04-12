@@ -33,6 +33,9 @@ public class SentencesController : BaseController
         return ApiResponse<List<SentenceResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Tải JSON template mẫu cho import sentences.
+    /// </summary>
     [HttpGet("import-template")]
     public async Task<IActionResult> DownloadImportTemplate()
     {
@@ -40,6 +43,9 @@ public class SentencesController : BaseController
         return CreateJsonFileResult(result, "sentence-import-template.json");
     }
 
+    /// <summary>
+    /// Tải JSON export sentences theo bộ lọc.
+    /// </summary>
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] SentenceExportQuery query)
     {
@@ -48,6 +54,9 @@ public class SentencesController : BaseController
         return CreateJsonFileResult(result, $"sentence-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
     }
 
+    /// <summary>
+    /// Preview payload import sentences, validate theo từng item, chưa ghi DB.
+    /// </summary>
     [HttpPost("import/preview")]
     public async Task<ApiResponse<SentenceImportPreviewResponse>> PreviewImport([FromBody] ImportSentenceRequest request)
     {
@@ -55,6 +64,9 @@ public class SentencesController : BaseController
         return ApiResponse<SentenceImportPreviewResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Commit batch import sentences vào DB.
+    /// </summary>
     [HttpPost("import/commit")]
     public async Task<ApiResponse<SentenceImportCommitResponse>> CommitImport([FromBody] ImportSentenceRequest request)
     {

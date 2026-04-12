@@ -21,6 +21,9 @@ public class GrammarController : BaseController
         _grammarService = grammarService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách grammar cho Editor/Admin có phân trang.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet]
     public async Task<ApiResponse<List<GrammarListItemResponse>>> Search([FromQuery] GrammarSearchQuery query)
@@ -30,6 +33,9 @@ public class GrammarController : BaseController
         return ApiResponse<List<GrammarListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết grammar card theo cardId. Card Published: public, chưa Published: chỉ owner mới xem được.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("{cardId}")]
     public async Task<ApiResponse<GrammarDetailResponse>> GetDetail([FromRoute] string cardId)
@@ -39,6 +45,9 @@ public class GrammarController : BaseController
         return ApiResponse<GrammarDetailResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Tạo mới một grammar card.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost]
     public async Task<ApiResponse<GrammarDetailResponse>> Create([FromBody] CreateGrammarCardRequest request)
@@ -48,6 +57,9 @@ public class GrammarController : BaseController
         return ApiResponse<GrammarDetailResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Tải JSON template mẫu cho import grammar.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet("import-template")]
     public async Task<IActionResult> DownloadImportTemplate()
@@ -56,6 +68,9 @@ public class GrammarController : BaseController
         return CreateJsonFileResult(result, "grammar-import-template.json");
     }
 
+    /// <summary>
+    /// Tải JSON export grammar theo bộ lọc.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] GrammarExportQuery query)
@@ -65,6 +80,9 @@ public class GrammarController : BaseController
         return CreateJsonFileResult(result, $"grammar-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
     }
 
+    /// <summary>
+    /// Preview payload import grammar, validate theo từng item, chưa ghi DB.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost("import/preview")]
     public async Task<ApiResponse<GrammarImportPreviewResponse>> PreviewImport([FromBody] ImportGrammarRequest request)
@@ -73,6 +91,9 @@ public class GrammarController : BaseController
         return ApiResponse<GrammarImportPreviewResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Commit batch import grammar vào DB.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost("import/commit")]
     public async Task<ApiResponse<GrammarImportCommitResponse>> CommitImport([FromBody] ImportGrammarRequest request)
@@ -82,6 +103,9 @@ public class GrammarController : BaseController
         return ApiResponse<GrammarImportCommitResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật thông tin grammar card theo cardId.
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPatch("{cardId}")]
     public async Task<ApiResponse<GrammarDetailResponse>> Update([FromRoute] string cardId, [FromBody] UpdateGrammarCardRequest request)
@@ -91,6 +115,9 @@ public class GrammarController : BaseController
         return ApiResponse<GrammarDetailResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Xóa mềm grammar card (chuyển trạng thái Archived).
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpDelete("{cardId}")]
     public async Task<ApiResponse<bool>> SoftDelete([FromRoute] string cardId)

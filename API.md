@@ -1,51 +1,299 @@
-﻿# Tacho Learning API - Implemented API Documentation
+# Tacho Learning API — Frontend Integration Guide
 
 > **Last updated:** 2026-04-11
 
-## Response Contract
+---
 
-Most business and validation failures are returned in HTTP 200 with this shape:
+## Mục lục
+
+1. [Quy ước chung](#1-quy-ước-chung)
+2. [Enum Reference](#2-enum-reference)
+3. [Auth Module](#3-auth-module)
+4. [Cards Module — User](#4-cards-module--user)
+5. [Card Notes Module — User](#5-card-notes-module--user)
+6. [Vocabulary Module — Admin](#6-vocabulary-module--admin)
+7. [Grammar Module — Admin](#7-grammar-module--admin)
+8. [Sentences Module — Admin](#8-sentences-module--admin)
+9. [Uploads Module — Admin](#9-uploads-module--admin)
+10. [Voicevox Module — Admin](#10-voicevox-module--admin)
+
+---
+
+## 1. Quy ước chung
+
+### 1.1 Base URL
+
+```
+http://localhost:5062/api
+```
+
+### 1.2 Response envelope
+
+Tất cả API trả về cùng một shape:
+
+```json
+{
+  "code": 200,
+  "success": true,
+  "message": null,
+  "data": { ... },
+  "metaData": null
+}
+```
+
+Khi có lỗi nghiệp vụ / validation, **HTTP vẫn trả 200** nhưng:
 
 ```json
 {
   "code": 400,
   "success": false,
   "message": "Error_Code_400",
-  "data": {},
+  "data": null,
   "metaData": null
 }
 ```
 
-Unhandled exceptions are returned as HTTP 500.
+Lỗi server không xử lý được → HTTP 500.
 
-## Auth Module
+### 1.3 Pagination
 
-### Endpoints
+Với các endpoint có phân trang, response sẽ kèm `metaData`:
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Đăng ký tài khoản |
-| POST | `/api/auth/login` | No | Đăng nhập |
-| POST | `/api/auth/refresh-token` | No | Làm mới access token |
-| POST | `/api/auth/refresh` | No | Alias của refresh-token |
-| GET | `/api/auth/me` | Yes | Lấy user hiện tại |
-| PATCH | `/api/auth/me/profile` | Yes | Cập nhật profile |
-| POST | `/api/auth/me/avatar` | Yes | Upload avatar image |
-| PATCH | `/api/auth/change-password` | Yes | Đổi mật khẩu |
-| POST | `/api/auth/logout` | Yes | Đăng xuất |
-| POST | `/api/auth/forgot-password` | No | Gửi email reset password |
-| POST | `/api/auth/reset-password` | No | Reset password |
+```json
+{
+  "metaData": {
+    "page": 1,
+    "pageSize": 20,
+    "total": 150,
+    "totalPage": 8
+  }
+}
+```
 
-### POST `/api/auth/me/avatar`
+Query params phân trang mặc định:
 
-Upload ảnh avatar mới cho user hiện tại.
+| Param | Type | Default | Mô tả |
+|-------|------|---------|-------|
+| `page` | `int` | `1` | Trang hiện tại |
+| `pageSize` | `int` | `20` | Số item/trang |
 
-- Content-Type: `multipart/form-data`
-- Form field: `avatar`
-- Allowed mime: `image/jpeg`, `image/png`, `image/webp`
-- Max size: `5 MB`
+### 1.4 Authentication
 
-Response data (`AuthUserDTO`):
+- **Bearer Token**: Gửi `Authorization: Bearer <accessToken>` cho các endpoint yêu cầu auth.
+- **Refresh Token**: Lưu trong **HttpOnly cookie** `refreshToken`, được server tự set/xóa.
+- Các endpoint đánh dấu `🔒 Auth` cần access token hợp lệ.
+- Các endpoint đánh dấu `🔑 Editor/Admin` chỉ dành cho role `editor` hoặc `admin` (frontend admin).
+- Các endpoint đánh dấu `🌐 Public` không cần token.
+
+### 1.5 Message code pattern
+
+Lỗi được trả trong field `message` theo pattern:
+
+```
+<Module>_<ErrorName>_<HttpStatusCode>
+```
+
+Ví dụ: `Vocabulary_CardNotFound_404`, `Grammar_InvalidRichText_400`
+
+Lỗi import field-level kèm fieldPath sau dấu `:`:
+
+```
+<Module>_Import<ErrorName>_<StatusCode>:<fieldPath>
+```
+
+Ví dụ: `Vocabulary_ImportFieldRequired_400:title`, `Grammar_ImportFieldInvalid_400:structures[0].pattern`
+
+---
+
+## 2. Enum Reference
+
+Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
+
+### JlptLevel
+
+| Value | Mô tả |
+|-------|-------|
+| `N5` | Sơ cấp |
+| `N4` | Sơ cấp trên |
+| `N3` | Trung cấp |
+| `N2` | Trung cao cấp |
+| `N1` | Cao cấp |
+
+### PublishStatus
+
+| Value | Mô tả |
+|-------|-------|
+| `Draft` | Bản nháp, chưa public |
+| `Published` | Đã xuất bản, public |
+| `Archived` | Đã xóa mềm |
+
+### CardType
+
+| Value | Mô tả |
+|-------|-------|
+| `Vocab` | Thẻ từ vựng |
+| `Grammar` | Thẻ ngữ pháp |
+
+### UserRole
+
+| Value | Mô tả |
+|-------|-------|
+| `user` | Người dùng thường |
+| `editor` | Biên tập viên |
+| `admin` | Quản trị viên |
+
+### WordType (Vocabulary)
+
+| Value | Mô tả |
+|-------|-------|
+| `Native` | 和語 (Wago) — Từ thuần Nhật |
+| `SinoJapanese` | 漢語 (Kango) — Từ Hán-Nhật |
+| `Loanword` | 外来語 (Gairaigo) — Từ ngoại lai |
+
+### PartOfSpeech (Vocabulary)
+
+| Value | Mô tả |
+|-------|-------|
+| `Noun` | Danh từ |
+| `VerbU` | Động từ nhóm 1 (五段) |
+| `VerbRu` | Động từ nhóm 2 (一段) |
+| `IAdj` | Tính từ đuôi い |
+| `NaAdj` | Tính từ đuôi な |
+| `Adverb` | Phó từ |
+| `Particle` | Trợ từ |
+| `Conjunction` | Liên từ |
+| `Interjection` | Thán từ |
+
+### RegisterType (Grammar)
+
+| Value | Mô tả |
+|-------|-------|
+| `Standard` | Chuẩn |
+| `Formal` | Trang trọng |
+| `Polite` | Lịch sự |
+| `Casual` | Thân mật |
+
+### GrammarRelationType
+
+| Value | Mô tả |
+|-------|-------|
+| `Similar` | Ngữ pháp tương tự |
+| `Contrasting` | Ngữ pháp tương phản |
+
+---
+
+## 3. Auth Module
+
+> API xác thực và quản lý tài khoản người dùng.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| POST | `/api/auth/register` | 🌐 Public | Đăng ký tài khoản mới |
+| POST | `/api/auth/login` | 🌐 Public | Đăng nhập |
+| POST | `/api/auth/refresh-token` | 🌐 Public | Làm mới access token |
+| POST | `/api/auth/refresh` | 🌐 Public | Alias của `refresh-token` |
+| GET | `/api/auth/me` | 🔒 Auth | Lấy thông tin user hiện tại |
+| PATCH | `/api/auth/me/profile` | 🔒 Auth | Cập nhật profile |
+| POST | `/api/auth/me/avatar` | 🔒 Auth | Upload avatar |
+| PATCH | `/api/auth/change-password` | 🔒 Auth | Đổi mật khẩu |
+| POST | `/api/auth/logout` | 🔒 Auth | Đăng xuất |
+| POST | `/api/auth/forgot-password` | 🌐 Public | Gửi email reset password |
+| POST | `/api/auth/reset-password` | 🌐 Public | Xác nhận reset password |
+
+---
+
+### POST `/api/auth/register`
+
+Đăng ký tài khoản mới.
+
+**Request body:**
+
+```json
+{
+  "username": "string | null",
+  "displayName": "string | null",
+  "email": "string",         // ⚠ bắt buộc
+  "password": "string"       // ⚠ bắt buộc
+}
+```
+
+**Response data** (`AuthDTO`):
+
+```json
+{
+  "accessToken": "jwt-string",
+  "user": {
+    "id": "string",
+    "email": "string",
+    "displayName": "string",
+    "avatarUrl": "string | null",
+    "role": "user",
+    "createdAt": "datetime"
+  }
+}
+```
+
+> ℹ `refreshToken` được server tự set vào HttpOnly cookie, không nằm trong JSON response.
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Email_Exist_409` | Email đã tồn tại |
+
+---
+
+### POST `/api/auth/login`
+
+Đăng nhập.
+
+**Request body:**
+
+```json
+{
+  "email": "string",      // ⚠ bắt buộc
+  "password": "string"    // ⚠ bắt buộc
+}
+```
+
+**Response data:** Cùng shape `AuthDTO` như register.
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Invalid_400` | Sai email hoặc password |
+
+---
+
+### POST `/api/auth/refresh-token`
+
+Làm mới access token. Backend đọc `refreshToken` từ cookie.
+
+- Không cần gửi request body.
+- Response: `AuthDTO` (access token mới + user info).
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Token_Expired_409` | Refresh token hết hạn hoặc không hợp lệ |
+
+---
+
+### POST `/api/auth/refresh`
+
+Alias của `/api/auth/refresh-token`. Hoạt động giống hệt.
+
+---
+
+### GET `/api/auth/me` 🔒
+
+Lấy thông tin user đang đăng nhập.
+
+**Response data** (`AuthUserDTO`):
 
 ```json
 {
@@ -58,209 +306,535 @@ Response data (`AuthUserDTO`):
 }
 ```
 
-## Uploads Module
+---
 
-### Endpoints
+### PATCH `/api/auth/me/profile` 🔒
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/uploads/audio` | Yes | Upload audio resource |
+Cập nhật thông tin profile.
 
-### POST `/api/uploads/audio`
+**Request body:**
 
-Upload file audio và lưu metadata vào `MediaAssets`.
+```json
+{
+  "displayName": "string",
+  "avatarUrl": "string | null"
+}
+```
 
-- Content-Type: `multipart/form-data`
-- Form field: `audio`
-- Allowed mime: `audio/mpeg`, `audio/wav`, `audio/mp4`
-- Max size: `20 MB`
+**Response data:** `AuthUserDTO`
 
-Response data:
+---
+
+### POST `/api/auth/me/avatar` 🔒
+
+Upload ảnh avatar mới cho user hiện tại.
+
+- **Content-Type:** `multipart/form-data`
+- **Form field:** `avatar`
+- **Allowed MIME:** `image/jpeg`, `image/png`, `image/webp`
+- **Max size:** `5 MB`
+
+**Response data:** `AuthUserDTO`
+
+---
+
+### PATCH `/api/auth/change-password` 🔒
+
+Đổi mật khẩu.
+
+**Request body:**
+
+```json
+{
+  "currentPassword": "string",  // ⚠ bắt buộc
+  "newPassword": "string"       // ⚠ bắt buộc
+}
+```
+
+**Response data:** `true`
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Wrong_Current_Password_400` | Sai mật khẩu hiện tại |
+
+---
+
+### POST `/api/auth/logout` 🔒
+
+Đăng xuất. Backend xóa refresh token cookie.
+
+**Response data:** `true`
+
+---
+
+### POST `/api/auth/forgot-password`
+
+Gửi email chứa link reset password.
+
+**Request body:**
+
+```json
+{
+  "email": "string"  // ⚠ bắt buộc
+}
+```
+
+**Response data:** `true`
+
+---
+
+### POST `/api/auth/reset-password`
+
+Xác nhận reset password bằng token nhận từ email.
+
+**Request body:**
+
+```json
+{
+  "token": "string",       // ⚠ bắt buộc, token từ email
+  "newPassword": "string"  // ⚠ bắt buộc
+}
+```
+
+**Response data:** `true`
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Token_Expired_409` | Token hết hạn hoặc không hợp lệ |
+
+---
+
+## 4. Cards Module — User
+
+> API search card tổng hợp dành cho **frontend user**. Gộp kết quả Vocabulary + Grammar.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/cards/search` | 🌐 Public | Search card tổng hợp |
+
+---
+
+### GET `/api/cards/search`
+
+Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+|-------|------|----------|------|-------|
+| `cardType` | `string` | ❌ | `Vocab`, `Grammar` | Lọc theo loại card. Bỏ trống = tìm cả 2 |
+| `q` | `string` | ❌ | — | Từ khóa tìm kiếm |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ JLPT |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Quy tắc search:**
+- Backend **chỉ trả card có `status = Published`**.
+- Nếu không truyền `cardType`, kết quả được gộp rồi sort theo `updatedAt ?? createdAt` giảm dần.
+- `q` tìm theo:
+  - **Vocabulary:** `title`, `summary`, `writing`, `reading`
+  - **Grammar:** `title`, `summary`, `alternateForms`, `structures.pattern` (KHÔNG search trong `explanation`)
+
+**Response data item:**
 
 ```json
 {
   "id": "string",
-  "fileUrl": "string",
-  "fileType": "Audio",
-  "usageType": "Audio",
-  "sizeInBytes": 12345,
+  "cardType": "Vocab | Grammar",
+  "title": "string",
+  "summary": "string",
+  "level": "N5 | N4 | N3 | N2 | N1 | null",
+  "alternateForms": ["〜てからです"]
+}
+```
+
+> ℹ `alternateForms` chỉ có dữ liệu khi `cardType = Grammar`. Với `Vocab` luôn trả `[]`.
+
+---
+
+## 5. Card Notes Module — User
+
+> API ghi chú cộng đồng cho thẻ học. Tất cả endpoint yêu cầu **đăng nhập**.  
+> Áp dụng cho cả Vocabulary và Grammar card.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/cards/{cardId}/notes` | 🔒 Auth | Lấy danh sách community notes |
+| POST | `/api/cards/{cardId}/notes` | 🔒 Auth | Tạo/cập nhật ghi chú cá nhân |
+| DELETE | `/api/cards/{cardId}/notes/me` | 🔒 Auth | Xóa ghi chú cá nhân |
+| POST | `/api/notes/{noteId}/toggle-like` | 🔒 Auth | Bật/tắt like cho một note |
+
+---
+
+### GET `/api/cards/{cardId}/notes` 🔒
+
+Lấy danh sách community notes có phân trang.
+
+**Path params:**
+
+| Param | Type | Mô tả |
+|-------|------|-------|
+| `cardId` | `string` | ID của card (vocab hoặc grammar) |
+
+**Query params:**
+
+| Param | Type | Default | Mô tả |
+|-------|------|---------|-------|
+| `page` | `int` | `1` | Trang hiện tại |
+| `pageSize` | `int` | `10` | Số note/trang |
+
+**Response data item** (`CardNoteResponse`):
+
+```json
+{
+  "id": "string",
+  "userId": "string",
+  "userName": "string",
+  "content": "string",
+  "likesCount": 3,
+  "isLikedByMe": false,
   "createdAt": "datetime"
 }
 ```
 
 ---
 
-## Voicevox Module
+### POST `/api/cards/{cardId}/notes` 🔒
 
-### Endpoints
+Tạo mới hoặc cập nhật ghi chú **của chính user** cho card.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/voicevox/speakers` | Yes | Lấy danh sách speaker VOICEVOX được phép dùng |
-| POST | `/api/voicevox/preview` | Yes | Generate preview audio theo `speakerId` |
+- Mỗi user chỉ có **1 note** duy nhất trên mỗi card.
+- Nếu đã có note → cập nhật content.
+- Nếu chưa có → tạo mới.
 
-### POST `/api/voicevox/preview`
-
-Generate audio preview để frontend phát thử khi admin đổi speaker.
-
-Request body:
+**Request body:**
 
 ```json
 {
-  "speakerId": 3,
-  "text": "こんにちは。こちらは音声プレビューです。"
+  "content": "string"  // ⚠ bắt buộc, nội dung ghi chú
 }
 ```
 
-- `speakerId`: bắt buộc
-- `text`: tùy chọn, nếu bỏ trống backend dùng sample text mặc định
+**Response data:** `CardNoteResponse`
 
-Response data:
+---
+
+### DELETE `/api/cards/{cardId}/notes/me` 🔒
+
+Xóa ghi chú **của chính user** trên card.
+
+**Response data:** `true`
+
+---
+
+### POST `/api/notes/{noteId}/toggle-like` 🔒
+
+Bật/tắt trạng thái like cho một ghi chú.
+
+**Path params:**
+
+| Param | Type | Mô tả |
+|-------|------|-------|
+| `noteId` | `string` | ID note cần toggle like |
+
+**Response data:**
 
 ```json
 {
-  "speakerId": 3,
-  "text": "こんにちは。こちらは音声プレビューです。",
-  "audioUrl": "/audio-cache/example.wav"
+  "isLiked": true,      // trạng thái like mới
+  "likesCount": 4       // tổng số like hiện tại
 }
 ```
 
 ---
 
-## Sentences Module
+## 6. Vocabulary Module — Admin
 
-### Endpoints
+> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Trừ `GET /api/vocabulary/{cardId}` là endpoint Public dùng cho cả user lẫn admin.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/sentences` | Editor/Admin | Tìm kiếm sentence có phân trang |
-| GET | `/api/sentences/import-template` | Editor/Admin | Tải JSON template cho import sentences |
-| GET | `/api/sentences/export` | Editor/Admin | Tải JSON export sentences theo bộ lọc |
-| POST | `/api/sentences/import/preview` | Editor/Admin | Preview file import sentences, chưa ghi DB |
-| POST | `/api/sentences/import/commit` | Editor/Admin | Commit batch import sentences |
-| GET | `/api/sentences/{id}` | Editor/Admin | Lấy chi tiết sentence |
-| POST | `/api/sentences` | Editor/Admin | Tạo sentence mới |
-| PATCH | `/api/sentences/{id}` | Editor/Admin | Cập nhật sentence |
-| DELETE | `/api/sentences/{id}` | Editor/Admin | Xóa sentence |
+### Tổng quan
 
-### Sentence create/update note
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/vocabulary` | 🔑 Editor/Admin | Tìm kiếm vocabulary có phân trang |
+| GET | `/api/vocabulary/{cardId}` | 🌐 Public | Lấy chi tiết vocabulary |
+| POST | `/api/vocabulary` | 🔑 Editor/Admin | Tạo vocabulary mới |
+| PATCH | `/api/vocabulary/{cardId}` | 🔑 Editor/Admin | Cập nhật vocabulary |
+| DELETE | `/api/vocabulary/{cardId}` | 🔑 Editor/Admin | Xóa mềm vocabulary (Archived) |
+| GET | `/api/vocabulary/import-template` | 🔑 Editor/Admin | Tải JSON template import |
+| GET | `/api/vocabulary/export` | 🔑 Editor/Admin | Export vocabulary ra JSON |
+| POST | `/api/vocabulary/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
+| POST | `/api/vocabulary/import/commit` | 🔑 Editor/Admin | Commit batch import |
 
-Từ ngày 2026-04-09, `sentence` chuyển sang luồng **VOICEVOX-only**:
+---
 
-- Client không gửi `audioUrl` nữa.
-- Backend luôn tự generate `audioUrl` từ VOICEVOX dựa trên `text` và `speakerId`.
-- `speakerId` là speaker dùng để generate audio và được lưu lại trong DB.
+### GET `/api/vocabulary` 🔑
 
-Request body cho `POST /api/sentences` và `PATCH /api/sentences/{id}`:
+Tìm kiếm danh sách vocabulary cho admin.
 
-```json
-{
-  "text": "日本へ行きたいです。",
-  "meaning": "Tôi muốn đi Nhật.",
-  "speakerId": 3,
-  "level": "N5"
-}
-```
+**Query params:**
 
-Response data:
+| Param | Type | Bắt buộc | Enum | Mô tả |
+|-------|------|----------|------|-------|
+| `q` | `string` | ❌ | — | Tìm theo `title`, `summary`, `writing`, `reading` |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ |
+| `status` | `string` | ❌ | `PublishStatus` | Lọc theo trạng thái |
+| `wordType` | `string` | ❌ | `WordType` | Lọc theo loại từ |
+| `hasAudio` | `bool` | ❌ | — | `true`/`false` lọc có audio hay không |
+| `createdByMe` | `bool` | ❌ | — | `true` = chỉ lấy card do mình tạo |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item:**
 
 ```json
 {
   "id": "string",
-  "text": "string",
-  "meaning": "string",
+  "title": "string",
+  "summary": "string",
+  "level": "N5 | null",
+  "tags": ["verb"],
+  "status": "Draft | Published | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "writing": "食べる",
+  "reading": "たべる | null",
+  "wordType": "Native | SinoJapanese | Loanword | null"
+}
+```
+
+---
+
+### GET `/api/vocabulary/{cardId}` 🌐
+
+Lấy chi tiết vocabulary card.
+
+**Quy tắc truy cập:**
+- ✅ Card `Published`: ai cũng xem được (public).
+- ⚠ Card `Draft` / `Archived`: chỉ user tạo card mới xem được.
+
+**Response data** (`VocabularyDetailResponse`):
+
+```json
+{
+  "id": "string",
+  "cardType": "Vocab",
+  "title": "食べる",
+  "summary": "Động từ ăn",
+  "level": "N5 | null",
+  "tags": ["verb"],
+  "status": "Published | Draft | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "writing": "食べる",
+  "reading": "たべる | null",
+  "pitchPattern": [0, 1, 0],
   "audioUrl": "string | null",
   "speakerId": 3,
-  "level": "N5 | N4 | N3 | N2 | N1 | null"
-}
-```
-
-### Sentences import/export note
-
-- Sentence import/export dùng JSON file tương tự vocabulary nhưng đơn giản hơn.
-- Import sentence hiện tại là **create-only**.
-- Backend không nhận `audioUrl`; khi commit import, backend sẽ tự synth audio bằng VOICEVOX từ `text` và `speakerId`.
-- Export sentence trả về đúng shape import để frontend có thể chỉnh sửa rồi import tạo mới hàng loạt.
-
-### GET `/api/sentences/import-template`
-
-Trả về file `application/json` theo đúng shape import sentence.
-
-Response file body:
-
-```json
-{
-  "items": [
+  "wordType": "Native | SinoJapanese | Loanword | null",
+  "meanings": [
     {
-      "rowNumber": 1,
-      "text": "日本へ行きたいです。",
-      "meaning": "Tôi muốn đi Nhật.",
-      "speakerId": 3,
+      "partOfSpeech": "VerbRu",
+      "definitions": ["ăn", "dùng bữa"]
+    }
+  ],
+  "synonyms": ["食事する"],
+  "antonyms": [],
+  "relatedPhrases": ["ご飯を食べる"],
+  "sentences": [
+    {
+      "id": "sentence-id",
+      "text": "毎朝パンを食べる。",
+      "meaning": "Mỗi sáng tôi ăn bánh mì.",
+      "audioUrl": "https://cdn.example.com/audio/sentence.wav",
       "level": "N5"
+    }
+  ],
+  "userNotes": [
+    {
+      "id": "note-id",
+      "userId": "user-id",
+      "userName": "Tran Thi B",
+      "content": "Từ cơ bản, nên thuộc ở N5.",
+      "likesCount": 5,
+      "isLikedByMe": true,
+      "createdAt": "datetime"
     }
   ]
 }
 ```
 
-### GET `/api/sentences/export`
+**Field details:**
 
-Tải file `application/json` cùng shape với payload import, để có thể chỉnh sửa và import tạo mới hàng loạt.
+| Field | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `cardType` | `string` | `CardType` | Luôn là `Vocab` |
+| `level` | `string?` | `JlptLevel` | Nullable |
+| `status` | `string` | `PublishStatus` | |
+| `wordType` | `string?` | `WordType` | Nullable |
+| `pitchPattern` | `int[]?` | — | Mảng pitch accent, mỗi phần tử = `0` (thấp) hoặc `1` (cao) |
+| `audioUrl` | `string?` | — | URL file audio, do backend tự generate bằng VOICEVOX |
+| `speakerId` | `int?` | — | ID speaker VOICEVOX |
+| `meanings[].partOfSpeech` | `string` | `PartOfSpeech` | Từ loại |
+| `meanings[].definitions` | `string[]` | — | Danh sách nghĩa |
 
-Query params hỗ trợ:
+**Error codes:**
 
-- `q`
-- `level`
-- `hasAudio`
-- `createdByMe`
+| Code | Khi nào |
+|------|---------|
+| `Vocabulary_CardNotFound_404` | Card không tồn tại |
+| `Vocabulary_ReadForbidden_401` | Card chưa Published và user không phải owner |
 
-Response file body:
+---
+
+### POST `/api/vocabulary` 🔑
+
+Tạo mới một vocabulary card.
+
+**Lưu ý VOICEVOX-only:**
+- ❌ Client **không gửi** `audioUrl`.
+- ✅ Backend tự generate audio bằng VOICEVOX từ `reading` (fallback `writing` nếu rỗng).
+- `speakerId` là ID speaker dùng generate, được lưu DB.
+- `pitchPattern` nếu gửi sẽ override pitch mặc định.
+
+**Request body:**
 
 ```json
 {
-  "items": [
+  "title": "食べる",                    // ⚠ bắt buộc
+  "summary": "Động từ ăn",             // ⚠ bắt buộc
+  "level": "N5",                        // ❌ nullable — enum JlptLevel
+  "tags": ["verb"],                     // ❌ optional, mảng string
+  "status": "Draft",                    // ❌ nullable — enum PublishStatus
+  "writing": "食べる",                  // ⚠ bắt buộc
+  "reading": "たべる",                  // ❌ nullable
+  "pitchPattern": [0, 1, 0],           // ❌ nullable, mảng int (0=thấp, 1=cao)
+  "speakerId": 3,                       // ❌ nullable, int
+  "wordType": "Native",                // ❌ nullable — enum WordType
+  "meanings": [                         // ⚠ bắt buộc, ít nhất 1 item
     {
-      "rowNumber": null,
-      "text": "日本へ行きたいです。",
-      "meaning": "Tôi muốn đi Nhật.",
-      "speakerId": 3,
-      "level": "N5"
+      "partOfSpeech": "VerbRu",         // ⚠ bắt buộc — enum PartOfSpeech
+      "definitions": ["ăn", "dùng bữa"] // ⚠ bắt buộc, ít nhất 1 item
+    }
+  ],
+  "synonyms": [],                       // ❌ optional
+  "antonyms": [],                       // ❌ optional
+  "relatedPhrases": [],                 // ❌ optional
+  "sentences": [                        // ❌ optional, nested upsert
+    {
+      "id": "existing-sentence-id",     // ❌ có id → update sentence, không id → tạo mới
+      "text": "毎朝パンを食べる。",     // ⚠ bắt buộc
+      "meaning": "Mỗi sáng ăn bánh mì.", // ⚠ bắt buộc
+      "speakerId": 3,                   // ❌ nullable
+      "level": "N5"                     // ❌ nullable — enum JlptLevel
     }
   ]
 }
 ```
 
-### POST `/api/sentences/import/preview`
+**Response data:** `VocabularyDetailResponse` (full detail của card vừa tạo)
 
-Preview payload import, validate theo từng item và trả về danh sách lỗi/cảnh báo, chưa ghi DB.
+---
 
-Với lỗi field-level, backend trả theo format:
+### PATCH `/api/vocabulary/{cardId}` 🔑
 
-- `<MessageCode>:<fieldPath>`
+Cập nhật vocabulary card. Body giống `POST`.
 
-Ví dụ:
+**⚠ Quy tắc `sentences`:**
+- Danh sách `sentences` gửi lên = **trạng thái cuối cùng**.
+- Sentence nào **không có** trong request → bị gỡ khỏi vocabulary.
+- Sentence có `id` → update, không có `id` → tạo mới + generate audio VOICEVOX.
 
-- `Sentence_ImportFieldRequired_400:text`
-- `Sentence_ImportFieldTooLong_400:meaning`
-- `Sentence_ImportFieldInvalid_400:level`
-- `Sentence_ImportSpeakerIdNotSupported_400:speakerId`
+**Response data:** `VocabularyDetailResponse`
 
-Request body:
+---
+
+### DELETE `/api/vocabulary/{cardId}` 🔑
+
+Xóa mềm vocabulary card (chuyển `status = Archived`).
+
+**Response data:** `true`
+
+---
+
+### GET `/api/vocabulary/import-template` 🔑
+
+Tải file JSON template mẫu cho import vocabulary.
+
+- Response: file `application/json` (`Content-Disposition: attachment`).
+- Shape cùng với request body của `import/preview`.
+
+---
+
+### GET `/api/vocabulary/export` 🔑
+
+Export vocabulary ra file JSON theo bộ lọc.
+
+**Query params:**
+
+| Param | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `q` | `string` | — | Từ khóa |
+| `level` | `string` | `JlptLevel` | |
+| `status` | `string` | `PublishStatus` | |
+| `wordType` | `string` | `WordType` | |
+| `hasAudio` | `bool` | — | |
+| `createdByMe` | `bool` | — | |
+
+- Response: file `application/json` với shape tương tự import payload.
+
+---
+
+### POST `/api/vocabulary/import/preview` 🔑
+
+Preview payload import. Validate từng item, **chưa ghi vào DB**.
+
+**Import rules:**
+- Import hiện tại là **create-only** (chỉ tạo mới).
+- `sentences[*].id` **KHÔNG được gửi** (vì create-only).
+- `writing` không được trùng trong batch + không trùng DB.
+
+**Request body:**
 
 ```json
 {
   "items": [
     {
-      "rowNumber": 1,
-      "text": "日本へ行きたいです。",
-      "meaning": "Tôi muốn đi Nhật.",
+      "rowNumber": 1,                  // ⚠ số thứ tự hàng
+      "title": "食べる",
+      "summary": "Động từ ăn",
+      "level": "N5",
+      "tags": ["verb"],
+      "status": "Draft",
+      "writing": "食べる",
+      "reading": "たべる",
+      "pitchPattern": [0, 1, 0],
       "speakerId": 3,
-      "level": "N5"
+      "wordType": "Native",
+      "meanings": [
+        { "partOfSpeech": "VerbRu", "definitions": ["ăn"] }
+      ],
+      "synonyms": [],
+      "antonyms": [],
+      "relatedPhrases": [],
+      "sentences": [
+        { "text": "毎朝パンを食べる。", "meaning": "Mỗi sáng ăn bánh mì.", "speakerId": 3, "level": "N5" }
+      ]
     }
   ]
 }
 ```
 
-Response data:
+**Response data:**
 
 ```json
 {
@@ -270,7 +844,8 @@ Response data:
   "items": [
     {
       "rowNumber": 1,
-      "text": "日本へ行きたいです。",
+      "title": "食べる",
+      "writing": "食べる",
       "isValid": true,
       "errors": [],
       "warnings": []
@@ -279,7 +854,7 @@ Response data:
 }
 ```
 
-Ví dụ response khi payload không hợp lệ:
+**Ví dụ response lỗi:**
 
 ```json
 {
@@ -289,12 +864,12 @@ Ví dụ response khi payload không hợp lệ:
   "items": [
     {
       "rowNumber": 1,
-      "text": "",
+      "title": "食べる",
+      "writing": "食べる",
       "isValid": false,
       "errors": [
-        "Sentence_ImportFieldRequired_400:text",
-        "Sentence_ImportFieldInvalid_400:level",
-        "Sentence_ImportSpeakerIdNotSupported_400:speakerId"
+        "Vocabulary_ImportWritingAlreadyExists_400",
+        "Vocabulary_ImportSentenceIdNotAllowed_400:sentences[0].id"
       ],
       "warnings": []
     }
@@ -302,19 +877,39 @@ Ví dụ response khi payload không hợp lệ:
 }
 ```
 
-### POST `/api/sentences/import/commit`
+**Error codes cho import:**
 
-Commit batch import sau khi payload đã hợp lệ. Endpoint này sẽ:
+| Code | Mô tả |
+|------|-------|
+| `Vocabulary_ImportInvalidPayload_400` | Payload tổng thể không hợp lệ |
+| `Vocabulary_ImportBatchHasErrors_400` | Batch còn item lỗi, không commit |
+| `Vocabulary_ImportFieldRequired_400:<field>` | Field bắt buộc bị thiếu |
+| `Vocabulary_ImportFieldTooLong_400:<field>` | Field vượt quá độ dài cho phép |
+| `Vocabulary_ImportFieldInvalid_400:<field>` | Giá trị enum không hợp lệ |
+| `Vocabulary_ImportDuplicateWritingInBatch_400` | `writing` trùng trong batch |
+| `Vocabulary_ImportWritingAlreadyExists_400` | `writing` đã có trong DB |
+| `Vocabulary_ImportSentenceIdNotAllowed_400:<field>` | Không được gửi `sentences[*].id` khi import |
+| `Vocabulary_ImportMeaningsRequired_400` | Thiếu `meanings` |
+| `Vocabulary_ImportDefinitionsRequired_400` | Thiếu `definitions` trong meaning |
+| `Vocabulary_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ |
+| `Vocabulary_ImportListTooManyItems_400` | Vượt quá số item cho phép |
+| `Vocabulary_ImportSentencesTooMany_400` | Quá nhiều sentences |
+| `Vocabulary_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
 
-- chạy `preview` nội bộ trước
-- nếu còn item invalid thì không ghi DB
-- nếu hợp lệ thì xử lý tuần tự từng item
-- mỗi item hợp lệ sẽ tạo sentence mới
-- mỗi sentence mới sẽ được generate audio bằng VOICEVOX như `POST /api/sentences`
+---
 
-Request body cùng shape với `import/preview`.
+### POST `/api/vocabulary/import/commit` 🔑
 
-Response data:
+Commit batch import vào DB.
+
+**Quy trình:**
+1. Backend chạy `preview` nội bộ trước.
+2. Nếu còn item invalid → **không ghi DB**, trả lỗi `Vocabulary_ImportBatchHasErrors_400`.
+3. Nếu tất cả hợp lệ → tạo tuần tự từng vocabulary card mới.
+
+**Request body:** Cùng shape với `import/preview`.
+
+**Response data:**
 
 ```json
 {
@@ -325,18 +920,11 @@ Response data:
   "items": [
     {
       "rowNumber": 1,
-      "text": "日本へ行きたいです。",
+      "title": "食べる",
+      "writing": "食べる",
       "isSuccess": true,
       "action": "created",
-      "sentenceId": "new-sentence-id-1",
-      "errors": []
-    },
-    {
-      "rowNumber": 2,
-      "text": "毎日日本語を勉強します。",
-      "isSuccess": true,
-      "action": "created",
-      "sentenceId": "new-sentence-id-2",
+      "cardId": "new-card-id",
       "errors": []
     }
   ]
@@ -345,51 +933,72 @@ Response data:
 
 ---
 
-## Grammar Module
+## 7. Grammar Module — Admin
 
-### Endpoints
+> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Trừ `GET /api/grammar/{cardId}` là endpoint Public dùng cho cả user lẫn admin.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/grammar` | Editor/Admin | Tìm kiếm grammar có phân trang |
-| GET | `/api/grammar/{cardId}` | Public | Lấy chi tiết grammar (card chưa Published chỉ owner mới xem được) |
-| GET | `/api/grammar/import-template` | Editor/Admin | Tải JSON template cho import grammar |
-| GET | `/api/grammar/export` | Editor/Admin | Tải JSON export grammar theo bộ lọc |
-| POST | `/api/grammar/import/preview` | Editor/Admin | Preview payload import grammar, chưa ghi DB |
-| POST | `/api/grammar/import/commit` | Editor/Admin | Commit batch import grammar |
-| POST | `/api/grammar` | Editor/Admin | Tạo grammar mới |
-| PATCH | `/api/grammar/{cardId}` | Editor/Admin | Cập nhật grammar |
-| DELETE | `/api/grammar/{cardId}` | Editor/Admin | Soft delete grammar (Archived) |
+### Tổng quan
 
-### Search query (`GET /api/grammar`)
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/grammar` | 🔑 Editor/Admin | Tìm kiếm grammar có phân trang |
+| GET | `/api/grammar/{cardId}` | 🌐 Public | Lấy chi tiết grammar |
+| POST | `/api/grammar` | 🔑 Editor/Admin | Tạo grammar mới |
+| PATCH | `/api/grammar/{cardId}` | 🔑 Editor/Admin | Cập nhật grammar |
+| DELETE | `/api/grammar/{cardId}` | 🔑 Editor/Admin | Xóa mềm grammar (Archived) |
+| GET | `/api/grammar/import-template` | 🔑 Editor/Admin | Tải JSON template import |
+| GET | `/api/grammar/export` | 🔑 Editor/Admin | Export grammar ra JSON |
+| POST | `/api/grammar/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
+| POST | `/api/grammar/import/commit` | 🔑 Editor/Admin | Commit batch import |
 
-Hỗ trợ các query params:
+---
 
-- `q`
-- `level`
-- `status`
-- `register`
-- `createdByMe`
-- `page`
-- `pageSize`
+### GET `/api/grammar` 🔑
 
-`q` hiện tìm theo:
+Tìm kiếm danh sách grammar cho admin.
 
-- `title`
-- `summary`
-- `alternateForms`
-- `structures.pattern`
+**Query params:**
 
-`q` **không** tìm trong `explanation`.
+| Param | Type | Bắt buộc | Enum | Mô tả |
+|-------|------|----------|------|-------|
+| `q` | `string` | ❌ | — | Tìm theo `title`, `summary`, `alternateForms`, `structures.pattern`. **KHÔNG** tìm trong `explanation` |
+| `level` | `string` | ❌ | `JlptLevel` | |
+| `status` | `string` | ❌ | `PublishStatus` | |
+| `register` | `string` | ❌ | `RegisterType` | |
+| `createdByMe` | `bool` | ❌ | — | |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
 
-### GET `/api/grammar/{cardId}`
+**Response data item:**
+
+```json
+{
+  "id": "string",
+  "title": "〜ながら",
+  "summary": "Vừa làm A vừa làm B.",
+  "level": "N4 | null",
+  "tags": ["grammar", "simultaneous"],
+  "status": "Draft | Published | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "register": "Standard | Formal | Polite | Casual | null",
+  "structuresCount": 1,
+  "alternateForms": ["〜つつ"]
+}
+```
+
+---
+
+### GET `/api/grammar/{cardId}` 🌐
 
 Lấy chi tiết grammar card.
 
-- Card `Published`: public có thể xem.
-- Card chưa `Published`: chỉ user tạo card mới xem được.
+**Quy tắc truy cập:**
+- ✅ Card `Published`: public.
+- ⚠ Card `Draft` / `Archived`: chỉ owner xem được.
 
-Response data:
+**Response data** (`GrammarDetailResponse`):
 
 ```json
 {
@@ -397,7 +1006,7 @@ Response data:
   "cardType": "Grammar",
   "title": "〜ながら",
   "summary": "Vừa làm A vừa làm B.",
-  "level": "N4",
+  "level": "N4 | null",
   "tags": ["grammar", "simultaneous"],
   "status": "Published | Draft | Archived",
   "createdAt": "datetime",
@@ -435,7 +1044,7 @@ Response data:
       "id": "sentence-id",
       "text": "音楽を聞きながら勉強します。",
       "meaning": "Tôi vừa nghe nhạc vừa học.",
-      "audioUrl": "https://cdn.example.com/audio/sentence-1.wav",
+      "audioUrl": "https://cdn.example.com/audio/sentence.wav",
       "level": "N4"
     }
   ],
@@ -453,78 +1062,175 @@ Response data:
 }
 ```
 
-Field note cho `relations[*]`:
+**Field details:**
 
-- `relatedId`: ID card ngữ pháp liên quan.
-- `title`: tiêu đề card liên quan (để frontend hiển thị dễ đọc).
-- `summary`: mô tả ngắn của card liên quan.
-- `relationType`: **enum** `grammar_relation_type_enum` với 2 giá trị:
-  - `Similar`
-  - `Contrasting`
+| Field | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `cardType` | `string` | `CardType` | Luôn là `Grammar` |
+| `structures[].pattern` | `string` | — | Mẫu cấu trúc, hỗ trợ **rich text** |
+| `structures[].annotations` | `object?` | — | Key = số thứ tự `(1)`, value = chú thích |
+| `explanation` | `string?` | — | Giải thích chi tiết, hỗ trợ **rich text** |
+| `caution` | `string?` | — | Lưu ý, hỗ trợ **rich text** |
+| `register` | `string?` | `RegisterType` | Ngữ cảnh sử dụng |
+| `relations[].relationType` | `string` | `GrammarRelationType` | `Similar` hoặc `Contrasting` |
 
-### API update note (Grammar detail)
+**Error codes:**
 
-- Bổ sung `relations[*].title`.
-- Bổ sung `relations[*].summary`.
-- Chuẩn hóa `relations[*].relationType` sang enum `grammar_relation_type_enum` (`Similar`/`Contrasting`).
+| Code | Khi nào |
+|------|---------|
+| `Grammar_CardNotFound_404` | Card không tồn tại |
+| `Grammar_ReadForbidden_401` | Card chưa Published và user không phải owner |
 
-### Import/export note
+---
 
-- Grammar import hiện tại là **create-only**.
-- `import/preview` chỉ validate payload theo item, không ghi DB.
-- `import/commit` luôn chạy preview nội bộ trước; nếu còn item invalid sẽ block commit.
-- `export` trả đúng shape với payload import để frontend có thể chỉnh sửa rồi import lại.
-- Với grammar import create-only, `sentences[*].id` không được phép gửi.
+### Rich Text Rules (Markdown subset)
 
-### Rich text rule (Markdown subset)
+Áp dụng cho các field: `structures[].pattern`, `structures[].annotations[*]`, `explanation`, `caution`.
 
-Các field rich text:
+**Cho phép:**
 
-- `structures[].pattern`
-- `structures[].annotations[*]` (nếu có)
-- `explanation`
-- `caution`
+| Syntax | Mô tả |
+|--------|-------|
+| `**bold**` | In đậm |
+| `*italic*` | In nghiêng |
+| `~~strikethrough~~` | Gạch ngang |
+| `{u}text{/u}` | Gạch chân |
+| `{red}text{/red}` | Tô màu (whitelist) |
 
-Cho phép:
+**Màu whitelist:** `red`, `blue`, `green`, `yellow`, `orange`, `purple`, `gray`
 
-- `**bold**`
-- `*italic*`
-- `~~strikethrough~~`
-- Underline custom token: `{u}text{/u}`
-- Color custom token (whitelist): `{red|blue|green|yellow|orange|purple|gray}text{/<color>}`
-
-Không cho phép:
-
+**KHÔNG cho phép:**
 - Raw HTML (`<tag>...</tag>`)
 - Token sai cú pháp hoặc không đóng cặp
 - Token màu ngoài whitelist
 
-Giới hạn độ dài:
+**Giới hạn độ dài:**
 
-- `structures[].pattern`: tối đa 1000 ký tự
-- `structures[].annotations[*]`: tối đa 1000 ký tự/value
-- `explanation`: tối đa 10000 ký tự
-- `caution`: tối đa 5000 ký tự
+| Field | Max ký tự |
+|-------|-----------|
+| `structures[].pattern` | 1,000 |
+| `structures[].annotations[*]` | 1,000/value |
+| `explanation` | 10,000 |
+| `caution` | 5,000 |
 
-### GET `/api/grammar/import-template`
+---
 
-Trả về file JSON sample đúng shape import grammar.
+### POST `/api/grammar` 🔑
 
-### GET `/api/grammar/export`
+Tạo mới grammar card.
 
-Query params hỗ trợ:
+**Request body:**
 
-- `q`
-- `level`
-- `status`
-- `register`
-- `createdByMe`
+```json
+{
+  "title": "〜てから",                    // ⚠ bắt buộc
+  "summary": "Diễn tả hành động B xảy ra sau", // ⚠ bắt buộc
+  "level": "N5",                          // ❌ nullable — enum JlptLevel
+  "tags": ["grammar", "sequence"],        // ❌ optional
+  "status": "Draft",                      // ❌ nullable — enum PublishStatus
+  "structures": [                         // ❌ optional
+    {
+      "pattern": "**V[て形]** + から",    // rich text allowed
+      "annotations": {                    // ❌ nullable
+        "1": "Hành động trước"
+      }
+    }
+  ],
+  "explanation": "Dùng khi hành động sau xảy ra sau khi hành động trước hoàn tất.",  // ❌ nullable, rich text
+  "caution": "~~Không~~ dùng cho hai hành động đồng thời.",  // ❌ nullable, rich text
+  "register": "Standard",                // ❌ nullable — enum RegisterType
+  "alternateForms": ["〜てからです"],     // ❌ optional
+  "relations": [                          // ❌ optional
+    {
+      "relatedId": "grammar-card-id-1",   // ⚠ bắt buộc, ID card ngữ pháp liên quan
+      "relationType": "Similar"           // ⚠ bắt buộc — enum GrammarRelationType
+    }
+  ],
+  "resources": [                          // ❌ optional
+    {
+      "title": "Bài giảng",              // ⚠ bắt buộc
+      "url": "https://example.com/te-kara" // ⚠ bắt buộc
+    }
+  ],
+  "sentences": [                          // ❌ optional, nested upsert
+    {
+      "id": "optional-existing-id",       // ❌ có id → update, không id → tạo mới
+      "text": "ご飯を食べてから、勉強します。", // ⚠ bắt buộc
+      "meaning": "Ăn cơm xong rồi học.",  // ⚠ bắt buộc
+      "speakerId": 3,                     // ❌ nullable
+      "level": "N5"                       // ❌ nullable — enum JlptLevel
+    }
+  ]
+}
+```
 
-Response file body cùng shape với import request.
+**Response data:** `GrammarDetailResponse`
 
-### POST `/api/grammar/import/preview`
+**Error codes:**
 
-Request body:
+| Code | Khi nào |
+|------|---------|
+| `Grammar_InvalidRichText_400` | Rich text pattern/explanation/caution sai cú pháp |
+| `Grammar_RelatedCardNotFound_404` | `relatedId` không tìm thấy grammar card |
+| `Grammar_InvalidRelation_400` | Relation không hợp lệ (VD: tự tham chiếu chính mình) |
+
+---
+
+### PATCH `/api/grammar/{cardId}` 🔑
+
+Cập nhật grammar card. Body giống `POST`.
+
+**⚠ Quy tắc `sentences`:**
+- Danh sách `sentences` gửi lên = **trạng thái cuối cùng**.
+- Sentence nào KHÔNG có trong request → bị gỡ association.
+
+**Response data:** `GrammarDetailResponse`
+
+---
+
+### DELETE `/api/grammar/{cardId}` 🔑
+
+Xóa mềm grammar card (chuyển `status = Archived`).
+
+**Response data:** `true`
+
+---
+
+### GET `/api/grammar/import-template` 🔑
+
+Tải file JSON template mẫu cho import grammar.
+
+- Response: file `application/json` (`Content-Disposition: attachment`).
+
+---
+
+### GET `/api/grammar/export` 🔑
+
+Export grammar ra file JSON.
+
+**Query params:**
+
+| Param | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `q` | `string` | — | Từ khóa |
+| `level` | `string` | `JlptLevel` | |
+| `status` | `string` | `PublishStatus` | |
+| `register` | `string` | `RegisterType` | |
+| `createdByMe` | `bool` | — | |
+
+- Response: file `application/json` cùng shape với import payload.
+
+---
+
+### POST `/api/grammar/import/preview` 🔑
+
+Preview payload import grammar, validate từng item, **chưa ghi DB**.
+
+**Import rules:**
+- Import hiện tại là **create-only**.
+- `sentences[*].id` **KHÔNG được gửi** (vì create-only).
+
+**Request body:**
 
 ```json
 {
@@ -534,15 +1240,12 @@ Request body:
       "title": "〜ながら",
       "summary": "Vừa làm A vừa làm B.",
       "level": "N4",
-      "tags": ["grammar", "simultaneous"],
+      "tags": ["grammar"],
       "status": "Draft",
       "structures": [
         {
           "pattern": "V1(1) + ながら + V2(2)",
-          "annotations": {
-            "1": "Hành động phụ diễn ra đồng thời",
-            "2": "Hành động chính"
-          }
+          "annotations": { "1": "Hành động phụ", "2": "Hành động chính" }
         }
       ],
       "explanation": "Dùng khi chủ thể vừa làm A vừa làm B.",
@@ -553,22 +1256,17 @@ Request body:
         { "relatedId": "grammar-card-001", "relationType": "Similar" }
       ],
       "resources": [
-        { "title": "Bài giảng", "url": "https://example.com/grammar/nagara" }
+        { "title": "Bài giảng", "url": "https://example.com/nagara" }
       ],
       "sentences": [
-        {
-          "text": "音楽を聞きながら勉強します。",
-          "meaning": "Tôi vừa nghe nhạc vừa học.",
-          "speakerId": 3,
-          "level": "N4"
-        }
+        { "text": "音楽を聞きながら勉強します。", "meaning": "Vừa nghe nhạc vừa học.", "speakerId": 3, "level": "N4" }
       ]
     }
   ]
 }
 ```
 
-Response data:
+**Response data:**
 
 ```json
 {
@@ -587,11 +1285,37 @@ Response data:
 }
 ```
 
-### POST `/api/grammar/import/commit`
+**Error codes cho import:**
 
-Request body cùng shape với `import/preview`.
+| Code | Mô tả |
+|------|-------|
+| `Grammar_ImportInvalidPayload_400` | Payload tổng thể không hợp lệ |
+| `Grammar_ImportBatchHasErrors_400` | Batch còn item lỗi |
+| `Grammar_ImportFieldRequired_400:<field>` | Field bắt buộc bị thiếu |
+| `Grammar_ImportFieldTooLong_400:<field>` | Field vượt quá giới hạn |
+| `Grammar_ImportFieldInvalid_400:<field>` | Enum/giá trị không hợp lệ |
+| `Grammar_ImportRelatedGrammarNotFound_404:<field>` | `relatedId` không tìm thấy |
+| `Grammar_ImportDuplicateRelation_400:<field>` | Relation trùng lặp |
+| `Grammar_ImportSentenceIdNotAllowed_400:<field>` | Không được gửi `sentences[*].id` |
+| `Grammar_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ |
+| `Grammar_ImportListTooManyItems_400` | Quá số item cho phép |
+| `Grammar_ImportSentencesTooMany_400` | Quá nhiều sentences |
+| `Grammar_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
 
-Response data:
+---
+
+### POST `/api/grammar/import/commit` 🔑
+
+Commit batch import grammar.
+
+**Quy trình:**
+1. Backend chạy `preview` nội bộ trước.
+2. Nếu còn item invalid → trả `Grammar_ImportBatchHasErrors_400`.
+3. Hợp lệ → tạo tuần tự. Mỗi sentence sẽ generate audio bằng VOICEVOX.
+
+**Request body:** Cùng shape với `import/preview`.
+
+**Response data:**
 
 ```json
 {
@@ -612,355 +1336,178 @@ Response data:
 }
 ```
 
-Một số message code frontend cần bắt:
+---
 
-- `Grammar_ImportInvalidPayload_400`
-- `Grammar_ImportBatchHasErrors_400`
-- `Grammar_ImportFieldRequired_400:<fieldPath>`
-- `Grammar_ImportFieldTooLong_400:<fieldPath>`
-- `Grammar_ImportFieldInvalid_400:<fieldPath>`
-- `Grammar_ImportRelatedGrammarNotFound_404:<fieldPath>`
-- `Grammar_ImportDuplicateRelation_400:<fieldPath>`
-- `Grammar_ImportSentenceIdNotAllowed_400:<fieldPath>`
+## 8. Sentences Module — Admin
 
-### Request body (`POST`/`PATCH`)
+> 🔑 **Toàn bộ module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Sentences là câu ví dụ dùng chung cho Vocabulary và Grammar.
 
-```json
-{
-  "title": "〜てから",
-  "summary": "Diễn tả hành động B xảy ra sau khi làm A",
-  "level": "N5",
-  "tags": ["grammar", "sequence"],
-  "status": "Draft",
-  "structures": [
-    {
-      "pattern": "V1(1) + ながら + V2(2)",
-      "annotations": {
-        "1": "Hành động phụ, có thể nhấn bằng {green}màu{/green}",
-        "2": "{u}Hành động chính{/u}"
-      }
-    },
-    {
-      "pattern": "**V[て形]** + から"
-    }
-  ],
-  "explanation": "Dùng khi hành động sau xảy ra sau khi hành động trước hoàn tất. Có thể nhấn mạnh bằng **bold**.",
-  "caution": "~~Không~~ dùng cho hai hành động đồng thời.",
-  "register": "Standard",
-  "alternateForms": ["〜てからです"],
-  "relations": [
-    { "relatedId": "grammar-card-id-1", "relationType": "Similar" },
-    { "relatedId": "grammar-card-id-2", "relationType": "Contrasting" }
-  ],
-  "resources": [
-    { "title": "Bài giảng", "url": "https://example.com/te-kara" }
-  ],
-  "sentences": [
-    {
-      "id": "optional-existing-sentence-id",
-      "text": "ご飯を食べてから、勉強します。",
-      "meaning": "Tôi ăn cơm xong rồi học.",
-      "speakerId": 3,
-      "level": "N5"
-    }
-  ]
-}
-```
+### Tổng quan
 
-### Grammar sentences note (`POST`/`PATCH`)
-
-- `sentences` là nested upsert cho example sentences.
-- Nếu `sentences[*].id` có giá trị: backend update sentence đó rồi giữ/gắn vào grammar card.
-- Nếu không có `id`: backend tạo sentence mới (VOICEVOX synth audio theo `text` + `speakerId`) rồi gắn vào grammar card.
-- Với `PATCH /api/grammar/{cardId}`, danh sách `sentences` được xem là trạng thái cuối cùng; association không còn trong request sẽ bị gỡ.
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/sentences` | 🔑 Editor/Admin | Tìm kiếm sentence có phân trang |
+| GET | `/api/sentences/{id}` | 🔑 Editor/Admin | Lấy chi tiết sentence |
+| POST | `/api/sentences` | 🔑 Editor/Admin | Tạo sentence mới |
+| PATCH | `/api/sentences/{id}` | 🔑 Editor/Admin | Cập nhật sentence |
+| DELETE | `/api/sentences/{id}` | 🔑 Editor/Admin | Xóa sentence |
+| GET | `/api/sentences/import-template` | 🔑 Editor/Admin | Tải JSON template import |
+| GET | `/api/sentences/export` | 🔑 Editor/Admin | Export sentences ra JSON |
+| POST | `/api/sentences/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
+| POST | `/api/sentences/import/commit` | 🔑 Editor/Admin | Commit batch import |
 
 ---
 
-## Vocabulary Module
+### GET `/api/sentences` 🔑
 
-### Endpoints
+Tìm kiếm danh sách sentence.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/vocabulary` | Editor/Admin | Tìm kiếm vocabulary có phân trang |
-| GET | `/api/vocabulary/{cardId}` | Public | Lấy chi tiết vocabulary |
-| GET | `/api/vocabulary/import-template` | Editor/Admin | Tải JSON template cho import vocabulary |
-| GET | `/api/vocabulary/export` | Editor/Admin | Tải JSON export vocabulary theo bộ lọc |
-| POST | `/api/vocabulary/import/preview` | Editor/Admin | Preview file import vocabulary, chưa ghi DB |
-| POST | `/api/vocabulary/import/commit` | Editor/Admin | Commit batch import vocabulary |
-| POST | `/api/vocabulary` | Editor/Admin | Tạo vocabulary mới |
-| PATCH | `/api/vocabulary/{cardId}` | Editor/Admin | Cập nhật vocabulary |
-| DELETE | `/api/vocabulary/{cardId}` | Editor/Admin | Soft delete vocabulary |
+**Query params:**
 
-### GET `/api/vocabulary/{cardId}`
+| Param | Type | Bắt buộc | Enum | Mô tả |
+|-------|------|----------|------|-------|
+| `q` | `string` | ❌ | — | Từ khóa tìm kiếm |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ |
+| `hasAudio` | `bool` | ❌ | — | Lọc có/không audio |
+| `createdByMe` | `bool` | ❌ | — | Chỉ lấy do mình tạo |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
 
-Lấy chi tiết vocabulary card.
-
-- Card `Published`: public có thể xem.
-- Card chưa `Published`: chỉ user tạo card mới xem được.
-
-Response data:
+**Response data item** (`SentenceResponse`):
 
 ```json
 {
-  "id": "vocab-card-id",
-  "cardType": "Vocab",
-  "title": "食べる",
-  "summary": "Động từ ăn",
-  "level": "N5",
-  "tags": ["verb"],
-  "status": "Published | Draft | Archived",
+  "id": "string",
+  "text": "日本へ行きたいです。",
+  "meaning": "Tôi muốn đi Nhật.",
+  "audioUrl": "string | null",
+  "speakerId": 3,
+  "level": "N5 | null",
   "createdAt": "datetime",
-  "updatedAt": "datetime | null",
-  "writing": "食べる",
-  "reading": "たべる",
-  "pitchPattern": [0, 1, 0],
-  "audioUrl": "https://cdn.example.com/audio/taberu.wav",
-  "speakerId": 3,
-  "wordType": "Native | SinoJapanese | Loanword | null",
-  "meanings": [
-    {
-      "partOfSpeech": "Noun | VerbU | VerbRu | IAdj | NaAdj | Adverb | Particle | Conjunction | Interjection",
-      "definitions": ["ăn", "dùng bữa"]
-    }
-  ],
-  "synonyms": ["食事する"],
-  "antonyms": [],
-  "relatedPhrases": ["ご飯を食べる"],
-  "sentences": [
-    {
-      "id": "sentence-id",
-      "text": "毎朝パンを食べる。",
-      "meaning": "Mỗi sáng tôi ăn bánh mì.",
-      "audioUrl": "https://cdn.example.com/audio/sentence-2.wav",
-      "level": "N5"
-    }
-  ],
-  "userNotes": [
-    {
-      "id": "note-id",
-      "userId": "user-id",
-      "userName": "Tran Thi B",
-      "content": "Từ cơ bản, nên thuộc ở N5.",
-      "likesCount": 5,
-      "isLikedByMe": true,
-      "createdAt": "datetime"
-    }
-  ]
+  "updatedAt": "datetime | null"
 }
 ```
 
-### Vocabulary create/update note
+---
 
-Từ ngày 2026-04-09, `vocabulary` chuyển sang luồng **VOICEVOX-only** cho audio:
+### GET `/api/sentences/{id}` 🔑
 
-- Client không gửi `audioUrl` nữa.
-- Backend luôn tự generate `audioUrl` từ VOICEVOX.
-- Backend ưu tiên dùng `reading` để generate audio; nếu `reading` trống thì fallback sang `writing`.
-- `speakerId` là speaker dùng để generate audio và được lưu lại trong DB.
-- `pitchPattern` vẫn được phép gửi để frontend-admin override thủ công nếu pitch từ VOICEVOX chưa chuẩn.
-- `sentences` trong request là danh sách nested upsert cho example sentences của vocabulary.
-- Nếu một sentence item có `id`, backend sẽ update sentence đó rồi giữ/gắn association vào vocabulary.
-- Nếu một sentence item không có `id`, backend sẽ tạo sentence mới, generate audio bằng VOICEVOX, rồi gắn vào vocabulary.
-- Với `PATCH /api/vocabulary/{cardId}`, danh sách `sentences` gửi lên được xem là trạng thái cuối cùng; association nào không còn trong request sẽ bị gỡ khỏi vocabulary.
+Lấy chi tiết sentence theo ID.
 
-Request body cho `POST /api/vocabulary` và `PATCH /api/vocabulary/{cardId}`:
+**Response data:** `SentenceResponse`
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Sentence_NotFound_404` | Sentence không tồn tại |
+
+---
+
+### POST `/api/sentences` 🔑
+
+Tạo sentence mới.
+
+**Lưu ý VOICEVOX-only:**
+- ❌ Client **không gửi** `audioUrl`.
+- ✅ Backend tự generate audio bằng VOICEVOX từ `text` và `speakerId`.
+
+**Request body:**
 
 ```json
 {
-  "title": "食べる",
-  "summary": "Động từ ăn",
-  "level": "N5",
-  "tags": ["verb"],
-  "status": "Draft",
-  "writing": "食べる",
-  "reading": "たべる",
-  "pitchPattern": [0, 1, 0],
-  "speakerId": 3,
-  "wordType": "Native",
-  "meanings": [
-    {
-      "partOfSpeech": "VerbRu",
-      "definitions": ["ăn", "dùng bữa"]
-    }
-  ],
-  "synonyms": [],
-  "antonyms": [],
-  "relatedPhrases": [],
-  "sentences": [
-    {
-      "id": "optional-existing-sentence-id",
-      "text": "毎朝パンを食べる。",
-      "meaning": "Mỗi sáng tôi ăn bánh mì.",
-      "speakerId": 3,
-      "level": "N5"
-    },
-    {
-      "text": "野菜をもっと食べたほうがいい。",
-      "meaning": "Bạn nên ăn rau nhiều hơn.",
-      "speakerId": 8,
-      "level": "N4"
-    }
-  ]
+  "text": "日本へ行きたいです。",    // ⚠ bắt buộc
+  "meaning": "Tôi muốn đi Nhật.",  // ⚠ bắt buộc
+  "speakerId": 3,                   // ❌ nullable
+  "level": "N5"                     // ❌ nullable — enum JlptLevel
 }
 ```
 
-Response detail vẫn trả `audioUrl`, `speakerId`, `pitchPattern` như trước để frontend phát audio và hiển thị accent.
+**Response data:** `SentenceResponse`
 
-### GET `/api/vocabulary/import-template`
+---
 
-Trả về file `application/json` theo đúng shape import create-only. File mẫu hiện tại gồm 1 item sample, có thể tải về, sửa dữ liệu rồi gọi preview/import sau.
+### PATCH `/api/sentences/{id}` 🔑
 
-Response file body:
+Cập nhật sentence.
+
+**Request body:** Cùng shape với `POST`.
+
+**Response data:** `SentenceResponse`
+
+---
+
+### DELETE `/api/sentences/{id}` 🔑
+
+Xóa sentence.
+
+**Response data:** `true`
+
+---
+
+### GET `/api/sentences/import-template` 🔑
+
+Tải file JSON template mẫu cho import sentences.
+
+**Response file body:**
 
 ```json
 {
   "items": [
     {
       "rowNumber": 1,
-      "title": "食べる",
-      "summary": "Động từ ăn",
-      "level": "N5",
-      "tags": ["verb", "daily-life"],
-      "status": "Draft",
-      "writing": "食べる",
-      "reading": "たべる",
-      "pitchPattern": [0, 1, 0],
+      "text": "日本へ行きたいです。",
+      "meaning": "Tôi muốn đi Nhật.",
       "speakerId": 3,
-      "wordType": "Native",
-      "meanings": [
-        {
-          "partOfSpeech": "VerbRu",
-          "definitions": ["ăn", "dùng bữa"]
-        }
-      ],
-      "synonyms": ["食事する"],
-      "antonyms": [],
-      "relatedPhrases": ["ご飯を食べる"],
-      "sentences": [
-        {
-          "text": "毎朝パンを食べる。",
-          "meaning": "Mỗi sáng tôi ăn bánh mì.",
-          "speakerId": 3,
-          "level": "N5"
-        }
-      ]
+      "level": "N5"
     }
   ]
 }
 ```
 
-### GET `/api/vocabulary/export`
+---
 
-Tải file `application/json` cùng shape với payload import create-only, để frontend có thể chỉnh sửa và import tạo vocabulary mới hàng loạt.
+### GET `/api/sentences/export` 🔑
 
-Query params hỗ trợ:
+Export sentences ra JSON.
 
-- `q`
-- `level`
-- `status`
-- `wordType`
-- `hasAudio`
-- `createdByMe`
+**Query params:**
 
-Response file body:
+| Param | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `q` | `string` | — | Từ khóa |
+| `level` | `string` | `JlptLevel` | |
+| `hasAudio` | `bool` | — | |
+| `createdByMe` | `bool` | — | |
 
-```json
-{
-  "items": [
-    {
-      "rowNumber": null,
-      "title": "断る",
-      "summary": "động từ từ chối",
-      "level": "N5",
-      "tags": ["verb"],
-      "status": "Draft",
-      "writing": "断る",
-      "reading": "ことわる",
-      "pitchPattern": [1, 1, 1, 1],
-      "speakerId": 8,
-      "wordType": "Native",
-      "meanings": [
-        {
-          "partOfSpeech": "VerbRu",
-          "definitions": ["từ chối"]
-        }
-      ],
-      "synonyms": [],
-      "antonyms": [],
-      "relatedPhrases": [],
-      "sentences": []
-    }
-  ]
-}
-```
+---
 
-### POST `/api/vocabulary/import/preview`
+### POST `/api/sentences/import/preview` 🔑
 
-Preview payload import, validate theo từng item và trả về danh sách lỗi/cảnh báo, chưa ghi DB.
+Preview import sentences, validate từng item, **chưa ghi DB**.
 
-Ngoài validation field thông thường, backend còn kiểm tra:
+**Import rules:**
+- Import là **create-only**.
+- Backend **không nhận** `audioUrl`; khi commit sẽ tự synth audio.
 
-- `writing` không được trùng trong chính batch import
-- `writing` không được trùng với vocabulary đã có trong database
-- `sentences[*].id` không được gửi trong vocabulary import vì import này là create-only
-
-Các message code quan trọng frontend nên bắt:
-
-- `Vocabulary_ImportDuplicateWritingInBatch_400`
-- `Vocabulary_ImportWritingAlreadyExists_400`
-
-Với lỗi field-level còn lại, backend trả theo format:
-
-- `<MessageCode>:<fieldPath>`
-
-Ví dụ:
-
-- `Vocabulary_ImportFieldRequired_400:title`
-- `Vocabulary_ImportFieldTooLong_400:summary`
-- `Vocabulary_ImportFieldInvalid_400:meanings[0].partOfSpeech`
-- `Vocabulary_ImportSentenceIdNotAllowed_400:sentences[0].id`
-
-Request body:
+**Request body:**
 
 ```json
 {
   "items": [
     {
       "rowNumber": 1,
-      "title": "食べる",
-      "summary": "Động từ ăn",
-      "level": "N5",
-      "tags": ["verb", "daily-life"],
-      "status": "Draft",
-      "writing": "食べる",
-      "reading": "たべる",
-      "pitchPattern": [0, 1, 0],
+      "text": "日本へ行きたいです。",
+      "meaning": "Tôi muốn đi Nhật.",
       "speakerId": 3,
-      "wordType": "Native",
-      "meanings": [
-        {
-          "partOfSpeech": "VerbRu",
-          "definitions": ["ăn", "dùng bữa"]
-        }
-      ],
-      "synonyms": ["食事する"],
-      "antonyms": [],
-      "relatedPhrases": ["ご飯を食べる"],
-      "sentences": [
-        {
-          "text": "毎朝パンを食べる。",
-          "meaning": "Mỗi sáng tôi ăn bánh mì.",
-          "speakerId": 3,
-          "level": "N5"
-        }
-      ]
+      "level": "N5"
     }
   ]
 }
 ```
 
-Response data:
+**Response data:**
 
 ```json
 {
@@ -970,8 +1517,7 @@ Response data:
   "items": [
     {
       "rowNumber": 1,
-      "title": "食べる",
-      "writing": "食べる",
+      "text": "日本へ行きたいです。",
       "isValid": true,
       "errors": [],
       "warnings": []
@@ -980,41 +1526,32 @@ Response data:
 }
 ```
 
-Ví dụ response khi payload không hợp lệ:
+**Error codes cho import:**
 
-```json
-{
-  "totalItems": 1,
-  "validItems": 0,
-  "invalidItems": 1,
-  "items": [
-    {
-      "rowNumber": 1,
-      "title": "食べる",
-      "writing": "食べる",
-      "isValid": false,
-      "errors": [
-        "Vocabulary_ImportWritingAlreadyExists_400",
-        "Vocabulary_ImportSentenceIdNotAllowed_400:sentences[0].id"
-      ],
-      "warnings": []
-    }
-  ]
-}
-```
+| Code | Mô tả |
+|------|-------|
+| `Sentence_ImportInvalidPayload_400` | Payload không hợp lệ |
+| `Sentence_ImportBatchHasErrors_400` | Batch còn lỗi |
+| `Sentence_ImportFieldRequired_400:<field>` | Field bắt buộc thiếu. VD: `text`, `meaning` |
+| `Sentence_ImportFieldTooLong_400:<field>` | Vượt độ dài |
+| `Sentence_ImportFieldInvalid_400:<field>` | Giá trị enum không hợp lệ. VD: `level` |
+| `Sentence_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ |
+| `Sentence_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
 
-### POST `/api/vocabulary/import/commit`
+---
 
-Commit batch import sau khi payload đã hợp lệ. Endpoint này sẽ:
+### POST `/api/sentences/import/commit` 🔑
 
-- chạy `preview` nội bộ trước
-- nếu còn item invalid thì không ghi DB
-- nếu hợp lệ thì xử lý tuần tự từng item
-- mỗi item hợp lệ sẽ tạo vocabulary card mới
+Commit batch import sentences.
 
-Request body cùng shape với `import/preview`.
+**Quy trình:**
+1. Backend chạy `preview` nội bộ trước.
+2. Nếu còn lỗi → không ghi DB.
+3. Hợp lệ → tạo tuần tự, mỗi sentence generate audio VOICEVOX.
 
-Response data:
+**Request body:** Cùng shape với `import/preview`.
+
+**Response data:**
 
 ```json
 {
@@ -1025,11 +1562,10 @@ Response data:
   "items": [
     {
       "rowNumber": 1,
-      "title": "食べる",
-      "writing": "食べる",
+      "text": "日本へ行きたいです。",
       "isSuccess": true,
       "action": "created",
-      "cardId": "new-card-id",
+      "sentenceId": "new-sentence-id",
       "errors": []
     }
   ]
@@ -1038,48 +1574,140 @@ Response data:
 
 ---
 
-## Cards Module
+## 9. Uploads Module — Admin
 
-### Endpoints
+> 🔒 Yêu cầu đăng nhập.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/cards/search` | No | Search đơn giản cho frontend user, gộp Vocabulary + Grammar |
+### Tổng quan
 
-### GET `/api/cards/search`
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| POST | `/api/uploads/audio` | 🔒 Auth | Upload audio resource |
 
-API search tổng hợp cho frontend user, tái sử dụng cùng logic search của Vocabulary và Grammar.
+---
 
-Query params hỗ trợ:
+### POST `/api/uploads/audio` 🔒
 
-- `cardType`: `Vocab` hoặc `Grammar` (bỏ trống để tìm cả 2 loại)
-- `q`
-- `level`
-- `page`
-- `pageSize`
+Upload file audio và lưu metadata vào `MediaAssets`.
 
-Rule:
+- **Content-Type:** `multipart/form-data`
+- **Form field:** `audio`
+- **Allowed MIME:** `audio/mpeg`, `audio/wav`, `audio/mp4`
+- **Max size:** `20 MB`
 
-- Backend luôn chỉ trả card có `status = Published`.
-- Nếu không truyền `cardType`, kết quả Vocabulary và Grammar được gộp rồi sort theo `updatedAt ?? createdAt` giảm dần.
-- `q` dùng chính logic search của từng module:
-  - Vocabulary: `title`, `summary`, `writing`, `reading`
-  - Grammar: `title`, `summary`, `alternateForms`, `structures.pattern` (không search trong `explanation`)
-
-Response data item:
+**Response data:**
 
 ```json
 {
   "id": "string",
-  "cardType": "Vocab | Grammar",
-  "title": "string",
-  "summary": "string",
-  "level": "N5 | N4 | N3 | N2 | N1 | null",
-  "alternateForms": ["〜てからです"]
+  "fileUrl": "string",
+  "fileType": "Audio",
+  "usageType": "Audio",
+  "sizeInBytes": 12345,
+  "createdAt": "datetime"
 }
 ```
 
-Field note cho frontend:
+---
 
-- `alternateForms` chỉ có dữ liệu khi `cardType = Grammar`.
-- Với `cardType = Vocab`, backend luôn trả `alternateForms: []` để giữ response shape ổn định.
+## 10. Voicevox Module — Admin
+
+> 🔒 Yêu cầu đăng nhập.  
+> VOICEVOX là engine Text-to-Speech để generate audio cho sentences.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/voicevox/speakers` | 🔒 Auth | Lấy danh sách speaker khả dụng |
+| POST | `/api/voicevox/preview` | 🔒 Auth | Generate preview audio |
+
+---
+
+### GET `/api/voicevox/speakers` 🔒
+
+Lấy danh sách speaker VOICEVOX được phép sử dụng.
+
+**Response data item:**
+
+```json
+{
+  "speakerId": 3,
+  "characterName": "ずんだもん",
+  "styleName": "ノーマル"
+}
+```
+
+---
+
+### POST `/api/voicevox/preview` 🔒
+
+Generate audio preview để phát thử khi admin đổi speaker.
+
+**Request body:**
+
+```json
+{
+  "speakerId": 3,    // ⚠ bắt buộc, int
+  "text": "こんにちは。"  // ❌ nullable, nếu rỗng backend dùng text mặc định
+}
+```
+
+**Response data:**
+
+```json
+{
+  "speakerId": 3,
+  "text": "こんにちは。こちらは音声プレビューです。",
+  "audioUrl": "/audio-cache/example.wav"
+}
+```
+
+---
+
+## Phụ lục: Tổng hợp Error Codes
+
+### Common
+
+| Code | HTTP | Mô tả |
+|------|------|-------|
+| `Common_500` | 500 | Lỗi server nội bộ |
+| `Common_404` | 404 | Không tìm thấy |
+| `Common_400` | 400 | Yêu cầu không hợp lệ |
+| `Common_401` | 401 | Không có quyền |
+
+### Auth
+
+| Code | Mô tả |
+|------|-------|
+| `Invalid_400` | Sai email/password khi login |
+| `Email_Exist_409` | Email đã tồn tại khi register |
+| `Token_Expired_409` | Refresh token / reset token hết hạn |
+| `Wrong_Current_Password_400` | Sai mật khẩu hiện tại khi đổi mật khẩu |
+
+### Vocabulary
+
+| Code | Mô tả |
+|------|-------|
+| `Vocabulary_CardNotFound_404` | Card không tồn tại |
+| `Vocabulary_DetailNotFound_404` | Chi tiết vocabulary không tìm thấy |
+| `Vocabulary_ReadForbidden_401` | Không có quyền xem card chưa Published |
+| `Vocabulary_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX |
+
+### Grammar
+
+| Code | Mô tả |
+|------|-------|
+| `Grammar_CardNotFound_404` | Card không tồn tại |
+| `Grammar_DetailNotFound_404` | Chi tiết grammar không tìm thấy |
+| `Grammar_ReadForbidden_401` | Không có quyền xem card chưa Published |
+| `Grammar_InvalidRelation_400` | Relation không hợp lệ |
+| `Grammar_RelatedCardNotFound_404` | Card liên quan không tìm thấy |
+| `Grammar_InvalidRichText_400` | Rich text sai cú pháp |
+
+### Sentence
+
+| Code | Mô tả |
+|------|-------|
+| `Sentence_NotFound_404` | Sentence không tồn tại |
+| `Sentence_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX |
