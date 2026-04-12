@@ -1,5 +1,6 @@
 using Application.DTOs.Cards;
 using Application.DTOs.Grammar;
+using Application.DTOs.Kanji;
 using Application.DTOs.Vocabulary;
 using Domain.Entities;
 
@@ -43,6 +44,19 @@ public static class CardMappings
             Summary = item.Summary,
             Level = item.Level,
             AlternateForms = item.AlternateForms,
+        };
+    }
+
+    public static CardListItemResponse ToCardListItemResponse(this KanjiListItemResponse item)
+    {
+        return new CardListItemResponse
+        {
+            Id = item.Id,
+            CardType = "Kanji",
+            Title = item.Title,
+            Summary = item.Summary,
+            Level = item.Level,
+            AlternateForms = new List<string>(),
         };
     }
 }

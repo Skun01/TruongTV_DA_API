@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IVocabularyDetailService, VocabularyDetailService>();
         services.AddScoped<IGrammarService, GrammarService>();
+        services.AddScoped<IKanjiService, KanjiService>();
         services.AddScoped<ICardService, CardService>();
         services.AddScoped<ICardNoteService, CardNoteService>();
         services.AddScoped<ISentenceService, SentenceService>();

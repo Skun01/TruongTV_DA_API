@@ -20,7 +20,9 @@ public class Card : BaseEntity
      // Navigation
      public VocabularyDetail? VocabularyDetail { get; set; }
      public GrammarDetail? GrammarDetail { get; set; }
+     public KanjiDetail? KanjiDetail { get; set; }
      public ICollection<CardSentence> CardSentences { get; set; } = new List<CardSentence>();
      public ICollection<UserCardNote> UserCardNotes { get; set; } = new List<UserCardNote>();
      public ICollection<GrammarResource> GrammarResources { get; set; } = new List<GrammarResource>();
+     public ICollection<KanjiRadical> KanjiRadicals { get; set; } = new List<KanjiRadical>();
 }

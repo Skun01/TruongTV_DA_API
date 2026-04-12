@@ -15,6 +15,9 @@ public class AppDbContext : DbContext
     public DbSet<Card> Cards { set; get; }
     public DbSet<VocabularyDetail> VocabularyDetails { set; get; }
     public DbSet<GrammarDetail> GrammarDetails { set; get; }
+    public DbSet<KanjiDetail> KanjiDetails { set; get; }
+    public DbSet<RadicalDetail> RadicalDetails { set; get; }
+    public DbSet<KanjiRadical> KanjiRadicals { set; get; }
     public DbSet<GrammarRelation> GrammarRelations { set; get; }
     public DbSet<GrammarResource> GrammarResources { set; get; }
     public DbSet<Sentence> Sentences { set; get; }

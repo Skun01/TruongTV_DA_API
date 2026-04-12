@@ -13,6 +13,9 @@ public class UnitOfWork : IUnitOfWork
     private ICardRepository? _cards;
     private IVocabularyDetailRepository? _vocabularyDetails;
     private IGrammarDetailRepository? _grammarDetails;
+    private IKanjiDetailRepository? _kanjiDetails;
+    private IRadicalDetailRepository? _radicalDetails;
+    private IKanjiRadicalRepository? _kanjiRadicals;
     private IGrammarRelationRepository? _grammarRelations;
     private IGrammarResourceRepository? _grammarResources;
     private ISentenceRepository? _sentences;
@@ -32,6 +35,9 @@ public class UnitOfWork : IUnitOfWork
     public ICardRepository Cards => _cards ??= new CardRepository(_context);
     public IVocabularyDetailRepository VocabularyDetails => _vocabularyDetails ??= new VocabularyDetailRepository(_context);
     public IGrammarDetailRepository GrammarDetails => _grammarDetails ??= new GrammarDetailRepository(_context);
+    public IKanjiDetailRepository KanjiDetails => _kanjiDetails ??= new KanjiDetailRepository(_context);
+    public IRadicalDetailRepository RadicalDetails => _radicalDetails ??= new RadicalDetailRepository(_context);
+    public IKanjiRadicalRepository KanjiRadicals => _kanjiRadicals ??= new KanjiRadicalRepository(_context);
     public IGrammarRelationRepository GrammarRelations => _grammarRelations ??= new GrammarRelationRepository(_context);
     public IGrammarResourceRepository GrammarResources => _grammarResources ??= new GrammarResourceRepository(_context);
     public ISentenceRepository Sentences => _sentences ??= new SentenceRepository(_context);

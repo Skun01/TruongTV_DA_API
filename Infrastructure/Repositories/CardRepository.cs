@@ -33,6 +33,16 @@ public class CardRepository : Repository<Card>, ICardRepository
             .FirstOrDefaultAsync(c => c.Id == cardId);
     }
 
+    public async Task<Card?> GetKanjiDetailByIdAsync(string cardId)
+    {
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.KanjiDetail)
+            .Include(c => c.KanjiRadicals)
+                .ThenInclude(kr => kr.Radical)
+            .FirstOrDefaultAsync(c => c.Id == cardId);
+    }
+
     public async Task<(List<Card> Items, int Total)> SearchVocabularyAsync(
         string? query,
         JlptLevel? level,
@@ -205,6 +215,122 @@ public class CardRepository : Repository<Card>, ICardRepository
         return (items, total);
     }
 
+    public async Task<(List<Card> Items, int Total)> SearchKanjiAsync(
+        string? query,
+        JlptLevel? level,
+        PublishStatus? status,
+        int? strokeCountMin,
+        int? strokeCountMax,
+        string? radical,
+        string? createdBy,
+        int page,
+        int pageSize)
+    {
+        var cardsQuery = _context.Cards
+            .AsNoTracking()
+            .Include(c => c.KanjiDetail)
+            .Include(c => c.KanjiRadicals)
+                .ThenInclude(kr => kr.Radical)
+            .Where(c => c.CardType == CardType.Kanji);
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var pattern = $"%{query.Trim()}%";
+            cardsQuery = cardsQuery.Where(c =>
+                EF.Functions.ILike(c.Title, pattern)
+                || EF.Functions.ILike(c.Summary, pattern)
+                || (c.KanjiDetail != null
+                    && (EF.Functions.ILike(c.KanjiDetail.Kanji, pattern)
+                        || EF.Functions.ILike(c.KanjiDetail.MeaningVi, pattern)
+                        || (c.KanjiDetail.HanViet != null && EF.Functions.ILike(c.KanjiDetail.HanViet, pattern)))));
+        }
+
+        if (level.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Level == level.Value);
+
+        if (status.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Status == status.Value);
+
+        if (strokeCountMin.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.KanjiDetail != null && c.KanjiDetail.StrokeCount >= strokeCountMin.Value);
+
+        if (strokeCountMax.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.KanjiDetail != null && c.KanjiDetail.StrokeCount <= strokeCountMax.Value);
+
+        if (!string.IsNullOrWhiteSpace(radical))
+        {
+            var normalizedRadical = radical.Trim();
+            cardsQuery = cardsQuery.Where(c => c.KanjiRadicals.Any(kr => kr.Radical.Character == normalizedRadical));
+        }
+
+        if (!string.IsNullOrWhiteSpace(createdBy))
+            cardsQuery = cardsQuery.Where(c => c.CreatedBy == createdBy);
+
+        var total = await cardsQuery.CountAsync();
+
+        var items = await cardsQuery
+            .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<List<Card>> GetKanjiExportAsync(
+        string? query,
+        JlptLevel? level,
+        PublishStatus? status,
+        int? strokeCountMin,
+        int? strokeCountMax,
+        string? radical,
+        string? createdBy)
+    {
+        var cardsQuery = _context.Cards
+            .AsNoTracking()
+            .Include(c => c.KanjiDetail)
+            .Include(c => c.KanjiRadicals)
+                .ThenInclude(kr => kr.Radical)
+            .Where(c => c.CardType == CardType.Kanji);
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var pattern = $"%{query.Trim()}%";
+            cardsQuery = cardsQuery.Where(c =>
+                EF.Functions.ILike(c.Title, pattern)
+                || EF.Functions.ILike(c.Summary, pattern)
+                || (c.KanjiDetail != null
+                    && (EF.Functions.ILike(c.KanjiDetail.Kanji, pattern)
+                        || EF.Functions.ILike(c.KanjiDetail.MeaningVi, pattern)
+                        || (c.KanjiDetail.HanViet != null && EF.Functions.ILike(c.KanjiDetail.HanViet, pattern)))));
+        }
+
+        if (level.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Level == level.Value);
+
+        if (status.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Status == status.Value);
+
+        if (strokeCountMin.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.KanjiDetail != null && c.KanjiDetail.StrokeCount >= strokeCountMin.Value);
+
+        if (strokeCountMax.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.KanjiDetail != null && c.KanjiDetail.StrokeCount <= strokeCountMax.Value);
+
+        if (!string.IsNullOrWhiteSpace(radical))
+        {
+            var normalizedRadical = radical.Trim();
+            cardsQuery = cardsQuery.Where(c => c.KanjiRadicals.Any(kr => kr.Radical.Character == normalizedRadical));
+        }
+
+        if (!string.IsNullOrWhiteSpace(createdBy))
+            cardsQuery = cardsQuery.Where(c => c.CreatedBy == createdBy);
+
+        return await cardsQuery
+            .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<bool> ExistsVocabularyByWritingAsync(string writing)
     {
         var normalizedWriting = writing.Trim();
@@ -216,6 +342,19 @@ public class CardRepository : Repository<Card>, ICardRepository
                 c.CardType == CardType.Vocab
                 && c.VocabularyDetail != null
                 && c.VocabularyDetail.Writing == normalizedWriting);
+    }
+
+    public async Task<bool> ExistsKanjiByCharacterAsync(string kanji)
+    {
+        var normalizedKanji = kanji.Trim();
+
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.KanjiDetail)
+            .AnyAsync(c =>
+                c.CardType == CardType.Kanji
+                && c.KanjiDetail != null
+                && c.KanjiDetail.Kanji == normalizedKanji);
     }
 
     public async Task<(List<Card> Items, int Total)> SearchCardsAsync(

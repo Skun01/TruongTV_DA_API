@@ -1338,7 +1338,427 @@ Commit batch import grammar.
 
 ---
 
-## 8. Sentences Module — Admin
+## 8. Kanji Module — Admin
+
+> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Trừ `GET /api/kanji/{cardId}` là endpoint Public dùng cho cả user lẫn admin.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| GET | `/api/kanji` | 🔑 Editor/Admin | Tìm kiếm kanji có phân trang |
+| GET | `/api/kanji/{cardId}` | 🌐 Public | Lấy chi tiết kanji |
+| POST | `/api/kanji` | 🔑 Editor/Admin | Tạo kanji mới |
+| PATCH | `/api/kanji/{cardId}` | 🔑 Editor/Admin | Cập nhật kanji |
+| DELETE | `/api/kanji/{cardId}` | 🔑 Editor/Admin | Xóa mềm kanji (Archived) |
+| GET | `/api/kanji/import-template` | 🔑 Editor/Admin | Tải JSON template import |
+| GET | `/api/kanji/export` | 🔑 Editor/Admin | Export kanji ra JSON |
+| POST | `/api/kanji/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
+| POST | `/api/kanji/import/commit` | 🔑 Editor/Admin | Commit batch import |
+
+---
+
+### GET `/api/kanji` 🔑
+
+Tìm kiếm danh sách kanji cho admin.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+|-------|------|----------|------|-------|
+| `q` | `string` | ❌ | — | Tìm theo `title`, `summary`, `kanji`, `meaningVi`, `hanViet` |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ |
+| `status` | `string` | ❌ | `PublishStatus` | Lọc theo trạng thái |
+| `strokeCountMin` | `int` | ❌ | — | Số nét tối thiểu, phải > `0` |
+| `strokeCountMax` | `int` | ❌ | — | Số nét tối đa, phải > `0` |
+| `radical` | `string` | ❌ | — | Lọc theo đúng radical character, ví dụ `日`, `口`, `氵` |
+| `createdByMe` | `bool` | ❌ | — | `true` = chỉ lấy card do mình tạo |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item** (`KanjiListItemResponse`):
+
+```json
+{
+  "id": "string",
+  "title": "明",
+  "summary": "Kanji diễn tả sự sáng, rõ ràng.",
+  "level": "N5 | null",
+  "tags": ["kanji", "co-ban"],
+  "status": "Draft | Published | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "kanji": "明",
+  "strokeCount": 8,
+  "hanViet": "minh | null",
+  "meaningVi": "sáng, rõ ràng",
+  "radicalCount": 2
+}
+```
+
+---
+
+### GET `/api/kanji/{cardId}` 🌐
+
+Lấy chi tiết một kanji card.
+
+**Quy tắc truy cập:**
+- ✅ Card `Published`: ai cũng xem được (public).
+- ⚠ Card `Draft` / `Archived`: chỉ user tạo card mới xem được.
+
+**Response data** (`KanjiDetailResponse`):
+
+```json
+{
+  "id": "string",
+  "cardType": "Kanji",
+  "title": "明",
+  "summary": "Kanji diễn tả sự sáng, rõ ràng.",
+  "level": "N5 | null",
+  "tags": ["kanji", "co-ban"],
+  "status": "Published | Draft | Archived",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null",
+  "kanji": "明",
+  "strokeCount": 8,
+  "strokeOrderUrl": "https://cdn.example.com/kanji/mei.gif | null",
+  "onyomi": ["メイ", "ミョウ"],
+  "kunyomi": ["あ.かり", "あか.るい"],
+  "hanViet": "minh | null",
+  "meaningVi": "sáng, rõ ràng",
+  "radicals": [
+    {
+      "id": "radical-id-1",
+      "character": "日",
+      "meaningVi": "mặt trời",
+      "kanjiCardId": "kanji-card-id-cua-日 | null"
+    },
+    {
+      "id": "radical-id-2",
+      "character": "月",
+      "meaningVi": "mặt trăng",
+      "kanjiCardId": null
+    }
+  ],
+  "userNotes": [
+    {
+      "id": "note-id",
+      "userId": "user-id",
+      "userName": "Tran Thi B",
+      "content": "Chữ này ghép từ mặt trời và mặt trăng.",
+      "likesCount": 2,
+      "isLikedByMe": false,
+      "createdAt": "datetime"
+    }
+  ]
+}
+```
+
+**Field details:**
+
+| Field | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `cardType` | `string` | `CardType` | Luôn là `Kanji` |
+| `kanji` | `string` | — | Bản thân chữ kanji, ví dụ `明` |
+| `strokeCount` | `int` | — | Số nét, phải > `0` |
+| `strokeOrderUrl` | `string?` | — | URL ảnh/GIF/video mô tả thứ tự nét |
+| `onyomi` | `string[]` | — | Danh sách âm On, ví dụ `["メイ", "ミョウ"]` |
+| `kunyomi` | `string[]` | — | Danh sách âm Kun, ví dụ `["あ.かるい", "あ.ける"]` |
+| `hanViet` | `string?` | — | Âm Hán Việt, ví dụ `minh` |
+| `meaningVi` | `string` | — | Nghĩa tiếng Việt |
+| `radicals[].character` | `string` | — | Ký tự radical, ví dụ `日`, `口`, `氵` |
+| `radicals[].meaningVi` | `string` | — | Nghĩa tiếng Việt của radical |
+| `radicals[].kanjiCardId` | `string?` | — | Nếu radical này cũng có kanji card riêng, backend tự link card đó |
+
+**Error codes:**
+
+| Code | Khi nào |
+|------|---------|
+| `Kanji_CardNotFound_404` | Card không tồn tại |
+| `Kanji_ReadForbidden_401` | Card chưa Published và user không phải owner |
+
+---
+
+### POST `/api/kanji` 🔑
+
+Tạo mới một kanji card.
+
+**Request body:**
+
+```json
+{
+  "title": "明",                                // ⚠ bắt buộc
+  "summary": "Kanji diễn tả sự sáng, rõ ràng.", // ⚠ bắt buộc
+  "level": "N5",                               // ❌ nullable — enum JlptLevel
+  "tags": ["kanji", "co-ban"],                 // ❌ optional, mảng string
+  "status": "Draft",                           // ❌ nullable — enum PublishStatus
+  "kanji": "明",                               // ⚠ bắt buộc, duy nhất trong hệ thống
+  "strokeCount": 8,                            // ⚠ bắt buộc, int > 0
+  "strokeOrderUrl": "https://example.com/mei.gif", // ❌ nullable
+  "onyomi": ["メイ", "ミョウ"],                // ❌ optional, mảng string
+  "kunyomi": ["あ.かり", "あか.るい"],         // ❌ optional, mảng string
+  "hanViet": "minh",                           // ❌ nullable
+  "meaningVi": "sáng, rõ ràng",                // ⚠ bắt buộc
+  "radicals": [                                // ⚠ bắt buộc, ít nhất 1 item
+    {
+      "character": "日",                       // ⚠ bắt buộc
+      "meaningVi": "mặt trời"                  // ⚠ bắt buộc
+    },
+    {
+      "character": "月",
+      "meaningVi": "mặt trăng"
+    }
+  ]
+}
+```
+
+**Field rules quan trọng:**
+
+| Field | Hợp lệ khi | Ghi chú |
+|------|------------|---------|
+| `title` | string không rỗng, max `200` ký tự | Thường nên đặt cùng giá trị với `kanji` để đồng nhất UI |
+| `summary` | string không rỗng, max `2000` ký tự | Mô tả ngắn cho card |
+| `level` | `N5`, `N4`, `N3`, `N2`, `N1` hoặc bỏ trống | Không được gửi giá trị khác |
+| `tags` | tối đa `20` phần tử, mỗi phần tử max `100` ký tự | Backend tự trim và loại bỏ phần tử rỗng |
+| `status` | `Draft`, `Published`, `Archived` hoặc bỏ trống | Nếu bỏ trống khi create, backend mặc định `Draft` |
+| `kanji` | string không rỗng, max `20` ký tự | Phải duy nhất toàn hệ thống |
+| `strokeCount` | số nguyên > `0` | Không chấp nhận `0` hoặc số âm |
+| `strokeOrderUrl` | string max `2000` ký tự hoặc `null` | Chỉ là URL string, không upload file qua endpoint này |
+| `onyomi` | tối đa `20` item, mỗi item max `100` ký tự | Ví dụ `["メイ", "ミョウ"]` |
+| `kunyomi` | tối đa `20` item, mỗi item max `100` ký tự | Ví dụ `["あ.かるい", "あ.ける"]` |
+| `hanViet` | string max `200` ký tự hoặc `null` | Ví dụ `minh`, `nhật` |
+| `meaningVi` | string không rỗng, max `1000` ký tự | Nghĩa tiếng Việt chính |
+| `radicals` | bắt buộc có ít nhất `1` item, tối đa `30` item | Đây là danh sách thành phần cấu tạo của kanji |
+| `radicals[].character` | string không rỗng, max `20` ký tự | Nên là đúng ký tự radical, ví dụ `日`, `月`, `氵` |
+| `radicals[].meaningVi` | string không rỗng, max `500` ký tự | Nghĩa tiếng Việt của radical |
+
+**Lưu ý về radicals:**
+- Client **không gửi** `radicalId`.
+- Client **không gửi** `kanjiCardId`.
+- Backend tự:
+  - tìm radical theo `character`
+  - nếu đã tồn tại thì reuse record đó
+  - nếu chưa có thì tạo mới
+  - tự gắn `kanjiCardId` nếu tồn tại một kanji card có `kanji` trùng `radicals[].character`
+
+**Response data:** `KanjiDetailResponse`
+
+---
+
+### PATCH `/api/kanji/{cardId}` 🔑
+
+Cập nhật kanji card. Body giống `POST`.
+
+**⚠ Quy tắc `radicals`:**
+- Danh sách `radicals` gửi lên = **trạng thái cuối cùng**.
+- Radical nào **không có** trong request → bị gỡ khỏi liên kết của kanji này.
+- Radical trùng `character` trong cùng một payload là dữ liệu không hợp lệ.
+
+**Response data:** `KanjiDetailResponse`
+
+---
+
+### DELETE `/api/kanji/{cardId}` 🔑
+
+Xóa mềm kanji card (chuyển `status = Archived`).
+
+**Response data:** `true`
+
+---
+
+### GET `/api/kanji/import-template` 🔑
+
+Tải file JSON template mẫu cho import kanji.
+
+- Response: file `application/json` (`Content-Disposition: attachment`).
+- Shape cùng với request body của `import/preview`.
+
+---
+
+### GET `/api/kanji/export` 🔑
+
+Export kanji ra file JSON theo bộ lọc.
+
+**Query params:**
+
+| Param | Type | Enum | Mô tả |
+|-------|------|------|-------|
+| `q` | `string` | — | Từ khóa |
+| `level` | `string` | `JlptLevel` | |
+| `status` | `string` | `PublishStatus` | |
+| `strokeCountMin` | `int` | — | |
+| `strokeCountMax` | `int` | — | |
+| `radical` | `string` | — | Radical character cần lọc |
+| `createdByMe` | `bool` | — | |
+
+- Response: file `application/json` với shape tương tự import payload.
+
+---
+
+### POST `/api/kanji/import/preview` 🔑
+
+Preview payload import. Validate từng item, **chưa ghi vào DB**.
+
+**Import rules:**
+- Import hiện tại là **create-only** (chỉ tạo mới).
+- `kanji` không được trùng trong batch + không trùng DB.
+- `radicals` là bắt buộc.
+- Trong cùng một item import, `radicals[*].character` không được trùng nhau.
+- `radical` trong import chỉ cần gửi `character` + `meaningVi`.
+
+**Request body:**
+
+```json
+{
+  "items": [
+    {
+      "rowNumber": 1,                           // ⚠ số thứ tự hàng, > 0
+      "title": "明",                            // ⚠ bắt buộc, max 200
+      "summary": "Kanji diễn tả sự sáng.",     // ⚠ bắt buộc, max 2000
+      "level": "N5",                            // ❌ nullable — JlptLevel
+      "tags": ["kanji", "co-ban"],              // ❌ optional, tối đa 20 item
+      "status": "Draft",                        // ❌ nullable — PublishStatus
+      "kanji": "明",                            // ⚠ bắt buộc, duy nhất
+      "strokeCount": 8,                         // ⚠ bắt buộc, int > 0
+      "strokeOrderUrl": "https://example.com/mei.gif", // ❌ nullable
+      "onyomi": ["メイ", "ミョウ"],             // ❌ optional
+      "kunyomi": ["あ.かり", "あか.るい"],      // ❌ optional
+      "hanViet": "minh",                        // ❌ nullable
+      "meaningVi": "sáng, rõ ràng",             // ⚠ bắt buộc
+      "radicals": [                             // ⚠ bắt buộc, ít nhất 1 item
+        {
+          "character": "日",                    // ⚠ bắt buộc
+          "meaningVi": "mặt trời"               // ⚠ bắt buộc
+        },
+        {
+          "character": "月",
+          "meaningVi": "mặt trăng"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Field guide để tự viết file import JSON hợp lệ:**
+
+| JSON path | Kiểu dữ liệu hợp lệ | Bắt buộc | Ví dụ hợp lệ | Ghi chú |
+|----------|----------------------|----------|--------------|---------|
+| `items` | `array` | ⚠ | `[ {...} ]` | Danh sách item import |
+| `items[].rowNumber` | `int` > `0` | ❌ | `1` | Nếu bỏ trống, backend tự lấy số thứ tự theo vị trí |
+| `items[].title` | `string` | ⚠ | `"明"` | Không được rỗng |
+| `items[].summary` | `string` | ⚠ | `"Kanji diễn tả sự sáng."` | Không được rỗng |
+| `items[].level` | `string` hoặc `null` | ❌ | `"N5"` | Chỉ nhận `N5/N4/N3/N2/N1` |
+| `items[].tags` | `string[]` | ❌ | `["kanji", "co-ban"]` | Mỗi phần tử là string |
+| `items[].status` | `string` hoặc `null` | ❌ | `"Draft"` | Chỉ nhận `Draft/Published/Archived` |
+| `items[].kanji` | `string` | ⚠ | `"明"` | Không được trùng DB hoặc trùng item khác trong batch |
+| `items[].strokeCount` | `int` | ⚠ | `8` | Phải > `0` |
+| `items[].strokeOrderUrl` | `string` hoặc `null` | ❌ | `"https://example.com/mei.gif"` | Không phải object/file |
+| `items[].onyomi` | `string[]` | ❌ | `["メイ", "ミョウ"]` | Không dùng number/object |
+| `items[].kunyomi` | `string[]` | ❌ | `["あ.かり", "あか.るい"]` | Không dùng number/object |
+| `items[].hanViet` | `string` hoặc `null` | ❌ | `"minh"` | |
+| `items[].meaningVi` | `string` | ⚠ | `"sáng, rõ ràng"` | Không được rỗng |
+| `items[].radicals` | `array` | ⚠ | `[{"character":"日","meaningVi":"mặt trời"}]` | Phải có ít nhất 1 phần tử |
+| `items[].radicals[].character` | `string` | ⚠ | `"日"` | Trong cùng item không được trùng nhau |
+| `items[].radicals[].meaningVi` | `string` | ⚠ | `"mặt trời"` | Không được rỗng |
+
+**Response data:**
+
+```json
+{
+  "totalItems": 1,
+  "validItems": 1,
+  "invalidItems": 0,
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "明",
+      "kanji": "明",
+      "isValid": true,
+      "errors": []
+    }
+  ]
+}
+```
+
+**Ví dụ response lỗi:**
+
+```json
+{
+  "totalItems": 1,
+  "validItems": 0,
+  "invalidItems": 1,
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "明",
+      "kanji": "明",
+      "isValid": false,
+      "errors": [
+        "Kanji_ImportKanjiAlreadyExists_400",
+        "Kanji_ImportDuplicateRadicalInItem_400:radicals[1].character",
+        "Kanji_ImportFieldInvalid_400:strokeCount"
+      ]
+    }
+  ]
+}
+```
+
+**Error codes cho import:**
+
+| Code | Mô tả |
+|------|-------|
+| `Kanji_ImportInvalidPayload_400` | Payload tổng thể không hợp lệ |
+| `Kanji_ImportBatchHasErrors_400` | Batch còn item lỗi, không commit |
+| `Kanji_ImportFieldRequired_400:<field>` | Field bắt buộc bị thiếu |
+| `Kanji_ImportFieldTooLong_400:<field>` | Field vượt quá độ dài cho phép |
+| `Kanji_ImportFieldInvalid_400:<field>` | Giá trị enum / number không hợp lệ |
+| `Kanji_ImportDuplicateKanjiInBatch_400` | `kanji` trùng trong batch |
+| `Kanji_ImportKanjiAlreadyExists_400` | `kanji` đã có trong DB |
+| `Kanji_ImportRadicalsRequired_400` | Thiếu `radicals` |
+| `Kanji_ImportDuplicateRadicalInItem_400:<field>` | Radical trùng trong cùng item |
+| `Kanji_ImportListTooManyItems_400:<field>` | Vượt quá số item cho phép |
+| `Kanji_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
+
+---
+
+### POST `/api/kanji/import/commit` 🔑
+
+Commit batch import vào DB.
+
+**Quy trình:**
+1. Backend chạy `preview` nội bộ trước.
+2. Nếu còn item invalid → **không ghi DB**, trả `HasValidationErrors = true`.
+3. Nếu tất cả hợp lệ → tạo tuần tự từng kanji card mới.
+
+**Request body:** Cùng shape với `import/preview`.
+
+**Response data:**
+
+```json
+{
+  "totalItems": 1,
+  "successfulItems": 1,
+  "failedItems": 0,
+  "hasValidationErrors": false,
+  "items": [
+    {
+      "rowNumber": 1,
+      "title": "明",
+      "kanji": "明",
+      "isSuccess": true,
+      "action": "created",
+      "cardId": "new-kanji-card-id",
+      "errors": []
+    }
+  ]
+}
+```
+
+---
+
+## 9. Sentences Module — Admin
 
 > 🔑 **Toàn bộ module này yêu cầu quyền `Editor` hoặc `Admin`.**  
 > Sentences là câu ví dụ dùng chung cho Vocabulary và Grammar.

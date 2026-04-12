@@ -71,6 +71,25 @@ public static class MessageConstants
         public const string IMPORT_SPEAKER_ID_NOT_SUPPORTED = "Grammar_ImportSpeakerIdNotSupported_400";
     }
 
+    public static class KanjiMessage
+    {
+        public const string CARD_NOT_FOUND = "Kanji_CardNotFound_404";
+        public const string DETAIL_NOT_FOUND = "Kanji_DetailNotFound_404";
+        public const string READ_FORBIDDEN = "Kanji_ReadForbidden_401";
+        public const string KANJI_ALREADY_EXISTS = "Kanji_KanjiAlreadyExists_409";
+        public const string IMPORT_INVALID_PAYLOAD = "Kanji_ImportInvalidPayload_400";
+        public const string IMPORT_BATCH_HAS_ERRORS = "Kanji_ImportBatchHasErrors_400";
+        public const string IMPORT_DUPLICATE_KANJI_IN_BATCH = "Kanji_ImportDuplicateKanjiInBatch_400";
+        public const string IMPORT_KANJI_ALREADY_EXISTS = "Kanji_ImportKanjiAlreadyExists_400";
+        public const string IMPORT_ROW_NUMBER_INVALID = "Kanji_ImportRowNumberInvalid_400";
+        public const string IMPORT_FIELD_REQUIRED = "Kanji_ImportFieldRequired_400";
+        public const string IMPORT_FIELD_TOO_LONG = "Kanji_ImportFieldTooLong_400";
+        public const string IMPORT_FIELD_INVALID = "Kanji_ImportFieldInvalid_400";
+        public const string IMPORT_LIST_TOO_MANY_ITEMS = "Kanji_ImportListTooManyItems_400";
+        public const string IMPORT_RADICALS_REQUIRED = "Kanji_ImportRadicalsRequired_400";
+        public const string IMPORT_DUPLICATE_RADICAL_IN_ITEM = "Kanji_ImportDuplicateRadicalInItem_400";
+    }
+
     public static class AuthMessage
     {
         public const string INVALID_LOGIN = "Invalid_400";

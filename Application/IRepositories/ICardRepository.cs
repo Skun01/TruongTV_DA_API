@@ -7,6 +7,7 @@ public interface ICardRepository : IRepository<Card>
 {
 	Task<Card?> GetVocabularyDetailByIdAsync(string cardId);
 	Task<Card?> GetGrammarDetailByIdAsync(string cardId);
+	Task<Card?> GetKanjiDetailByIdAsync(string cardId);
 	Task<(List<Card> Items, int Total)> SearchVocabularyAsync(
 		string? query,
 		JlptLevel? level,
@@ -34,7 +35,28 @@ public interface ICardRepository : IRepository<Card>
 		int page,
 		int pageSize);
 
+	Task<(List<Card> Items, int Total)> SearchKanjiAsync(
+		string? query,
+		JlptLevel? level,
+		PublishStatus? status,
+		int? strokeCountMin,
+		int? strokeCountMax,
+		string? radical,
+		string? createdBy,
+		int page,
+		int pageSize);
+
+	Task<List<Card>> GetKanjiExportAsync(
+		string? query,
+		JlptLevel? level,
+		PublishStatus? status,
+		int? strokeCountMin,
+		int? strokeCountMax,
+		string? radical,
+		string? createdBy);
+
 	Task<bool> ExistsVocabularyByWritingAsync(string writing);
+	Task<bool> ExistsKanjiByCharacterAsync(string kanji);
 
 	Task<(List<Card> Items, int Total)> SearchCardsAsync(
 		CardType? cardType,
