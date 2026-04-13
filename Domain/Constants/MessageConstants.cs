@@ -97,4 +97,14 @@ public static class MessageConstants
         public const string TOKEN_EXPIRED = "Token_Expired_409";
         public const string WRONG_CURRENT_PASSWORD = "Wrong_Current_Password_400";
     }
+
+    public static class FileUploadMessage
+    {
+        public const string CLOUDINARY_UPLOAD_FAILED = "FileUpload_CloudinaryUploadFailed_500";
+        public const string CLOUDINARY_DELETE_FAILED = "FileUpload_CloudinaryDeleteFailed_500";
+        public const string CLOUDINARY_CLOUD_NAME_NOT_CONFIGURED = "FileUpload_CloudinaryCloudNameNotConfigured_500";
+        public const string CLOUDINARY_API_KEY_NOT_CONFIGURED = "FileUpload_CloudinaryApiKeyNotConfigured_500";
+        public const string CLOUDINARY_API_SECRET_NOT_CONFIGURED = "FileUpload_CloudinaryApiSecretNotConfigured_500";
+        public const string INVALID_UPLOAD_REQUEST = "FileUpload_InvalidUploadRequest_400";
+    }
 }

@@ -17,4 +17,17 @@ public static class ResourceMappings
             CreatedAt = mediaAsset.CreatedAt,
         };
     }
+
+    public static UploadImageResponse ToUploadImageResponse(this MediaAsset mediaAsset)
+    {
+        return new UploadImageResponse
+        {
+            Id = mediaAsset.Id,
+            FileUrl = mediaAsset.FileUrl,
+            FileType = mediaAsset.FileType.ToString().ToLowerInvariant(),
+            UsageType = mediaAsset.UsageType.ToString().ToLowerInvariant(),
+            SizeInBytes = mediaAsset.SizeInBytes,
+            CreatedAt = mediaAsset.CreatedAt,
+        };
+    }
 }

@@ -3,5 +3,6 @@ namespace Domain.Enums;
 public enum ResourceUsageType
 {
     Avatar = 1,
-    Audio = 2
+    Audio = 2,
+    Image = 3
 }

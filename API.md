@@ -16,6 +16,7 @@
 8. [Sentences Module — Admin](#8-sentences-module--admin)
 9. [Uploads Module — Admin](#9-uploads-module--admin)
 10. [Voicevox Module — Admin](#10-voicevox-module--admin)
+11. [Kanji Module — Admin](#8-kanji-module--admin)
 
 ---
 
@@ -72,10 +73,10 @@ Với các endpoint có phân trang, response sẽ kèm `metaData`:
 
 Query params phân trang mặc định:
 
-| Param | Type | Default | Mô tả |
-|-------|------|---------|-------|
-| `page` | `int` | `1` | Trang hiện tại |
-| `pageSize` | `int` | `20` | Số item/trang |
+| Param      | Type  | Default | Mô tả          |
+| ---------- | ----- | ------- | -------------- |
+| `page`     | `int` | `1`     | Trang hiện tại |
+| `pageSize` | `int` | `20`    | Số item/trang  |
 
 ### 1.4 Authentication
 
@@ -111,73 +112,73 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 
 ### JlptLevel
 
-| Value | Mô tả |
-|-------|-------|
-| `N5` | Sơ cấp |
-| `N4` | Sơ cấp trên |
-| `N3` | Trung cấp |
-| `N2` | Trung cao cấp |
-| `N1` | Cao cấp |
+| Value | Mô tả         |
+| ----- | ------------- |
+| `N5`  | Sơ cấp        |
+| `N4`  | Sơ cấp trên   |
+| `N3`  | Trung cấp     |
+| `N2`  | Trung cao cấp |
+| `N1`  | Cao cấp       |
 
 ### PublishStatus
 
-| Value | Mô tả |
-|-------|-------|
-| `Draft` | Bản nháp, chưa public |
-| `Published` | Đã xuất bản, public |
-| `Archived` | Đã xóa mềm |
+| Value       | Mô tả                 |
+| ----------- | --------------------- |
+| `Draft`     | Bản nháp, chưa public |
+| `Published` | Đã xuất bản, public   |
+| `Archived`  | Đã xóa mềm            |
 
 ### CardType
 
-| Value | Mô tả |
-|-------|-------|
-| `Vocab` | Thẻ từ vựng |
+| Value     | Mô tả        |
+| --------- | ------------ |
+| `Vocab`   | Thẻ từ vựng  |
 | `Grammar` | Thẻ ngữ pháp |
 
 ### UserRole
 
-| Value | Mô tả |
-|-------|-------|
-| `user` | Người dùng thường |
-| `editor` | Biên tập viên |
-| `admin` | Quản trị viên |
+| Value    | Mô tả             |
+| -------- | ----------------- |
+| `user`   | Người dùng thường |
+| `editor` | Biên tập viên     |
+| `admin`  | Quản trị viên     |
 
 ### WordType (Vocabulary)
 
-| Value | Mô tả |
-|-------|-------|
-| `Native` | 和語 (Wago) — Từ thuần Nhật |
-| `SinoJapanese` | 漢語 (Kango) — Từ Hán-Nhật |
-| `Loanword` | 外来語 (Gairaigo) — Từ ngoại lai |
+| Value          | Mô tả                            |
+| -------------- | -------------------------------- |
+| `Native`       | 和語 (Wago) — Từ thuần Nhật      |
+| `SinoJapanese` | 漢語 (Kango) — Từ Hán-Nhật       |
+| `Loanword`     | 外来語 (Gairaigo) — Từ ngoại lai |
 
 ### PartOfSpeech (Vocabulary)
 
-| Value | Mô tả |
-|-------|-------|
-| `Noun` | Danh từ |
-| `VerbU` | Động từ nhóm 1 (五段) |
-| `VerbRu` | Động từ nhóm 2 (一段) |
-| `IAdj` | Tính từ đuôi い |
-| `NaAdj` | Tính từ đuôi な |
-| `Adverb` | Phó từ |
-| `Particle` | Trợ từ |
-| `Conjunction` | Liên từ |
-| `Interjection` | Thán từ |
+| Value          | Mô tả                 |
+| -------------- | --------------------- |
+| `Noun`         | Danh từ               |
+| `VerbU`        | Động từ nhóm 1 (五段) |
+| `VerbRu`       | Động từ nhóm 2 (一段) |
+| `IAdj`         | Tính từ đuôi い       |
+| `NaAdj`        | Tính từ đuôi な       |
+| `Adverb`       | Phó từ                |
+| `Particle`     | Trợ từ                |
+| `Conjunction`  | Liên từ               |
+| `Interjection` | Thán từ               |
 
 ### RegisterType (Grammar)
 
-| Value | Mô tả |
-|-------|-------|
-| `Standard` | Chuẩn |
-| `Formal` | Trang trọng |
-| `Polite` | Lịch sự |
-| `Casual` | Thân mật |
+| Value      | Mô tả       |
+| ---------- | ----------- |
+| `Standard` | Chuẩn       |
+| `Formal`   | Trang trọng |
+| `Polite`   | Lịch sự     |
+| `Casual`   | Thân mật    |
 
 ### GrammarRelationType
 
-| Value | Mô tả |
-|-------|-------|
-| `Similar` | Ngữ pháp tương tự |
+| Value         | Mô tả               |
+| ------------- | ------------------- |
+| `Similar`     | Ngữ pháp tương tự   |
 | `Contrasting` | Ngữ pháp tương phản |
 
 ---
@@ -188,19 +189,19 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| POST | `/api/auth/register` | 🌐 Public | Đăng ký tài khoản mới |
-| POST | `/api/auth/login` | 🌐 Public | Đăng nhập |
-| POST | `/api/auth/refresh-token` | 🌐 Public | Làm mới access token |
-| POST | `/api/auth/refresh` | 🌐 Public | Alias của `refresh-token` |
-| GET | `/api/auth/me` | 🔒 Auth | Lấy thông tin user hiện tại |
-| PATCH | `/api/auth/me/profile` | 🔒 Auth | Cập nhật profile |
-| POST | `/api/auth/me/avatar` | 🔒 Auth | Upload avatar |
-| PATCH | `/api/auth/change-password` | 🔒 Auth | Đổi mật khẩu |
-| POST | `/api/auth/logout` | 🔒 Auth | Đăng xuất |
-| POST | `/api/auth/forgot-password` | 🌐 Public | Gửi email reset password |
-| POST | `/api/auth/reset-password` | 🌐 Public | Xác nhận reset password |
+| Method | Endpoint                    | Auth      | Mô tả                       |
+| ------ | --------------------------- | --------- | --------------------------- |
+| POST   | `/api/auth/register`        | 🌐 Public | Đăng ký tài khoản mới       |
+| POST   | `/api/auth/login`           | 🌐 Public | Đăng nhập                   |
+| POST   | `/api/auth/refresh-token`   | 🌐 Public | Làm mới access token        |
+| POST   | `/api/auth/refresh`         | 🌐 Public | Alias của `refresh-token`   |
+| GET    | `/api/auth/me`              | 🔒 Auth   | Lấy thông tin user hiện tại |
+| PATCH  | `/api/auth/me/profile`      | 🔒 Auth   | Cập nhật profile            |
+| POST   | `/api/auth/me/avatar`       | 🔒 Auth   | Upload avatar               |
+| PATCH  | `/api/auth/change-password` | 🔒 Auth   | Đổi mật khẩu                |
+| POST   | `/api/auth/logout`          | 🔒 Auth   | Đăng xuất                   |
+| POST   | `/api/auth/forgot-password` | 🌐 Public | Gửi email reset password    |
+| POST   | `/api/auth/reset-password`  | 🌐 Public | Xác nhận reset password     |
 
 ---
 
@@ -214,8 +215,8 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 {
   "username": "string | null",
   "displayName": "string | null",
-  "email": "string",         // ⚠ bắt buộc
-  "password": "string"       // ⚠ bắt buộc
+  "email": "string", // ⚠ bắt buộc
+  "password": "string" // ⚠ bắt buộc
 }
 ```
 
@@ -239,8 +240,8 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
+| Code              | Khi nào          |
+| ----------------- | ---------------- |
 | `Email_Exist_409` | Email đã tồn tại |
 
 ---
@@ -253,8 +254,8 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 
 ```json
 {
-  "email": "string",      // ⚠ bắt buộc
-  "password": "string"    // ⚠ bắt buộc
+  "email": "string", // ⚠ bắt buộc
+  "password": "string" // ⚠ bắt buộc
 }
 ```
 
@@ -262,8 +263,8 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
+| Code          | Khi nào                 |
+| ------------- | ----------------------- |
 | `Invalid_400` | Sai email hoặc password |
 
 ---
@@ -277,8 +278,8 @@ Làm mới access token. Backend đọc `refreshToken` từ cookie.
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
+| Code                | Khi nào                                 |
+| ------------------- | --------------------------------------- |
 | `Token_Expired_409` | Refresh token hết hạn hoặc không hợp lệ |
 
 ---
@@ -346,8 +347,8 @@ Upload ảnh avatar mới cho user hiện tại.
 
 ```json
 {
-  "currentPassword": "string",  // ⚠ bắt buộc
-  "newPassword": "string"       // ⚠ bắt buộc
+  "currentPassword": "string", // ⚠ bắt buộc
+  "newPassword": "string" // ⚠ bắt buộc
 }
 ```
 
@@ -355,8 +356,8 @@ Upload ảnh avatar mới cho user hiện tại.
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
+| Code                         | Khi nào               |
+| ---------------------------- | --------------------- |
 | `Wrong_Current_Password_400` | Sai mật khẩu hiện tại |
 
 ---
@@ -377,7 +378,7 @@ Gửi email chứa link reset password.
 
 ```json
 {
-  "email": "string"  // ⚠ bắt buộc
+  "email": "string" // ⚠ bắt buộc
 }
 ```
 
@@ -393,8 +394,8 @@ Xác nhận reset password bằng token nhận từ email.
 
 ```json
 {
-  "token": "string",       // ⚠ bắt buộc, token từ email
-  "newPassword": "string"  // ⚠ bắt buộc
+  "token": "string", // ⚠ bắt buộc, token từ email
+  "newPassword": "string" // ⚠ bắt buộc
 }
 ```
 
@@ -402,8 +403,8 @@ Xác nhận reset password bằng token nhận từ email.
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
+| Code                | Khi nào                         |
+| ------------------- | ------------------------------- |
 | `Token_Expired_409` | Token hết hạn hoặc không hợp lệ |
 
 ---
@@ -414,9 +415,9 @@ Xác nhận reset password bằng token nhận từ email.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/cards/search` | 🌐 Public | Search card tổng hợp |
+| Method | Endpoint            | Auth      | Mô tả                |
+| ------ | ------------------- | --------- | -------------------- |
+| GET    | `/api/cards/search` | 🌐 Public | Search card tổng hợp |
 
 ---
 
@@ -426,15 +427,16 @@ Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar.
 
 **Query params:**
 
-| Param | Type | Bắt buộc | Enum | Mô tả |
-|-------|------|----------|------|-------|
-| `cardType` | `string` | ❌ | `Vocab`, `Grammar` | Lọc theo loại card. Bỏ trống = tìm cả 2 |
-| `q` | `string` | ❌ | — | Từ khóa tìm kiếm |
-| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ JLPT |
-| `page` | `int` | ❌ | — | Mặc định `1` |
-| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+| Param      | Type     | Bắt buộc | Enum               | Mô tả                                   |
+| ---------- | -------- | -------- | ------------------ | --------------------------------------- |
+| `cardType` | `string` | ❌       | `Vocab`, `Grammar` | Lọc theo loại card. Bỏ trống = tìm cả 2 |
+| `q`        | `string` | ❌       | —                  | Từ khóa tìm kiếm                        |
+| `level`    | `string` | ❌       | `JlptLevel`        | Lọc theo trình độ JLPT                  |
+| `page`     | `int`    | ❌       | —                  | Mặc định `1`                            |
+| `pageSize` | `int`    | ❌       | —                  | Mặc định `20`                           |
 
 **Quy tắc search:**
+
 - Backend **chỉ trả card có `status = Published`**.
 - Nếu không truyền `cardType`, kết quả được gộp rồi sort theo `updatedAt ?? createdAt` giảm dần.
 - `q` tìm theo:
@@ -465,12 +467,12 @@ Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/cards/{cardId}/notes` | 🔒 Auth | Lấy danh sách community notes |
-| POST | `/api/cards/{cardId}/notes` | 🔒 Auth | Tạo/cập nhật ghi chú cá nhân |
-| DELETE | `/api/cards/{cardId}/notes/me` | 🔒 Auth | Xóa ghi chú cá nhân |
-| POST | `/api/notes/{noteId}/toggle-like` | 🔒 Auth | Bật/tắt like cho một note |
+| Method | Endpoint                          | Auth    | Mô tả                         |
+| ------ | --------------------------------- | ------- | ----------------------------- |
+| GET    | `/api/cards/{cardId}/notes`       | 🔒 Auth | Lấy danh sách community notes |
+| POST   | `/api/cards/{cardId}/notes`       | 🔒 Auth | Tạo/cập nhật ghi chú cá nhân  |
+| DELETE | `/api/cards/{cardId}/notes/me`    | 🔒 Auth | Xóa ghi chú cá nhân           |
+| POST   | `/api/notes/{noteId}/toggle-like` | 🔒 Auth | Bật/tắt like cho một note     |
 
 ---
 
@@ -480,16 +482,16 @@ Lấy danh sách community notes có phân trang.
 
 **Path params:**
 
-| Param | Type | Mô tả |
-|-------|------|-------|
+| Param    | Type     | Mô tả                            |
+| -------- | -------- | -------------------------------- |
 | `cardId` | `string` | ID của card (vocab hoặc grammar) |
 
 **Query params:**
 
-| Param | Type | Default | Mô tả |
-|-------|------|---------|-------|
-| `page` | `int` | `1` | Trang hiện tại |
-| `pageSize` | `int` | `10` | Số note/trang |
+| Param      | Type  | Default | Mô tả          |
+| ---------- | ----- | ------- | -------------- |
+| `page`     | `int` | `1`     | Trang hiện tại |
+| `pageSize` | `int` | `10`    | Số note/trang  |
 
 **Response data item** (`CardNoteResponse`):
 
@@ -519,7 +521,7 @@ Tạo mới hoặc cập nhật ghi chú **của chính user** cho card.
 
 ```json
 {
-  "content": "string"  // ⚠ bắt buộc, nội dung ghi chú
+  "content": "string" // ⚠ bắt buộc, nội dung ghi chú
 }
 ```
 
@@ -541,16 +543,16 @@ Bật/tắt trạng thái like cho một ghi chú.
 
 **Path params:**
 
-| Param | Type | Mô tả |
-|-------|------|-------|
+| Param    | Type     | Mô tả                   |
+| -------- | -------- | ----------------------- |
 | `noteId` | `string` | ID note cần toggle like |
 
 **Response data:**
 
 ```json
 {
-  "isLiked": true,      // trạng thái like mới
-  "likesCount": 4       // tổng số like hiện tại
+  "isLiked": true, // trạng thái like mới
+  "likesCount": 4 // tổng số like hiện tại
 }
 ```
 
@@ -563,17 +565,17 @@ Bật/tắt trạng thái like cho một ghi chú.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/vocabulary` | 🔑 Editor/Admin | Tìm kiếm vocabulary có phân trang |
-| GET | `/api/vocabulary/{cardId}` | 🌐 Public | Lấy chi tiết vocabulary |
-| POST | `/api/vocabulary` | 🔑 Editor/Admin | Tạo vocabulary mới |
-| PATCH | `/api/vocabulary/{cardId}` | 🔑 Editor/Admin | Cập nhật vocabulary |
-| DELETE | `/api/vocabulary/{cardId}` | 🔑 Editor/Admin | Xóa mềm vocabulary (Archived) |
-| GET | `/api/vocabulary/import-template` | 🔑 Editor/Admin | Tải JSON template import |
-| GET | `/api/vocabulary/export` | 🔑 Editor/Admin | Export vocabulary ra JSON |
-| POST | `/api/vocabulary/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
-| POST | `/api/vocabulary/import/commit` | 🔑 Editor/Admin | Commit batch import |
+| Method | Endpoint                          | Auth            | Mô tả                             |
+| ------ | --------------------------------- | --------------- | --------------------------------- |
+| GET    | `/api/vocabulary`                 | 🔑 Editor/Admin | Tìm kiếm vocabulary có phân trang |
+| GET    | `/api/vocabulary/{cardId}`        | 🌐 Public       | Lấy chi tiết vocabulary           |
+| POST   | `/api/vocabulary`                 | 🔑 Editor/Admin | Tạo vocabulary mới                |
+| PATCH  | `/api/vocabulary/{cardId}`        | 🔑 Editor/Admin | Cập nhật vocabulary               |
+| DELETE | `/api/vocabulary/{cardId}`        | 🔑 Editor/Admin | Xóa mềm vocabulary (Archived)     |
+| GET    | `/api/vocabulary/import-template` | 🔑 Editor/Admin | Tải JSON template import          |
+| GET    | `/api/vocabulary/export`          | 🔑 Editor/Admin | Export vocabulary ra JSON         |
+| POST   | `/api/vocabulary/import/preview`  | 🔑 Editor/Admin | Preview import, chưa ghi DB       |
+| POST   | `/api/vocabulary/import/commit`   | 🔑 Editor/Admin | Commit batch import               |
 
 ---
 
@@ -583,16 +585,16 @@ Tìm kiếm danh sách vocabulary cho admin.
 
 **Query params:**
 
-| Param | Type | Bắt buộc | Enum | Mô tả |
-|-------|------|----------|------|-------|
-| `q` | `string` | ❌ | — | Tìm theo `title`, `summary`, `writing`, `reading` |
-| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ |
-| `status` | `string` | ❌ | `PublishStatus` | Lọc theo trạng thái |
-| `wordType` | `string` | ❌ | `WordType` | Lọc theo loại từ |
-| `hasAudio` | `bool` | ❌ | — | `true`/`false` lọc có audio hay không |
-| `createdByMe` | `bool` | ❌ | — | `true` = chỉ lấy card do mình tạo |
-| `page` | `int` | ❌ | — | Mặc định `1` |
-| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+| Param         | Type     | Bắt buộc | Enum            | Mô tả                                             |
+| ------------- | -------- | -------- | --------------- | ------------------------------------------------- |
+| `q`           | `string` | ❌       | —               | Tìm theo `title`, `summary`, `writing`, `reading` |
+| `level`       | `string` | ❌       | `JlptLevel`     | Lọc theo trình độ                                 |
+| `status`      | `string` | ❌       | `PublishStatus` | Lọc theo trạng thái                               |
+| `wordType`    | `string` | ❌       | `WordType`      | Lọc theo loại từ                                  |
+| `hasAudio`    | `bool`   | ❌       | —               | `true`/`false` lọc có audio hay không             |
+| `createdByMe` | `bool`   | ❌       | —               | `true` = chỉ lấy card do mình tạo                 |
+| `page`        | `int`    | ❌       | —               | Mặc định `1`                                      |
+| `pageSize`    | `int`    | ❌       | —               | Mặc định `20`                                     |
 
 **Response data item:**
 
@@ -619,6 +621,7 @@ Tìm kiếm danh sách vocabulary cho admin.
 Lấy chi tiết vocabulary card.
 
 **Quy tắc truy cập:**
+
 - ✅ Card `Published`: ai cũng xem được (public).
 - ⚠ Card `Draft` / `Archived`: chỉ user tạo card mới xem được.
 
@@ -675,23 +678,23 @@ Lấy chi tiết vocabulary card.
 
 **Field details:**
 
-| Field | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `cardType` | `string` | `CardType` | Luôn là `Vocab` |
-| `level` | `string?` | `JlptLevel` | Nullable |
-| `status` | `string` | `PublishStatus` | |
-| `wordType` | `string?` | `WordType` | Nullable |
-| `pitchPattern` | `int[]?` | — | Mảng pitch accent, mỗi phần tử = `0` (thấp) hoặc `1` (cao) |
-| `audioUrl` | `string?` | — | URL file audio, do backend tự generate bằng VOICEVOX |
-| `speakerId` | `int?` | — | ID speaker VOICEVOX |
-| `meanings[].partOfSpeech` | `string` | `PartOfSpeech` | Từ loại |
-| `meanings[].definitions` | `string[]` | — | Danh sách nghĩa |
+| Field                     | Type       | Enum            | Mô tả                                                      |
+| ------------------------- | ---------- | --------------- | ---------------------------------------------------------- |
+| `cardType`                | `string`   | `CardType`      | Luôn là `Vocab`                                            |
+| `level`                   | `string?`  | `JlptLevel`     | Nullable                                                   |
+| `status`                  | `string`   | `PublishStatus` |                                                            |
+| `wordType`                | `string?`  | `WordType`      | Nullable                                                   |
+| `pitchPattern`            | `int[]?`   | —               | Mảng pitch accent, mỗi phần tử = `0` (thấp) hoặc `1` (cao) |
+| `audioUrl`                | `string?`  | —               | URL file audio, do backend tự generate bằng VOICEVOX       |
+| `speakerId`               | `int?`     | —               | ID speaker VOICEVOX                                        |
+| `meanings[].partOfSpeech` | `string`   | `PartOfSpeech`  | Từ loại                                                    |
+| `meanings[].definitions`  | `string[]` | —               | Danh sách nghĩa                                            |
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
-| `Vocabulary_CardNotFound_404` | Card không tồn tại |
+| Code                           | Khi nào                                      |
+| ------------------------------ | -------------------------------------------- |
+| `Vocabulary_CardNotFound_404`  | Card không tồn tại                           |
 | `Vocabulary_ReadForbidden_401` | Card chưa Published và user không phải owner |
 
 ---
@@ -701,6 +704,7 @@ Lấy chi tiết vocabulary card.
 Tạo mới một vocabulary card.
 
 **Lưu ý VOICEVOX-only:**
+
 - ❌ Client **không gửi** `audioUrl`.
 - ✅ Backend tự generate audio bằng VOICEVOX từ `reading` (fallback `writing` nếu rỗng).
 - `speakerId` là ID speaker dùng generate, được lưu DB.
@@ -710,32 +714,34 @@ Tạo mới một vocabulary card.
 
 ```json
 {
-  "title": "食べる",                    // ⚠ bắt buộc
-  "summary": "Động từ ăn",             // ⚠ bắt buộc
-  "level": "N5",                        // ❌ nullable — enum JlptLevel
-  "tags": ["verb"],                     // ❌ optional, mảng string
-  "status": "Draft",                    // ❌ nullable — enum PublishStatus
-  "writing": "食べる",                  // ⚠ bắt buộc
-  "reading": "たべる",                  // ❌ nullable
-  "pitchPattern": [0, 1, 0],           // ❌ nullable, mảng int (0=thấp, 1=cao)
-  "speakerId": 3,                       // ❌ nullable, int
-  "wordType": "Native",                // ❌ nullable — enum WordType
-  "meanings": [                         // ⚠ bắt buộc, ít nhất 1 item
+  "title": "食べる", // ⚠ bắt buộc
+  "summary": "Động từ ăn", // ⚠ bắt buộc
+  "level": "N5", // ❌ nullable — enum JlptLevel
+  "tags": ["verb"], // ❌ optional, mảng string
+  "status": "Draft", // ❌ nullable — enum PublishStatus
+  "writing": "食べる", // ⚠ bắt buộc
+  "reading": "たべる", // ❌ nullable
+  "pitchPattern": [0, 1, 0], // ❌ nullable, mảng int (0=thấp, 1=cao)
+  "speakerId": 3, // ❌ nullable, int
+  "wordType": "Native", // ❌ nullable — enum WordType
+  "meanings": [
+    // ⚠ bắt buộc, ít nhất 1 item
     {
-      "partOfSpeech": "VerbRu",         // ⚠ bắt buộc — enum PartOfSpeech
+      "partOfSpeech": "VerbRu", // ⚠ bắt buộc — enum PartOfSpeech
       "definitions": ["ăn", "dùng bữa"] // ⚠ bắt buộc, ít nhất 1 item
     }
   ],
-  "synonyms": [],                       // ❌ optional
-  "antonyms": [],                       // ❌ optional
-  "relatedPhrases": [],                 // ❌ optional
-  "sentences": [                        // ❌ optional, nested upsert
+  "synonyms": [], // ❌ optional
+  "antonyms": [], // ❌ optional
+  "relatedPhrases": [], // ❌ optional
+  "sentences": [
+    // ❌ optional, nested upsert
     {
-      "id": "existing-sentence-id",     // ❌ có id → update sentence, không id → tạo mới
-      "text": "毎朝パンを食べる。",     // ⚠ bắt buộc
+      "id": "existing-sentence-id", // ❌ có id → update sentence, không id → tạo mới
+      "text": "毎朝パンを食べる。", // ⚠ bắt buộc
       "meaning": "Mỗi sáng ăn bánh mì.", // ⚠ bắt buộc
-      "speakerId": 3,                   // ❌ nullable
-      "level": "N5"                     // ❌ nullable — enum JlptLevel
+      "speakerId": 3, // ❌ nullable
+      "level": "N5" // ❌ nullable — enum JlptLevel
     }
   ]
 }
@@ -750,6 +756,7 @@ Tạo mới một vocabulary card.
 Cập nhật vocabulary card. Body giống `POST`.
 
 **⚠ Quy tắc `sentences`:**
+
 - Danh sách `sentences` gửi lên = **trạng thái cuối cùng**.
 - Sentence nào **không có** trong request → bị gỡ khỏi vocabulary.
 - Sentence có `id` → update, không có `id` → tạo mới + generate audio VOICEVOX.
@@ -781,14 +788,14 @@ Export vocabulary ra file JSON theo bộ lọc.
 
 **Query params:**
 
-| Param | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `q` | `string` | — | Từ khóa |
-| `level` | `string` | `JlptLevel` | |
-| `status` | `string` | `PublishStatus` | |
-| `wordType` | `string` | `WordType` | |
-| `hasAudio` | `bool` | — | |
-| `createdByMe` | `bool` | — | |
+| Param         | Type     | Enum            | Mô tả   |
+| ------------- | -------- | --------------- | ------- |
+| `q`           | `string` | —               | Từ khóa |
+| `level`       | `string` | `JlptLevel`     |         |
+| `status`      | `string` | `PublishStatus` |         |
+| `wordType`    | `string` | `WordType`      |         |
+| `hasAudio`    | `bool`   | —               |         |
+| `createdByMe` | `bool`   | —               |         |
 
 - Response: file `application/json` với shape tương tự import payload.
 
@@ -799,6 +806,7 @@ Export vocabulary ra file JSON theo bộ lọc.
 Preview payload import. Validate từng item, **chưa ghi vào DB**.
 
 **Import rules:**
+
 - Import hiện tại là **create-only** (chỉ tạo mới).
 - `sentences[*].id` **KHÔNG được gửi** (vì create-only).
 - `writing` không được trùng trong batch + không trùng DB.
@@ -809,7 +817,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 {
   "items": [
     {
-      "rowNumber": 1,                  // ⚠ số thứ tự hàng
+      "rowNumber": 1, // ⚠ số thứ tự hàng
       "title": "食べる",
       "summary": "Động từ ăn",
       "level": "N5",
@@ -820,14 +828,17 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
       "pitchPattern": [0, 1, 0],
       "speakerId": 3,
       "wordType": "Native",
-      "meanings": [
-        { "partOfSpeech": "VerbRu", "definitions": ["ăn"] }
-      ],
+      "meanings": [{ "partOfSpeech": "VerbRu", "definitions": ["ăn"] }],
       "synonyms": [],
       "antonyms": [],
       "relatedPhrases": [],
       "sentences": [
-        { "text": "毎朝パンを食べる。", "meaning": "Mỗi sáng ăn bánh mì.", "speakerId": 3, "level": "N5" }
+        {
+          "text": "毎朝パンを食べる。",
+          "meaning": "Mỗi sáng ăn bánh mì.",
+          "speakerId": 3,
+          "level": "N5"
+        }
       ]
     }
   ]
@@ -879,22 +890,22 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 
 **Error codes cho import:**
 
-| Code | Mô tả |
-|------|-------|
-| `Vocabulary_ImportInvalidPayload_400` | Payload tổng thể không hợp lệ |
-| `Vocabulary_ImportBatchHasErrors_400` | Batch còn item lỗi, không commit |
-| `Vocabulary_ImportFieldRequired_400:<field>` | Field bắt buộc bị thiếu |
-| `Vocabulary_ImportFieldTooLong_400:<field>` | Field vượt quá độ dài cho phép |
-| `Vocabulary_ImportFieldInvalid_400:<field>` | Giá trị enum không hợp lệ |
-| `Vocabulary_ImportDuplicateWritingInBatch_400` | `writing` trùng trong batch |
-| `Vocabulary_ImportWritingAlreadyExists_400` | `writing` đã có trong DB |
+| Code                                                | Mô tả                                       |
+| --------------------------------------------------- | ------------------------------------------- |
+| `Vocabulary_ImportInvalidPayload_400`               | Payload tổng thể không hợp lệ               |
+| `Vocabulary_ImportBatchHasErrors_400`               | Batch còn item lỗi, không commit            |
+| `Vocabulary_ImportFieldRequired_400:<field>`        | Field bắt buộc bị thiếu                     |
+| `Vocabulary_ImportFieldTooLong_400:<field>`         | Field vượt quá độ dài cho phép              |
+| `Vocabulary_ImportFieldInvalid_400:<field>`         | Giá trị enum không hợp lệ                   |
+| `Vocabulary_ImportDuplicateWritingInBatch_400`      | `writing` trùng trong batch                 |
+| `Vocabulary_ImportWritingAlreadyExists_400`         | `writing` đã có trong DB                    |
 | `Vocabulary_ImportSentenceIdNotAllowed_400:<field>` | Không được gửi `sentences[*].id` khi import |
-| `Vocabulary_ImportMeaningsRequired_400` | Thiếu `meanings` |
-| `Vocabulary_ImportDefinitionsRequired_400` | Thiếu `definitions` trong meaning |
-| `Vocabulary_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ |
-| `Vocabulary_ImportListTooManyItems_400` | Vượt quá số item cho phép |
-| `Vocabulary_ImportSentencesTooMany_400` | Quá nhiều sentences |
-| `Vocabulary_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
+| `Vocabulary_ImportMeaningsRequired_400`             | Thiếu `meanings`                            |
+| `Vocabulary_ImportDefinitionsRequired_400`          | Thiếu `definitions` trong meaning           |
+| `Vocabulary_ImportSpeakerIdNotSupported_400`        | `speakerId` không hợp lệ                    |
+| `Vocabulary_ImportListTooManyItems_400`             | Vượt quá số item cho phép                   |
+| `Vocabulary_ImportSentencesTooMany_400`             | Quá nhiều sentences                         |
+| `Vocabulary_ImportRowNumberInvalid_400`             | `rowNumber` không hợp lệ                    |
 
 ---
 
@@ -903,6 +914,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 Commit batch import vào DB.
 
 **Quy trình:**
+
 1. Backend chạy `preview` nội bộ trước.
 2. Nếu còn item invalid → **không ghi DB**, trả lỗi `Vocabulary_ImportBatchHasErrors_400`.
 3. Nếu tất cả hợp lệ → tạo tuần tự từng vocabulary card mới.
@@ -940,17 +952,17 @@ Commit batch import vào DB.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/grammar` | 🔑 Editor/Admin | Tìm kiếm grammar có phân trang |
-| GET | `/api/grammar/{cardId}` | 🌐 Public | Lấy chi tiết grammar |
-| POST | `/api/grammar` | 🔑 Editor/Admin | Tạo grammar mới |
-| PATCH | `/api/grammar/{cardId}` | 🔑 Editor/Admin | Cập nhật grammar |
-| DELETE | `/api/grammar/{cardId}` | 🔑 Editor/Admin | Xóa mềm grammar (Archived) |
-| GET | `/api/grammar/import-template` | 🔑 Editor/Admin | Tải JSON template import |
-| GET | `/api/grammar/export` | 🔑 Editor/Admin | Export grammar ra JSON |
-| POST | `/api/grammar/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
-| POST | `/api/grammar/import/commit` | 🔑 Editor/Admin | Commit batch import |
+| Method | Endpoint                       | Auth            | Mô tả                          |
+| ------ | ------------------------------ | --------------- | ------------------------------ |
+| GET    | `/api/grammar`                 | 🔑 Editor/Admin | Tìm kiếm grammar có phân trang |
+| GET    | `/api/grammar/{cardId}`        | 🌐 Public       | Lấy chi tiết grammar           |
+| POST   | `/api/grammar`                 | 🔑 Editor/Admin | Tạo grammar mới                |
+| PATCH  | `/api/grammar/{cardId}`        | 🔑 Editor/Admin | Cập nhật grammar               |
+| DELETE | `/api/grammar/{cardId}`        | 🔑 Editor/Admin | Xóa mềm grammar (Archived)     |
+| GET    | `/api/grammar/import-template` | 🔑 Editor/Admin | Tải JSON template import       |
+| GET    | `/api/grammar/export`          | 🔑 Editor/Admin | Export grammar ra JSON         |
+| POST   | `/api/grammar/import/preview`  | 🔑 Editor/Admin | Preview import, chưa ghi DB    |
+| POST   | `/api/grammar/import/commit`   | 🔑 Editor/Admin | Commit batch import            |
 
 ---
 
@@ -960,15 +972,15 @@ Tìm kiếm danh sách grammar cho admin.
 
 **Query params:**
 
-| Param | Type | Bắt buộc | Enum | Mô tả |
-|-------|------|----------|------|-------|
-| `q` | `string` | ❌ | — | Tìm theo `title`, `summary`, `alternateForms`, `structures.pattern`. **KHÔNG** tìm trong `explanation` |
-| `level` | `string` | ❌ | `JlptLevel` | |
-| `status` | `string` | ❌ | `PublishStatus` | |
-| `register` | `string` | ❌ | `RegisterType` | |
-| `createdByMe` | `bool` | ❌ | — | |
-| `page` | `int` | ❌ | — | Mặc định `1` |
-| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+| Param         | Type     | Bắt buộc | Enum            | Mô tả                                                                                                  |
+| ------------- | -------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| `q`           | `string` | ❌       | —               | Tìm theo `title`, `summary`, `alternateForms`, `structures.pattern`. **KHÔNG** tìm trong `explanation` |
+| `level`       | `string` | ❌       | `JlptLevel`     |                                                                                                        |
+| `status`      | `string` | ❌       | `PublishStatus` |                                                                                                        |
+| `register`    | `string` | ❌       | `RegisterType`  |                                                                                                        |
+| `createdByMe` | `bool`   | ❌       | —               |                                                                                                        |
+| `page`        | `int`    | ❌       | —               | Mặc định `1`                                                                                           |
+| `pageSize`    | `int`    | ❌       | —               | Mặc định `20`                                                                                          |
 
 **Response data item:**
 
@@ -995,6 +1007,7 @@ Tìm kiếm danh sách grammar cho admin.
 Lấy chi tiết grammar card.
 
 **Quy tắc truy cập:**
+
 - ✅ Card `Published`: public.
 - ⚠ Card `Draft` / `Archived`: chỉ owner xem được.
 
@@ -1064,21 +1077,21 @@ Lấy chi tiết grammar card.
 
 **Field details:**
 
-| Field | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `cardType` | `string` | `CardType` | Luôn là `Grammar` |
-| `structures[].pattern` | `string` | — | Mẫu cấu trúc, hỗ trợ **rich text** |
-| `structures[].annotations` | `object?` | — | Key = số thứ tự `(1)`, value = chú thích |
-| `explanation` | `string?` | — | Giải thích chi tiết, hỗ trợ **rich text** |
-| `caution` | `string?` | — | Lưu ý, hỗ trợ **rich text** |
-| `register` | `string?` | `RegisterType` | Ngữ cảnh sử dụng |
-| `relations[].relationType` | `string` | `GrammarRelationType` | `Similar` hoặc `Contrasting` |
+| Field                      | Type      | Enum                  | Mô tả                                     |
+| -------------------------- | --------- | --------------------- | ----------------------------------------- |
+| `cardType`                 | `string`  | `CardType`            | Luôn là `Grammar`                         |
+| `structures[].pattern`     | `string`  | —                     | Mẫu cấu trúc, hỗ trợ **rich text**        |
+| `structures[].annotations` | `object?` | —                     | Key = số thứ tự `(1)`, value = chú thích  |
+| `explanation`              | `string?` | —                     | Giải thích chi tiết, hỗ trợ **rich text** |
+| `caution`                  | `string?` | —                     | Lưu ý, hỗ trợ **rich text**               |
+| `register`                 | `string?` | `RegisterType`        | Ngữ cảnh sử dụng                          |
+| `relations[].relationType` | `string`  | `GrammarRelationType` | `Similar` hoặc `Contrasting`              |
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
-| `Grammar_CardNotFound_404` | Card không tồn tại |
+| Code                        | Khi nào                                      |
+| --------------------------- | -------------------------------------------- |
+| `Grammar_CardNotFound_404`  | Card không tồn tại                           |
 | `Grammar_ReadForbidden_401` | Card chưa Published và user không phải owner |
 
 ---
@@ -1089,29 +1102,30 @@ Lấy chi tiết grammar card.
 
 **Cho phép:**
 
-| Syntax | Mô tả |
-|--------|-------|
-| `**bold**` | In đậm |
-| `*italic*` | In nghiêng |
-| `~~strikethrough~~` | Gạch ngang |
-| `{u}text{/u}` | Gạch chân |
-| `{red}text{/red}` | Tô màu (whitelist) |
+| Syntax              | Mô tả              |
+| ------------------- | ------------------ |
+| `**bold**`          | In đậm             |
+| `*italic*`          | In nghiêng         |
+| `~~strikethrough~~` | Gạch ngang         |
+| `{u}text{/u}`       | Gạch chân          |
+| `{red}text{/red}`   | Tô màu (whitelist) |
 
 **Màu whitelist:** `red`, `blue`, `green`, `yellow`, `orange`, `purple`, `gray`
 
 **KHÔNG cho phép:**
+
 - Raw HTML (`<tag>...</tag>`)
 - Token sai cú pháp hoặc không đóng cặp
 - Token màu ngoài whitelist
 
 **Giới hạn độ dài:**
 
-| Field | Max ký tự |
-|-------|-----------|
-| `structures[].pattern` | 1,000 |
+| Field                         | Max ký tự   |
+| ----------------------------- | ----------- |
+| `structures[].pattern`        | 1,000       |
 | `structures[].annotations[*]` | 1,000/value |
-| `explanation` | 10,000 |
-| `caution` | 5,000 |
+| `explanation`                 | 10,000      |
+| `caution`                     | 5,000       |
 
 ---
 
@@ -1123,42 +1137,47 @@ Tạo mới grammar card.
 
 ```json
 {
-  "title": "〜てから",                    // ⚠ bắt buộc
+  "title": "〜てから", // ⚠ bắt buộc
   "summary": "Diễn tả hành động B xảy ra sau", // ⚠ bắt buộc
-  "level": "N5",                          // ❌ nullable — enum JlptLevel
-  "tags": ["grammar", "sequence"],        // ❌ optional
-  "status": "Draft",                      // ❌ nullable — enum PublishStatus
-  "structures": [                         // ❌ optional
+  "level": "N5", // ❌ nullable — enum JlptLevel
+  "tags": ["grammar", "sequence"], // ❌ optional
+  "status": "Draft", // ❌ nullable — enum PublishStatus
+  "structures": [
+    // ❌ optional
     {
-      "pattern": "**V[て形]** + から",    // rich text allowed
-      "annotations": {                    // ❌ nullable
+      "pattern": "**V[て形]** + から", // rich text allowed
+      "annotations": {
+        // ❌ nullable
         "1": "Hành động trước"
       }
     }
   ],
-  "explanation": "Dùng khi hành động sau xảy ra sau khi hành động trước hoàn tất.",  // ❌ nullable, rich text
-  "caution": "~~Không~~ dùng cho hai hành động đồng thời.",  // ❌ nullable, rich text
-  "register": "Standard",                // ❌ nullable — enum RegisterType
-  "alternateForms": ["〜てからです"],     // ❌ optional
-  "relations": [                          // ❌ optional
+  "explanation": "Dùng khi hành động sau xảy ra sau khi hành động trước hoàn tất.", // ❌ nullable, rich text
+  "caution": "~~Không~~ dùng cho hai hành động đồng thời.", // ❌ nullable, rich text
+  "register": "Standard", // ❌ nullable — enum RegisterType
+  "alternateForms": ["〜てからです"], // ❌ optional
+  "relations": [
+    // ❌ optional
     {
-      "relatedId": "grammar-card-id-1",   // ⚠ bắt buộc, ID card ngữ pháp liên quan
-      "relationType": "Similar"           // ⚠ bắt buộc — enum GrammarRelationType
+      "relatedId": "grammar-card-id-1", // ⚠ bắt buộc, ID card ngữ pháp liên quan
+      "relationType": "Similar" // ⚠ bắt buộc — enum GrammarRelationType
     }
   ],
-  "resources": [                          // ❌ optional
+  "resources": [
+    // ❌ optional
     {
-      "title": "Bài giảng",              // ⚠ bắt buộc
+      "title": "Bài giảng", // ⚠ bắt buộc
       "url": "https://example.com/te-kara" // ⚠ bắt buộc
     }
   ],
-  "sentences": [                          // ❌ optional, nested upsert
+  "sentences": [
+    // ❌ optional, nested upsert
     {
-      "id": "optional-existing-id",       // ❌ có id → update, không id → tạo mới
+      "id": "optional-existing-id", // ❌ có id → update, không id → tạo mới
       "text": "ご飯を食べてから、勉強します。", // ⚠ bắt buộc
-      "meaning": "Ăn cơm xong rồi học.",  // ⚠ bắt buộc
-      "speakerId": 3,                     // ❌ nullable
-      "level": "N5"                       // ❌ nullable — enum JlptLevel
+      "meaning": "Ăn cơm xong rồi học.", // ⚠ bắt buộc
+      "speakerId": 3, // ❌ nullable
+      "level": "N5" // ❌ nullable — enum JlptLevel
     }
   ]
 }
@@ -1168,11 +1187,11 @@ Tạo mới grammar card.
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
-| `Grammar_InvalidRichText_400` | Rich text pattern/explanation/caution sai cú pháp |
-| `Grammar_RelatedCardNotFound_404` | `relatedId` không tìm thấy grammar card |
-| `Grammar_InvalidRelation_400` | Relation không hợp lệ (VD: tự tham chiếu chính mình) |
+| Code                              | Khi nào                                              |
+| --------------------------------- | ---------------------------------------------------- |
+| `Grammar_InvalidRichText_400`     | Rich text pattern/explanation/caution sai cú pháp    |
+| `Grammar_RelatedCardNotFound_404` | `relatedId` không tìm thấy grammar card              |
+| `Grammar_InvalidRelation_400`     | Relation không hợp lệ (VD: tự tham chiếu chính mình) |
 
 ---
 
@@ -1181,6 +1200,7 @@ Tạo mới grammar card.
 Cập nhật grammar card. Body giống `POST`.
 
 **⚠ Quy tắc `sentences`:**
+
 - Danh sách `sentences` gửi lên = **trạng thái cuối cùng**.
 - Sentence nào KHÔNG có trong request → bị gỡ association.
 
@@ -1210,13 +1230,13 @@ Export grammar ra file JSON.
 
 **Query params:**
 
-| Param | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `q` | `string` | — | Từ khóa |
-| `level` | `string` | `JlptLevel` | |
-| `status` | `string` | `PublishStatus` | |
-| `register` | `string` | `RegisterType` | |
-| `createdByMe` | `bool` | — | |
+| Param         | Type     | Enum            | Mô tả   |
+| ------------- | -------- | --------------- | ------- |
+| `q`           | `string` | —               | Từ khóa |
+| `level`       | `string` | `JlptLevel`     |         |
+| `status`      | `string` | `PublishStatus` |         |
+| `register`    | `string` | `RegisterType`  |         |
+| `createdByMe` | `bool`   | —               |         |
 
 - Response: file `application/json` cùng shape với import payload.
 
@@ -1227,6 +1247,7 @@ Export grammar ra file JSON.
 Preview payload import grammar, validate từng item, **chưa ghi DB**.
 
 **Import rules:**
+
 - Import hiện tại là **create-only**.
 - `sentences[*].id` **KHÔNG được gửi** (vì create-only).
 
@@ -1259,7 +1280,12 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
         { "title": "Bài giảng", "url": "https://example.com/nagara" }
       ],
       "sentences": [
-        { "text": "音楽を聞きながら勉強します。", "meaning": "Vừa nghe nhạc vừa học.", "speakerId": 3, "level": "N4" }
+        {
+          "text": "音楽を聞きながら勉強します。",
+          "meaning": "Vừa nghe nhạc vừa học.",
+          "speakerId": 3,
+          "level": "N4"
+        }
       ]
     }
   ]
@@ -1287,20 +1313,20 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
 
 **Error codes cho import:**
 
-| Code | Mô tả |
-|------|-------|
-| `Grammar_ImportInvalidPayload_400` | Payload tổng thể không hợp lệ |
-| `Grammar_ImportBatchHasErrors_400` | Batch còn item lỗi |
-| `Grammar_ImportFieldRequired_400:<field>` | Field bắt buộc bị thiếu |
-| `Grammar_ImportFieldTooLong_400:<field>` | Field vượt quá giới hạn |
-| `Grammar_ImportFieldInvalid_400:<field>` | Enum/giá trị không hợp lệ |
-| `Grammar_ImportRelatedGrammarNotFound_404:<field>` | `relatedId` không tìm thấy |
-| `Grammar_ImportDuplicateRelation_400:<field>` | Relation trùng lặp |
-| `Grammar_ImportSentenceIdNotAllowed_400:<field>` | Không được gửi `sentences[*].id` |
-| `Grammar_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ |
-| `Grammar_ImportListTooManyItems_400` | Quá số item cho phép |
-| `Grammar_ImportSentencesTooMany_400` | Quá nhiều sentences |
-| `Grammar_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
+| Code                                               | Mô tả                            |
+| -------------------------------------------------- | -------------------------------- |
+| `Grammar_ImportInvalidPayload_400`                 | Payload tổng thể không hợp lệ    |
+| `Grammar_ImportBatchHasErrors_400`                 | Batch còn item lỗi               |
+| `Grammar_ImportFieldRequired_400:<field>`          | Field bắt buộc bị thiếu          |
+| `Grammar_ImportFieldTooLong_400:<field>`           | Field vượt quá giới hạn          |
+| `Grammar_ImportFieldInvalid_400:<field>`           | Enum/giá trị không hợp lệ        |
+| `Grammar_ImportRelatedGrammarNotFound_404:<field>` | `relatedId` không tìm thấy       |
+| `Grammar_ImportDuplicateRelation_400:<field>`      | Relation trùng lặp               |
+| `Grammar_ImportSentenceIdNotAllowed_400:<field>`   | Không được gửi `sentences[*].id` |
+| `Grammar_ImportSpeakerIdNotSupported_400`          | `speakerId` không hợp lệ         |
+| `Grammar_ImportListTooManyItems_400`               | Quá số item cho phép             |
+| `Grammar_ImportSentencesTooMany_400`               | Quá nhiều sentences              |
+| `Grammar_ImportRowNumberInvalid_400`               | `rowNumber` không hợp lệ         |
 
 ---
 
@@ -1309,6 +1335,7 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
 Commit batch import grammar.
 
 **Quy trình:**
+
 1. Backend chạy `preview` nội bộ trước.
 2. Nếu còn item invalid → trả `Grammar_ImportBatchHasErrors_400`.
 3. Hợp lệ → tạo tuần tự. Mỗi sentence sẽ generate audio bằng VOICEVOX.
@@ -1345,17 +1372,17 @@ Commit batch import grammar.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/kanji` | 🔑 Editor/Admin | Tìm kiếm kanji có phân trang |
-| GET | `/api/kanji/{cardId}` | 🌐 Public | Lấy chi tiết kanji |
-| POST | `/api/kanji` | 🔑 Editor/Admin | Tạo kanji mới |
-| PATCH | `/api/kanji/{cardId}` | 🔑 Editor/Admin | Cập nhật kanji |
-| DELETE | `/api/kanji/{cardId}` | 🔑 Editor/Admin | Xóa mềm kanji (Archived) |
-| GET | `/api/kanji/import-template` | 🔑 Editor/Admin | Tải JSON template import |
-| GET | `/api/kanji/export` | 🔑 Editor/Admin | Export kanji ra JSON |
-| POST | `/api/kanji/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
-| POST | `/api/kanji/import/commit` | 🔑 Editor/Admin | Commit batch import |
+| Method | Endpoint                     | Auth            | Mô tả                        |
+| ------ | ---------------------------- | --------------- | ---------------------------- |
+| GET    | `/api/kanji`                 | 🔑 Editor/Admin | Tìm kiếm kanji có phân trang |
+| GET    | `/api/kanji/{cardId}`        | 🌐 Public       | Lấy chi tiết kanji           |
+| POST   | `/api/kanji`                 | 🔑 Editor/Admin | Tạo kanji mới                |
+| PATCH  | `/api/kanji/{cardId}`        | 🔑 Editor/Admin | Cập nhật kanji               |
+| DELETE | `/api/kanji/{cardId}`        | 🔑 Editor/Admin | Xóa mềm kanji (Archived)     |
+| GET    | `/api/kanji/import-template` | 🔑 Editor/Admin | Tải JSON template import     |
+| GET    | `/api/kanji/export`          | 🔑 Editor/Admin | Export kanji ra JSON         |
+| POST   | `/api/kanji/import/preview`  | 🔑 Editor/Admin | Preview import, chưa ghi DB  |
+| POST   | `/api/kanji/import/commit`   | 🔑 Editor/Admin | Commit batch import          |
 
 ---
 
@@ -1365,17 +1392,17 @@ Tìm kiếm danh sách kanji cho admin.
 
 **Query params:**
 
-| Param | Type | Bắt buộc | Enum | Mô tả |
-|-------|------|----------|------|-------|
-| `q` | `string` | ❌ | — | Tìm theo `title`, `summary`, `kanji`, `meaningVi`, `hanViet` |
-| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ |
-| `status` | `string` | ❌ | `PublishStatus` | Lọc theo trạng thái |
-| `strokeCountMin` | `int` | ❌ | — | Số nét tối thiểu, phải > `0` |
-| `strokeCountMax` | `int` | ❌ | — | Số nét tối đa, phải > `0` |
-| `radical` | `string` | ❌ | — | Lọc theo đúng radical character, ví dụ `日`, `口`, `氵` |
-| `createdByMe` | `bool` | ❌ | — | `true` = chỉ lấy card do mình tạo |
-| `page` | `int` | ❌ | — | Mặc định `1` |
-| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+| Param            | Type     | Bắt buộc | Enum            | Mô tả                                                        |
+| ---------------- | -------- | -------- | --------------- | ------------------------------------------------------------ |
+| `q`              | `string` | ❌       | —               | Tìm theo `title`, `summary`, `kanji`, `meaningVi`, `hanViet` |
+| `level`          | `string` | ❌       | `JlptLevel`     | Lọc theo trình độ                                            |
+| `status`         | `string` | ❌       | `PublishStatus` | Lọc theo trạng thái                                          |
+| `strokeCountMin` | `int`    | ❌       | —               | Số nét tối thiểu, phải > `0`                                 |
+| `strokeCountMax` | `int`    | ❌       | —               | Số nét tối đa, phải > `0`                                    |
+| `radical`        | `string` | ❌       | —               | Lọc theo đúng radical character, ví dụ `日`, `口`, `氵`      |
+| `createdByMe`    | `bool`   | ❌       | —               | `true` = chỉ lấy card do mình tạo                            |
+| `page`           | `int`    | ❌       | —               | Mặc định `1`                                                 |
+| `pageSize`       | `int`    | ❌       | —               | Mặc định `20`                                                |
 
 **Response data item** (`KanjiListItemResponse`):
 
@@ -1404,6 +1431,7 @@ Tìm kiếm danh sách kanji cho admin.
 Lấy chi tiết một kanji card.
 
 **Quy tắc truy cập:**
+
 - ✅ Card `Published`: ai cũng xem được (public).
 - ⚠ Card `Draft` / `Archived`: chỉ user tạo card mới xem được.
 
@@ -1457,25 +1485,25 @@ Lấy chi tiết một kanji card.
 
 **Field details:**
 
-| Field | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `cardType` | `string` | `CardType` | Luôn là `Kanji` |
-| `kanji` | `string` | — | Bản thân chữ kanji, ví dụ `明` |
-| `strokeCount` | `int` | — | Số nét, phải > `0` |
-| `strokeOrderUrl` | `string?` | — | URL ảnh/GIF/video mô tả thứ tự nét |
-| `onyomi` | `string[]` | — | Danh sách âm On, ví dụ `["メイ", "ミョウ"]` |
-| `kunyomi` | `string[]` | — | Danh sách âm Kun, ví dụ `["あ.かるい", "あ.ける"]` |
-| `hanViet` | `string?` | — | Âm Hán Việt, ví dụ `minh` |
-| `meaningVi` | `string` | — | Nghĩa tiếng Việt |
-| `radicals[].character` | `string` | — | Ký tự radical, ví dụ `日`, `口`, `氵` |
-| `radicals[].meaningVi` | `string` | — | Nghĩa tiếng Việt của radical |
-| `radicals[].kanjiCardId` | `string?` | — | Nếu radical này cũng có kanji card riêng, backend tự link card đó |
+| Field                    | Type       | Enum       | Mô tả                                                             |
+| ------------------------ | ---------- | ---------- | ----------------------------------------------------------------- |
+| `cardType`               | `string`   | `CardType` | Luôn là `Kanji`                                                   |
+| `kanji`                  | `string`   | —          | Bản thân chữ kanji, ví dụ `明`                                    |
+| `strokeCount`            | `int`      | —          | Số nét, phải > `0`                                                |
+| `strokeOrderUrl`         | `string?`  | —          | URL ảnh/GIF/video mô tả thứ tự nét                                |
+| `onyomi`                 | `string[]` | —          | Danh sách âm On, ví dụ `["メイ", "ミョウ"]`                       |
+| `kunyomi`                | `string[]` | —          | Danh sách âm Kun, ví dụ `["あ.かるい", "あ.ける"]`                |
+| `hanViet`                | `string?`  | —          | Âm Hán Việt, ví dụ `minh`                                         |
+| `meaningVi`              | `string`   | —          | Nghĩa tiếng Việt                                                  |
+| `radicals[].character`   | `string`   | —          | Ký tự radical, ví dụ `日`, `口`, `氵`                             |
+| `radicals[].meaningVi`   | `string`   | —          | Nghĩa tiếng Việt của radical                                      |
+| `radicals[].kanjiCardId` | `string?`  | —          | Nếu radical này cũng có kanji card riêng, backend tự link card đó |
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
-| `Kanji_CardNotFound_404` | Card không tồn tại |
+| Code                      | Khi nào                                      |
+| ------------------------- | -------------------------------------------- |
+| `Kanji_CardNotFound_404`  | Card không tồn tại                           |
 | `Kanji_ReadForbidden_401` | Card chưa Published và user không phải owner |
 
 ---
@@ -1488,22 +1516,23 @@ Tạo mới một kanji card.
 
 ```json
 {
-  "title": "明",                                // ⚠ bắt buộc
+  "title": "明", // ⚠ bắt buộc
   "summary": "Kanji diễn tả sự sáng, rõ ràng.", // ⚠ bắt buộc
-  "level": "N5",                               // ❌ nullable — enum JlptLevel
-  "tags": ["kanji", "co-ban"],                 // ❌ optional, mảng string
-  "status": "Draft",                           // ❌ nullable — enum PublishStatus
-  "kanji": "明",                               // ⚠ bắt buộc, duy nhất trong hệ thống
-  "strokeCount": 8,                            // ⚠ bắt buộc, int > 0
+  "level": "N5", // ❌ nullable — enum JlptLevel
+  "tags": ["kanji", "co-ban"], // ❌ optional, mảng string
+  "status": "Draft", // ❌ nullable — enum PublishStatus
+  "kanji": "明", // ⚠ bắt buộc, duy nhất trong hệ thống
+  "strokeCount": 8, // ⚠ bắt buộc, int > 0
   "strokeOrderUrl": "https://example.com/mei.gif", // ❌ nullable
-  "onyomi": ["メイ", "ミョウ"],                // ❌ optional, mảng string
-  "kunyomi": ["あ.かり", "あか.るい"],         // ❌ optional, mảng string
-  "hanViet": "minh",                           // ❌ nullable
-  "meaningVi": "sáng, rõ ràng",                // ⚠ bắt buộc
-  "radicals": [                                // ⚠ bắt buộc, ít nhất 1 item
+  "onyomi": ["メイ", "ミョウ"], // ❌ optional, mảng string
+  "kunyomi": ["あ.かり", "あか.るい"], // ❌ optional, mảng string
+  "hanViet": "minh", // ❌ nullable
+  "meaningVi": "sáng, rõ ràng", // ⚠ bắt buộc
+  "radicals": [
+    // ⚠ bắt buộc, ít nhất 1 item
     {
-      "character": "日",                       // ⚠ bắt buộc
-      "meaningVi": "mặt trời"                  // ⚠ bắt buộc
+      "character": "日", // ⚠ bắt buộc
+      "meaningVi": "mặt trời" // ⚠ bắt buộc
     },
     {
       "character": "月",
@@ -1515,25 +1544,26 @@ Tạo mới một kanji card.
 
 **Field rules quan trọng:**
 
-| Field | Hợp lệ khi | Ghi chú |
-|------|------------|---------|
-| `title` | string không rỗng, max `200` ký tự | Thường nên đặt cùng giá trị với `kanji` để đồng nhất UI |
-| `summary` | string không rỗng, max `2000` ký tự | Mô tả ngắn cho card |
-| `level` | `N5`, `N4`, `N3`, `N2`, `N1` hoặc bỏ trống | Không được gửi giá trị khác |
-| `tags` | tối đa `20` phần tử, mỗi phần tử max `100` ký tự | Backend tự trim và loại bỏ phần tử rỗng |
-| `status` | `Draft`, `Published`, `Archived` hoặc bỏ trống | Nếu bỏ trống khi create, backend mặc định `Draft` |
-| `kanji` | string không rỗng, max `20` ký tự | Phải duy nhất toàn hệ thống |
-| `strokeCount` | số nguyên > `0` | Không chấp nhận `0` hoặc số âm |
-| `strokeOrderUrl` | string max `2000` ký tự hoặc `null` | Chỉ là URL string, không upload file qua endpoint này |
-| `onyomi` | tối đa `20` item, mỗi item max `100` ký tự | Ví dụ `["メイ", "ミョウ"]` |
-| `kunyomi` | tối đa `20` item, mỗi item max `100` ký tự | Ví dụ `["あ.かるい", "あ.ける"]` |
-| `hanViet` | string max `200` ký tự hoặc `null` | Ví dụ `minh`, `nhật` |
-| `meaningVi` | string không rỗng, max `1000` ký tự | Nghĩa tiếng Việt chính |
-| `radicals` | bắt buộc có ít nhất `1` item, tối đa `30` item | Đây là danh sách thành phần cấu tạo của kanji |
-| `radicals[].character` | string không rỗng, max `20` ký tự | Nên là đúng ký tự radical, ví dụ `日`, `月`, `氵` |
-| `radicals[].meaningVi` | string không rỗng, max `500` ký tự | Nghĩa tiếng Việt của radical |
+| Field                  | Hợp lệ khi                                       | Ghi chú                                                 |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| `title`                | string không rỗng, max `200` ký tự               | Thường nên đặt cùng giá trị với `kanji` để đồng nhất UI |
+| `summary`              | string không rỗng, max `2000` ký tự              | Mô tả ngắn cho card                                     |
+| `level`                | `N5`, `N4`, `N3`, `N2`, `N1` hoặc bỏ trống       | Không được gửi giá trị khác                             |
+| `tags`                 | tối đa `20` phần tử, mỗi phần tử max `100` ký tự | Backend tự trim và loại bỏ phần tử rỗng                 |
+| `status`               | `Draft`, `Published`, `Archived` hoặc bỏ trống   | Nếu bỏ trống khi create, backend mặc định `Draft`       |
+| `kanji`                | string không rỗng, max `20` ký tự                | Phải duy nhất toàn hệ thống                             |
+| `strokeCount`          | số nguyên > `0`                                  | Không chấp nhận `0` hoặc số âm                          |
+| `strokeOrderUrl`       | string max `2000` ký tự hoặc `null`              | Chỉ là URL string, không upload file qua endpoint này   |
+| `onyomi`               | tối đa `20` item, mỗi item max `100` ký tự       | Ví dụ `["メイ", "ミョウ"]`                              |
+| `kunyomi`              | tối đa `20` item, mỗi item max `100` ký tự       | Ví dụ `["あ.かるい", "あ.ける"]`                        |
+| `hanViet`              | string max `200` ký tự hoặc `null`               | Ví dụ `minh`, `nhật`                                    |
+| `meaningVi`            | string không rỗng, max `1000` ký tự              | Nghĩa tiếng Việt chính                                  |
+| `radicals`             | bắt buộc có ít nhất `1` item, tối đa `30` item   | Đây là danh sách thành phần cấu tạo của kanji           |
+| `radicals[].character` | string không rỗng, max `20` ký tự                | Nên là đúng ký tự radical, ví dụ `日`, `月`, `氵`       |
+| `radicals[].meaningVi` | string không rỗng, max `500` ký tự               | Nghĩa tiếng Việt của radical                            |
 
 **Lưu ý về radicals:**
+
 - Client **không gửi** `radicalId`.
 - Client **không gửi** `kanjiCardId`.
 - Backend tự:
@@ -1551,6 +1581,7 @@ Tạo mới một kanji card.
 Cập nhật kanji card. Body giống `POST`.
 
 **⚠ Quy tắc `radicals`:**
+
 - Danh sách `radicals` gửi lên = **trạng thái cuối cùng**.
 - Radical nào **không có** trong request → bị gỡ khỏi liên kết của kanji này.
 - Radical trùng `character` trong cùng một payload là dữ liệu không hợp lệ.
@@ -1582,15 +1613,15 @@ Export kanji ra file JSON theo bộ lọc.
 
 **Query params:**
 
-| Param | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `q` | `string` | — | Từ khóa |
-| `level` | `string` | `JlptLevel` | |
-| `status` | `string` | `PublishStatus` | |
-| `strokeCountMin` | `int` | — | |
-| `strokeCountMax` | `int` | — | |
-| `radical` | `string` | — | Radical character cần lọc |
-| `createdByMe` | `bool` | — | |
+| Param            | Type     | Enum            | Mô tả                     |
+| ---------------- | -------- | --------------- | ------------------------- |
+| `q`              | `string` | —               | Từ khóa                   |
+| `level`          | `string` | `JlptLevel`     |                           |
+| `status`         | `string` | `PublishStatus` |                           |
+| `strokeCountMin` | `int`    | —               |                           |
+| `strokeCountMax` | `int`    | —               |                           |
+| `radical`        | `string` | —               | Radical character cần lọc |
+| `createdByMe`    | `bool`   | —               |                           |
 
 - Response: file `application/json` với shape tương tự import payload.
 
@@ -1601,6 +1632,7 @@ Export kanji ra file JSON theo bộ lọc.
 Preview payload import. Validate từng item, **chưa ghi vào DB**.
 
 **Import rules:**
+
 - Import hiện tại là **create-only** (chỉ tạo mới).
 - `kanji` không được trùng trong batch + không trùng DB.
 - `radicals` là bắt buộc.
@@ -1613,23 +1645,24 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 {
   "items": [
     {
-      "rowNumber": 1,                           // ⚠ số thứ tự hàng, > 0
-      "title": "明",                            // ⚠ bắt buộc, max 200
-      "summary": "Kanji diễn tả sự sáng.",     // ⚠ bắt buộc, max 2000
-      "level": "N5",                            // ❌ nullable — JlptLevel
-      "tags": ["kanji", "co-ban"],              // ❌ optional, tối đa 20 item
-      "status": "Draft",                        // ❌ nullable — PublishStatus
-      "kanji": "明",                            // ⚠ bắt buộc, duy nhất
-      "strokeCount": 8,                         // ⚠ bắt buộc, int > 0
+      "rowNumber": 1, // ⚠ số thứ tự hàng, > 0
+      "title": "明", // ⚠ bắt buộc, max 200
+      "summary": "Kanji diễn tả sự sáng.", // ⚠ bắt buộc, max 2000
+      "level": "N5", // ❌ nullable — JlptLevel
+      "tags": ["kanji", "co-ban"], // ❌ optional, tối đa 20 item
+      "status": "Draft", // ❌ nullable — PublishStatus
+      "kanji": "明", // ⚠ bắt buộc, duy nhất
+      "strokeCount": 8, // ⚠ bắt buộc, int > 0
       "strokeOrderUrl": "https://example.com/mei.gif", // ❌ nullable
-      "onyomi": ["メイ", "ミョウ"],             // ❌ optional
-      "kunyomi": ["あ.かり", "あか.るい"],      // ❌ optional
-      "hanViet": "minh",                        // ❌ nullable
-      "meaningVi": "sáng, rõ ràng",             // ⚠ bắt buộc
-      "radicals": [                             // ⚠ bắt buộc, ít nhất 1 item
+      "onyomi": ["メイ", "ミョウ"], // ❌ optional
+      "kunyomi": ["あ.かり", "あか.るい"], // ❌ optional
+      "hanViet": "minh", // ❌ nullable
+      "meaningVi": "sáng, rõ ràng", // ⚠ bắt buộc
+      "radicals": [
+        // ⚠ bắt buộc, ít nhất 1 item
         {
-          "character": "日",                    // ⚠ bắt buộc
-          "meaningVi": "mặt trời"               // ⚠ bắt buộc
+          "character": "日", // ⚠ bắt buộc
+          "meaningVi": "mặt trời" // ⚠ bắt buộc
         },
         {
           "character": "月",
@@ -1643,25 +1676,25 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 
 **Field guide để tự viết file import JSON hợp lệ:**
 
-| JSON path | Kiểu dữ liệu hợp lệ | Bắt buộc | Ví dụ hợp lệ | Ghi chú |
-|----------|----------------------|----------|--------------|---------|
-| `items` | `array` | ⚠ | `[ {...} ]` | Danh sách item import |
-| `items[].rowNumber` | `int` > `0` | ❌ | `1` | Nếu bỏ trống, backend tự lấy số thứ tự theo vị trí |
-| `items[].title` | `string` | ⚠ | `"明"` | Không được rỗng |
-| `items[].summary` | `string` | ⚠ | `"Kanji diễn tả sự sáng."` | Không được rỗng |
-| `items[].level` | `string` hoặc `null` | ❌ | `"N5"` | Chỉ nhận `N5/N4/N3/N2/N1` |
-| `items[].tags` | `string[]` | ❌ | `["kanji", "co-ban"]` | Mỗi phần tử là string |
-| `items[].status` | `string` hoặc `null` | ❌ | `"Draft"` | Chỉ nhận `Draft/Published/Archived` |
-| `items[].kanji` | `string` | ⚠ | `"明"` | Không được trùng DB hoặc trùng item khác trong batch |
-| `items[].strokeCount` | `int` | ⚠ | `8` | Phải > `0` |
-| `items[].strokeOrderUrl` | `string` hoặc `null` | ❌ | `"https://example.com/mei.gif"` | Không phải object/file |
-| `items[].onyomi` | `string[]` | ❌ | `["メイ", "ミョウ"]` | Không dùng number/object |
-| `items[].kunyomi` | `string[]` | ❌ | `["あ.かり", "あか.るい"]` | Không dùng number/object |
-| `items[].hanViet` | `string` hoặc `null` | ❌ | `"minh"` | |
-| `items[].meaningVi` | `string` | ⚠ | `"sáng, rõ ràng"` | Không được rỗng |
-| `items[].radicals` | `array` | ⚠ | `[{"character":"日","meaningVi":"mặt trời"}]` | Phải có ít nhất 1 phần tử |
-| `items[].radicals[].character` | `string` | ⚠ | `"日"` | Trong cùng item không được trùng nhau |
-| `items[].radicals[].meaningVi` | `string` | ⚠ | `"mặt trời"` | Không được rỗng |
+| JSON path                      | Kiểu dữ liệu hợp lệ  | Bắt buộc | Ví dụ hợp lệ                                  | Ghi chú                                              |
+| ------------------------------ | -------------------- | -------- | --------------------------------------------- | ---------------------------------------------------- |
+| `items`                        | `array`              | ⚠        | `[ {...} ]`                                   | Danh sách item import                                |
+| `items[].rowNumber`            | `int` > `0`          | ❌       | `1`                                           | Nếu bỏ trống, backend tự lấy số thứ tự theo vị trí   |
+| `items[].title`                | `string`             | ⚠        | `"明"`                                        | Không được rỗng                                      |
+| `items[].summary`              | `string`             | ⚠        | `"Kanji diễn tả sự sáng."`                    | Không được rỗng                                      |
+| `items[].level`                | `string` hoặc `null` | ❌       | `"N5"`                                        | Chỉ nhận `N5/N4/N3/N2/N1`                            |
+| `items[].tags`                 | `string[]`           | ❌       | `["kanji", "co-ban"]`                         | Mỗi phần tử là string                                |
+| `items[].status`               | `string` hoặc `null` | ❌       | `"Draft"`                                     | Chỉ nhận `Draft/Published/Archived`                  |
+| `items[].kanji`                | `string`             | ⚠        | `"明"`                                        | Không được trùng DB hoặc trùng item khác trong batch |
+| `items[].strokeCount`          | `int`                | ⚠        | `8`                                           | Phải > `0`                                           |
+| `items[].strokeOrderUrl`       | `string` hoặc `null` | ❌       | `"https://example.com/mei.gif"`               | Không phải object/file                               |
+| `items[].onyomi`               | `string[]`           | ❌       | `["メイ", "ミョウ"]`                          | Không dùng number/object                             |
+| `items[].kunyomi`              | `string[]`           | ❌       | `["あ.かり", "あか.るい"]`                    | Không dùng number/object                             |
+| `items[].hanViet`              | `string` hoặc `null` | ❌       | `"minh"`                                      |                                                      |
+| `items[].meaningVi`            | `string`             | ⚠        | `"sáng, rõ ràng"`                             | Không được rỗng                                      |
+| `items[].radicals`             | `array`              | ⚠        | `[{"character":"日","meaningVi":"mặt trời"}]` | Phải có ít nhất 1 phần tử                            |
+| `items[].radicals[].character` | `string`             | ⚠        | `"日"`                                        | Trong cùng item không được trùng nhau                |
+| `items[].radicals[].meaningVi` | `string`             | ⚠        | `"mặt trời"`                                  | Không được rỗng                                      |
 
 **Response data:**
 
@@ -1707,19 +1740,19 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 
 **Error codes cho import:**
 
-| Code | Mô tả |
-|------|-------|
-| `Kanji_ImportInvalidPayload_400` | Payload tổng thể không hợp lệ |
-| `Kanji_ImportBatchHasErrors_400` | Batch còn item lỗi, không commit |
-| `Kanji_ImportFieldRequired_400:<field>` | Field bắt buộc bị thiếu |
-| `Kanji_ImportFieldTooLong_400:<field>` | Field vượt quá độ dài cho phép |
-| `Kanji_ImportFieldInvalid_400:<field>` | Giá trị enum / number không hợp lệ |
-| `Kanji_ImportDuplicateKanjiInBatch_400` | `kanji` trùng trong batch |
-| `Kanji_ImportKanjiAlreadyExists_400` | `kanji` đã có trong DB |
-| `Kanji_ImportRadicalsRequired_400` | Thiếu `radicals` |
-| `Kanji_ImportDuplicateRadicalInItem_400:<field>` | Radical trùng trong cùng item |
-| `Kanji_ImportListTooManyItems_400:<field>` | Vượt quá số item cho phép |
-| `Kanji_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
+| Code                                             | Mô tả                              |
+| ------------------------------------------------ | ---------------------------------- |
+| `Kanji_ImportInvalidPayload_400`                 | Payload tổng thể không hợp lệ      |
+| `Kanji_ImportBatchHasErrors_400`                 | Batch còn item lỗi, không commit   |
+| `Kanji_ImportFieldRequired_400:<field>`          | Field bắt buộc bị thiếu            |
+| `Kanji_ImportFieldTooLong_400:<field>`           | Field vượt quá độ dài cho phép     |
+| `Kanji_ImportFieldInvalid_400:<field>`           | Giá trị enum / number không hợp lệ |
+| `Kanji_ImportDuplicateKanjiInBatch_400`          | `kanji` trùng trong batch          |
+| `Kanji_ImportKanjiAlreadyExists_400`             | `kanji` đã có trong DB             |
+| `Kanji_ImportRadicalsRequired_400`               | Thiếu `radicals`                   |
+| `Kanji_ImportDuplicateRadicalInItem_400:<field>` | Radical trùng trong cùng item      |
+| `Kanji_ImportListTooManyItems_400:<field>`       | Vượt quá số item cho phép          |
+| `Kanji_ImportRowNumberInvalid_400`               | `rowNumber` không hợp lệ           |
 
 ---
 
@@ -1728,6 +1761,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 Commit batch import vào DB.
 
 **Quy trình:**
+
 1. Backend chạy `preview` nội bộ trước.
 2. Nếu còn item invalid → **không ghi DB**, trả `HasValidationErrors = true`.
 3. Nếu tất cả hợp lệ → tạo tuần tự từng kanji card mới.
@@ -1765,17 +1799,17 @@ Commit batch import vào DB.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/sentences` | 🔑 Editor/Admin | Tìm kiếm sentence có phân trang |
-| GET | `/api/sentences/{id}` | 🔑 Editor/Admin | Lấy chi tiết sentence |
-| POST | `/api/sentences` | 🔑 Editor/Admin | Tạo sentence mới |
-| PATCH | `/api/sentences/{id}` | 🔑 Editor/Admin | Cập nhật sentence |
-| DELETE | `/api/sentences/{id}` | 🔑 Editor/Admin | Xóa sentence |
-| GET | `/api/sentences/import-template` | 🔑 Editor/Admin | Tải JSON template import |
-| GET | `/api/sentences/export` | 🔑 Editor/Admin | Export sentences ra JSON |
-| POST | `/api/sentences/import/preview` | 🔑 Editor/Admin | Preview import, chưa ghi DB |
-| POST | `/api/sentences/import/commit` | 🔑 Editor/Admin | Commit batch import |
+| Method | Endpoint                         | Auth            | Mô tả                           |
+| ------ | -------------------------------- | --------------- | ------------------------------- |
+| GET    | `/api/sentences`                 | 🔑 Editor/Admin | Tìm kiếm sentence có phân trang |
+| GET    | `/api/sentences/{id}`            | 🔑 Editor/Admin | Lấy chi tiết sentence           |
+| POST   | `/api/sentences`                 | 🔑 Editor/Admin | Tạo sentence mới                |
+| PATCH  | `/api/sentences/{id}`            | 🔑 Editor/Admin | Cập nhật sentence               |
+| DELETE | `/api/sentences/{id}`            | 🔑 Editor/Admin | Xóa sentence                    |
+| GET    | `/api/sentences/import-template` | 🔑 Editor/Admin | Tải JSON template import        |
+| GET    | `/api/sentences/export`          | 🔑 Editor/Admin | Export sentences ra JSON        |
+| POST   | `/api/sentences/import/preview`  | 🔑 Editor/Admin | Preview import, chưa ghi DB     |
+| POST   | `/api/sentences/import/commit`   | 🔑 Editor/Admin | Commit batch import             |
 
 ---
 
@@ -1785,14 +1819,14 @@ Tìm kiếm danh sách sentence.
 
 **Query params:**
 
-| Param | Type | Bắt buộc | Enum | Mô tả |
-|-------|------|----------|------|-------|
-| `q` | `string` | ❌ | — | Từ khóa tìm kiếm |
-| `level` | `string` | ❌ | `JlptLevel` | Lọc theo trình độ |
-| `hasAudio` | `bool` | ❌ | — | Lọc có/không audio |
-| `createdByMe` | `bool` | ❌ | — | Chỉ lấy do mình tạo |
-| `page` | `int` | ❌ | — | Mặc định `1` |
-| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+| Param         | Type     | Bắt buộc | Enum        | Mô tả               |
+| ------------- | -------- | -------- | ----------- | ------------------- |
+| `q`           | `string` | ❌       | —           | Từ khóa tìm kiếm    |
+| `level`       | `string` | ❌       | `JlptLevel` | Lọc theo trình độ   |
+| `hasAudio`    | `bool`   | ❌       | —           | Lọc có/không audio  |
+| `createdByMe` | `bool`   | ❌       | —           | Chỉ lấy do mình tạo |
+| `page`        | `int`    | ❌       | —           | Mặc định `1`        |
+| `pageSize`    | `int`    | ❌       | —           | Mặc định `20`       |
 
 **Response data item** (`SentenceResponse`):
 
@@ -1819,8 +1853,8 @@ Lấy chi tiết sentence theo ID.
 
 **Error codes:**
 
-| Code | Khi nào |
-|------|---------|
+| Code                    | Khi nào                |
+| ----------------------- | ---------------------- |
 | `Sentence_NotFound_404` | Sentence không tồn tại |
 
 ---
@@ -1830,6 +1864,7 @@ Lấy chi tiết sentence theo ID.
 Tạo sentence mới.
 
 **Lưu ý VOICEVOX-only:**
+
 - ❌ Client **không gửi** `audioUrl`.
 - ✅ Backend tự generate audio bằng VOICEVOX từ `text` và `speakerId`.
 
@@ -1837,10 +1872,10 @@ Tạo sentence mới.
 
 ```json
 {
-  "text": "日本へ行きたいです。",    // ⚠ bắt buộc
-  "meaning": "Tôi muốn đi Nhật.",  // ⚠ bắt buộc
-  "speakerId": 3,                   // ❌ nullable
-  "level": "N5"                     // ❌ nullable — enum JlptLevel
+  "text": "日本へ行きたいです。", // ⚠ bắt buộc
+  "meaning": "Tôi muốn đi Nhật.", // ⚠ bắt buộc
+  "speakerId": 3, // ❌ nullable
+  "level": "N5" // ❌ nullable — enum JlptLevel
 }
 ```
 
@@ -1894,12 +1929,12 @@ Export sentences ra JSON.
 
 **Query params:**
 
-| Param | Type | Enum | Mô tả |
-|-------|------|------|-------|
-| `q` | `string` | — | Từ khóa |
-| `level` | `string` | `JlptLevel` | |
-| `hasAudio` | `bool` | — | |
-| `createdByMe` | `bool` | — | |
+| Param         | Type     | Enum        | Mô tả   |
+| ------------- | -------- | ----------- | ------- |
+| `q`           | `string` | —           | Từ khóa |
+| `level`       | `string` | `JlptLevel` |         |
+| `hasAudio`    | `bool`   | —           |         |
+| `createdByMe` | `bool`   | —           |         |
 
 ---
 
@@ -1908,6 +1943,7 @@ Export sentences ra JSON.
 Preview import sentences, validate từng item, **chưa ghi DB**.
 
 **Import rules:**
+
 - Import là **create-only**.
 - Backend **không nhận** `audioUrl`; khi commit sẽ tự synth audio.
 
@@ -1948,15 +1984,15 @@ Preview import sentences, validate từng item, **chưa ghi DB**.
 
 **Error codes cho import:**
 
-| Code | Mô tả |
-|------|-------|
-| `Sentence_ImportInvalidPayload_400` | Payload không hợp lệ |
-| `Sentence_ImportBatchHasErrors_400` | Batch còn lỗi |
+| Code                                       | Mô tả                                       |
+| ------------------------------------------ | ------------------------------------------- |
+| `Sentence_ImportInvalidPayload_400`        | Payload không hợp lệ                        |
+| `Sentence_ImportBatchHasErrors_400`        | Batch còn lỗi                               |
 | `Sentence_ImportFieldRequired_400:<field>` | Field bắt buộc thiếu. VD: `text`, `meaning` |
-| `Sentence_ImportFieldTooLong_400:<field>` | Vượt độ dài |
-| `Sentence_ImportFieldInvalid_400:<field>` | Giá trị enum không hợp lệ. VD: `level` |
-| `Sentence_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ |
-| `Sentence_ImportRowNumberInvalid_400` | `rowNumber` không hợp lệ |
+| `Sentence_ImportFieldTooLong_400:<field>`  | Vượt độ dài                                 |
+| `Sentence_ImportFieldInvalid_400:<field>`  | Giá trị enum không hợp lệ. VD: `level`      |
+| `Sentence_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ                    |
+| `Sentence_ImportRowNumberInvalid_400`      | `rowNumber` không hợp lệ                    |
 
 ---
 
@@ -1965,6 +2001,7 @@ Preview import sentences, validate từng item, **chưa ghi DB**.
 Commit batch import sentences.
 
 **Quy trình:**
+
 1. Backend chạy `preview` nội bộ trước.
 2. Nếu còn lỗi → không ghi DB.
 3. Hợp lệ → tạo tuần tự, mỗi sentence generate audio VOICEVOX.
@@ -2000,9 +2037,10 @@ Commit batch import sentences.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| POST | `/api/uploads/audio` | 🔒 Auth | Upload audio resource |
+| Method | Endpoint             | Auth    | Mô tả                 |
+| ------ | -------------------- | ------- | --------------------- |
+| POST   | `/api/uploads/audio` | 🔒 Auth | Upload audio resource |
+| POST   | `/api/uploads/image` | 🔑 Editor/Admin | Upload image resource |
 
 ---
 
@@ -2030,6 +2068,30 @@ Upload file audio và lưu metadata vào `MediaAssets`.
 
 ---
 
+### POST `/api/uploads/image` 🔑 Editor/Admin
+
+Upload file image và lưu metadata vào `MediaAssets`.
+
+- **Content-Type:** `multipart/form-data`
+- **Form field:** `image`
+- **Allowed MIME:** `image/jpeg`, `image/png`, `image/webp`, `image/gif`
+- **Max size:** `10 MB`
+
+**Response data:**
+
+```json
+{
+  "id": "string",
+  "fileUrl": "string",
+  "fileType": "Image",
+  "usageType": "Image",
+  "sizeInBytes": 12345,
+  "createdAt": "datetime"
+}
+```
+
+---
+
 ## 10. Voicevox Module — Admin
 
 > 🔒 Yêu cầu đăng nhập.  
@@ -2037,10 +2099,10 @@ Upload file audio và lưu metadata vào `MediaAssets`.
 
 ### Tổng quan
 
-| Method | Endpoint | Auth | Mô tả |
-|--------|----------|------|-------|
-| GET | `/api/voicevox/speakers` | 🔒 Auth | Lấy danh sách speaker khả dụng |
-| POST | `/api/voicevox/preview` | 🔒 Auth | Generate preview audio |
+| Method | Endpoint                 | Auth    | Mô tả                          |
+| ------ | ------------------------ | ------- | ------------------------------ |
+| GET    | `/api/voicevox/speakers` | 🔒 Auth | Lấy danh sách speaker khả dụng |
+| POST   | `/api/voicevox/preview`  | 🔒 Auth | Generate preview audio         |
 
 ---
 
@@ -2068,8 +2130,8 @@ Generate audio preview để phát thử khi admin đổi speaker.
 
 ```json
 {
-  "speakerId": 3,    // ⚠ bắt buộc, int
-  "text": "こんにちは。"  // ❌ nullable, nếu rỗng backend dùng text mặc định
+  "speakerId": 3, // ⚠ bắt buộc, int
+  "text": "こんにちは。" // ❌ nullable, nếu rỗng backend dùng text mặc định
 }
 ```
 
@@ -2089,45 +2151,45 @@ Generate audio preview để phát thử khi admin đổi speaker.
 
 ### Common
 
-| Code | HTTP | Mô tả |
-|------|------|-------|
-| `Common_500` | 500 | Lỗi server nội bộ |
-| `Common_404` | 404 | Không tìm thấy |
-| `Common_400` | 400 | Yêu cầu không hợp lệ |
-| `Common_401` | 401 | Không có quyền |
+| Code         | HTTP | Mô tả                |
+| ------------ | ---- | -------------------- |
+| `Common_500` | 500  | Lỗi server nội bộ    |
+| `Common_404` | 404  | Không tìm thấy       |
+| `Common_400` | 400  | Yêu cầu không hợp lệ |
+| `Common_401` | 401  | Không có quyền       |
 
 ### Auth
 
-| Code | Mô tả |
-|------|-------|
-| `Invalid_400` | Sai email/password khi login |
-| `Email_Exist_409` | Email đã tồn tại khi register |
-| `Token_Expired_409` | Refresh token / reset token hết hạn |
+| Code                         | Mô tả                                  |
+| ---------------------------- | -------------------------------------- |
+| `Invalid_400`                | Sai email/password khi login           |
+| `Email_Exist_409`            | Email đã tồn tại khi register          |
+| `Token_Expired_409`          | Refresh token / reset token hết hạn    |
 | `Wrong_Current_Password_400` | Sai mật khẩu hiện tại khi đổi mật khẩu |
 
 ### Vocabulary
 
-| Code | Mô tả |
-|------|-------|
-| `Vocabulary_CardNotFound_404` | Card không tồn tại |
-| `Vocabulary_DetailNotFound_404` | Chi tiết vocabulary không tìm thấy |
-| `Vocabulary_ReadForbidden_401` | Không có quyền xem card chưa Published |
-| `Vocabulary_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX |
+| Code                                  | Mô tả                                  |
+| ------------------------------------- | -------------------------------------- |
+| `Vocabulary_CardNotFound_404`         | Card không tồn tại                     |
+| `Vocabulary_DetailNotFound_404`       | Chi tiết vocabulary không tìm thấy     |
+| `Vocabulary_ReadForbidden_401`        | Không có quyền xem card chưa Published |
+| `Vocabulary_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX            |
 
 ### Grammar
 
-| Code | Mô tả |
-|------|-------|
-| `Grammar_CardNotFound_404` | Card không tồn tại |
-| `Grammar_DetailNotFound_404` | Chi tiết grammar không tìm thấy |
-| `Grammar_ReadForbidden_401` | Không có quyền xem card chưa Published |
-| `Grammar_InvalidRelation_400` | Relation không hợp lệ |
-| `Grammar_RelatedCardNotFound_404` | Card liên quan không tìm thấy |
-| `Grammar_InvalidRichText_400` | Rich text sai cú pháp |
+| Code                              | Mô tả                                  |
+| --------------------------------- | -------------------------------------- |
+| `Grammar_CardNotFound_404`        | Card không tồn tại                     |
+| `Grammar_DetailNotFound_404`      | Chi tiết grammar không tìm thấy        |
+| `Grammar_ReadForbidden_401`       | Không có quyền xem card chưa Published |
+| `Grammar_InvalidRelation_400`     | Relation không hợp lệ                  |
+| `Grammar_RelatedCardNotFound_404` | Card liên quan không tìm thấy          |
+| `Grammar_InvalidRichText_400`     | Rich text sai cú pháp                  |
 
 ### Sentence
 
-| Code | Mô tả |
-|------|-------|
-| `Sentence_NotFound_404` | Sentence không tồn tại |
+| Code                                | Mô tả                       |
+| ----------------------------------- | --------------------------- |
+| `Sentence_NotFound_404`             | Sentence không tồn tại      |
 | `Sentence_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX |

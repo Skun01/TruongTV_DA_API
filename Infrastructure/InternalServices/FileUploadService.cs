@@ -3,6 +3,7 @@ using Application.IServices.IInternal;
 using Application.Settings;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Domain.Constants;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.InternalServices;
@@ -40,7 +41,7 @@ public class FileUploadService : IFileUploadService
         var uploadResult = await _cloudinary.UploadAsync(uploadParams);
         if (uploadResult.Error != null)
         {
-            throw new ApplicationException($"Cloudinary upload failed: {uploadResult.Error.Message}_500");
+            throw new ApplicationException(MessageConstants.FileUploadMessage.CLOUDINARY_UPLOAD_FAILED);
         }
 
         var publicId = uploadResult.PublicId;
@@ -79,7 +80,7 @@ public class FileUploadService : IFileUploadService
         var deleteResult = await _cloudinary.DestroyAsync(deletionParams);
         if (deleteResult.Error != null)
         {
-            throw new ApplicationException($"Cloudinary delete failed: {deleteResult.Error.Message}_500");
+            throw new ApplicationException(MessageConstants.FileUploadMessage.CLOUDINARY_DELETE_FAILED);
         }
 
         _ = cancellationToken;
@@ -89,17 +90,17 @@ public class FileUploadService : IFileUploadService
     {
         if (string.IsNullOrWhiteSpace(_settings.CloudName))
         {
-            throw new ApplicationException("Cloudinary cloud name is not configured_500");
+            throw new ApplicationException(MessageConstants.FileUploadMessage.CLOUDINARY_CLOUD_NAME_NOT_CONFIGURED);
         }
 
         if (string.IsNullOrWhiteSpace(_settings.ApiKey))
         {
-            throw new ApplicationException("Cloudinary api key is not configured_500");
+            throw new ApplicationException(MessageConstants.FileUploadMessage.CLOUDINARY_API_KEY_NOT_CONFIGURED);
         }
 
         if (string.IsNullOrWhiteSpace(_settings.ApiSecret))
         {
-            throw new ApplicationException("Cloudinary api secret is not configured_500");
+            throw new ApplicationException(MessageConstants.FileUploadMessage.CLOUDINARY_API_SECRET_NOT_CONFIGURED);
         }
     }
 
@@ -117,7 +118,7 @@ public class FileUploadService : IFileUploadService
     {
         if (request.Content == Stream.Null || string.IsNullOrWhiteSpace(request.FileName) || string.IsNullOrWhiteSpace(request.ContentType))
         {
-            throw new ApplicationException("Invalid upload request_400");
+            throw new ApplicationException(MessageConstants.FileUploadMessage.INVALID_UPLOAD_REQUEST);
         }
     }
 }

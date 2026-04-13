@@ -1,6 +1,7 @@
 using Application.Common;
 using Application.DTOs.Resources;
 using Application.IServices;
+using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,5 +37,26 @@ public class ResourcesController : BaseController
         }, cancellationToken);
 
         return ApiResponse<UploadAudioResponse>.SuccessResponse(response);
+    }
+
+    /// <summary>
+    /// Tải lên tệp ảnh và trả về thông tin tài nguyên.
+    /// </summary>
+    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [HttpPost("image")]
+    public async Task<ApiResponse<UploadImageResponse>> UploadImage([FromForm] UploadImageFormRequest request, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        await using var stream = request.Image.OpenReadStream();
+
+        var response = await _resourceService.UploadImageAsync(userId, new UploadImageRequest
+        {
+            FileName = request.Image.FileName,
+            ContentType = request.Image.ContentType,
+            SizeInBytes = request.Image.Length,
+            Content = stream,
+        }, cancellationToken);
+
+        return ApiResponse<UploadImageResponse>.SuccessResponse(response);
     }
 }

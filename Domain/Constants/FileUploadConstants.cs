@@ -15,4 +15,12 @@ public static class FileUploadConstants
         "audio/wav",
         "audio/mp4"
     ];
+
+    public static readonly string[] AllowedImageMimeTypes =
+    [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+    ];
 }
