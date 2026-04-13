@@ -2,7 +2,6 @@ using API.Extensions;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infrastructure;
-using Infrastructure.Persistence;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,12 +24,6 @@ builder.Services.AddOptionSettingsExtension(builder.Configuration);
 builder.Services.AddAuthConfigurationExtension(builder.Configuration);
 builder.Services.AddSwaggerExtension();
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await AppDbSeeder.SeedAsync(dbContext);
-}
 
 app.UseSerilogRequestLogging();
 app.UseGlobalExceptionHandling();
