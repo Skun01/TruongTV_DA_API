@@ -9,8 +9,21 @@ public static class GrammarImportHelper
 {
     public static ImportGrammarRequest CreateTemplate()
     {
+        var guide = ImportTemplateGuideHelper.CreateBaseGuide();
+        guide.AllowedValues["level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
+        guide.AllowedValues["status"] = ImportTemplateGuideHelper.EnumValues<PublishStatus>();
+        guide.AllowedValues["register"] = ImportTemplateGuideHelper.EnumValues<RegisterType>();
+        guide.AllowedValues["relations[].relationType"] = ImportTemplateGuideHelper.EnumValues<GrammarRelationType>();
+        guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
+        guide.AllowedValues["sentences[].speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
+        guide.FieldNotes["structures"] = "Bắt buộc, ít nhất 1 phần tử.";
+        guide.FieldNotes["relations[].relatedId"] = "Phải là cardId của grammar đã tồn tại.";
+        guide.FieldNotes["relations[].relationType"] = "Bắt buộc khi có relation.";
+        guide.FieldNotes["sentences[].id"] = "Không truyền khi import tạo mới từ template.";
+
         return new ImportGrammarRequest
         {
+            Guide = guide,
             Items = new List<ImportGrammarItemRequest>
             {
                 new()

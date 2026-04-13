@@ -8,8 +8,14 @@ public static class SentenceImportHelper
 {
     public static ImportSentenceRequest CreateTemplate()
     {
+        var guide = ImportTemplateGuideHelper.CreateBaseGuide();
+        guide.AllowedValues["level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
+        guide.AllowedValues["speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
+        guide.FieldNotes["speakerId"] = "Khuyến nghị dùng danh sách speakerId trong allowedValues.speakerId.";
+
         return new ImportSentenceRequest
         {
+            Guide = guide,
             Items = new List<ImportSentenceItemRequest>
             {
                 new()

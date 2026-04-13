@@ -9,8 +9,22 @@ public static class VocabularyImportHelper
 {
     public static ImportVocabularyRequest CreateTemplate()
     {
+        var guide = ImportTemplateGuideHelper.CreateBaseGuide();
+        guide.AllowedValues["level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
+        guide.AllowedValues["status"] = ImportTemplateGuideHelper.EnumValues<PublishStatus>();
+        guide.AllowedValues["wordType"] = ImportTemplateGuideHelper.EnumValues<WordType>();
+        guide.AllowedValues["meanings[].partOfSpeech"] = ImportTemplateGuideHelper.EnumValues<PartOfSpeech>();
+        guide.AllowedValues["speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
+        guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
+        guide.AllowedValues["sentences[].speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
+        guide.FieldNotes["meanings[].partOfSpeech"] = "Bắt buộc, phải là enum hợp lệ.";
+        guide.FieldNotes["pitchPattern"] = "Mảng số nguyên, ví dụ [0,1,0]. Có thể để trống để hệ thống tự sinh.";
+        guide.FieldNotes["speakerId"] = "Khuyến nghị dùng danh sách speakerId trong allowedValues.speakerId.";
+        guide.FieldNotes["sentences[].id"] = "Không truyền khi import tạo mới từ template.";
+
         return new ImportVocabularyRequest
         {
+            Guide = guide,
             Items = new List<ImportVocabularyItemRequest>
             {
                 new()

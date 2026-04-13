@@ -106,6 +106,8 @@ public class KanjiController : BaseController
         {
             WriteIndented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
         });
 
         return new FileContentResult(Encoding.UTF8.GetBytes(json), "application/json")

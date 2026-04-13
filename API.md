@@ -778,7 +778,9 @@ Xóa mềm vocabulary card (chuyển `status = Archived`).
 Tải file JSON template mẫu cho import vocabulary.
 
 - Response: file `application/json` (`Content-Disposition: attachment`).
-- Shape cùng với request body của `import/preview`.
+- JSON dùng `camelCase`.
+- Có thêm object `guide` để mô tả `allowedValues` và `fieldNotes` cho các field quan trọng.
+- Payload import thực tế vẫn nằm trong `items` (shape cùng với request body của `import/preview`).
 
 ---
 
@@ -1221,6 +1223,8 @@ Xóa mềm grammar card (chuyển `status = Archived`).
 Tải file JSON template mẫu cho import grammar.
 
 - Response: file `application/json` (`Content-Disposition: attachment`).
+- JSON dùng `camelCase`.
+- Có thêm object `guide` để mô tả `allowedValues` và `fieldNotes` cho các field quan trọng.
 
 ---
 
@@ -1255,6 +1259,17 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
 
 ```json
 {
+  "guide": {
+    "jsonNamingConvention": "camelCase",
+    "allowedValues": {
+      "level": ["N5", "N4", "N3", "N2", "N1"],
+      "speakerId": ["2", "3", "8", "10", "11"]
+    },
+    "fieldNotes": {
+      "items": "Danh sách bản ghi import.",
+      "rowNumber": "Số dòng trong file import, dùng để đối chiếu lỗi."
+    }
+  },
   "items": [
     {
       "rowNumber": 1,
@@ -1603,7 +1618,9 @@ Xóa mềm kanji card (chuyển `status = Archived`).
 Tải file JSON template mẫu cho import kanji.
 
 - Response: file `application/json` (`Content-Disposition: attachment`).
-- Shape cùng với request body của `import/preview`.
+- JSON dùng `camelCase`.
+- Có thêm object `guide` để mô tả `allowedValues` và `fieldNotes` cho các field quan trọng.
+- Payload import thực tế vẫn nằm trong `items` (shape cùng với request body của `import/preview`).
 
 ---
 
@@ -1904,6 +1921,9 @@ Xóa sentence.
 ### GET `/api/sentences/import-template` 🔑
 
 Tải file JSON template mẫu cho import sentences.
+
+- JSON dùng `camelCase`.
+- Có thêm object `guide` để mô tả `allowedValues` và `fieldNotes` cho các field quan trọng.
 
 **Response file body:**
 

@@ -9,8 +9,16 @@ public static class KanjiImportHelper
 {
     public static ImportKanjiRequest CreateTemplate()
     {
+        var guide = ImportTemplateGuideHelper.CreateBaseGuide();
+        guide.AllowedValues["level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
+        guide.AllowedValues["status"] = ImportTemplateGuideHelper.EnumValues<PublishStatus>();
+        guide.FieldNotes["strokeCount"] = "Bắt buộc và phải > 0.";
+        guide.FieldNotes["radicals"] = "Bắt buộc, ít nhất 1 phần tử.";
+        guide.FieldNotes["radicals[].character"] = "Không trùng trong cùng 1 item.";
+
         return new ImportKanjiRequest
         {
+            Guide = guide,
             Items = new List<ImportKanjiItemRequest>
             {
                 new()
