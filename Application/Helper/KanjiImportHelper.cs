@@ -90,7 +90,6 @@ public static class KanjiImportHelper
 
         ValidateOptionalEnum<JlptLevel>(item.Level, "level", previewItem.Errors);
         ValidateOptionalEnum<PublishStatus>(item.Status, "status", previewItem.Errors);
-
         if (item.StrokeCount <= 0)
             previewItem.Errors.Add(BuildFieldCode(MessageConstants.KanjiMessage.IMPORT_FIELD_INVALID, "strokeCount"));
 

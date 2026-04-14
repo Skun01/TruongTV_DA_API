@@ -134,6 +134,7 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 | --------- | ------------ |
 | `Vocab`   | Thẻ từ vựng  |
 | `Grammar` | Thẻ ngữ pháp |
+| `Kanji`   | Thẻ Kanji    |
 
 ### UserRole
 
@@ -411,29 +412,30 @@ Xác nhận reset password bằng token nhận từ email.
 
 ## 4. Cards Module — User
 
-> API search card tổng hợp dành cho **frontend user**. Gộp kết quả Vocabulary + Grammar.
+> API search card tổng hợp dành cho **frontend user**. Gộp kết quả Vocabulary + Grammar + Kanji.
 
 ### Tổng quan
 
-| Method | Endpoint            | Auth      | Mô tả                |
-| ------ | ------------------- | --------- | -------------------- |
-| GET    | `/api/cards/search` | 🌐 Public | Search card tổng hợp |
+| Method | Endpoint             | Auth      | Mô tả                |
+| ------ | -------------------- | --------- | -------------------- |
+| GET    | `/api/cards/search`  | 🌐 Public | Search card tổng hợp |
+| GET    | `/api/kanji/{cardId}`| 🌐 Public | Lấy chi tiết kanji   |
 
 ---
 
 ### GET `/api/cards/search`
 
-Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar.
+Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar + Kanji.
 
 **Query params:**
 
-| Param      | Type     | Bắt buộc | Enum               | Mô tả                                   |
-| ---------- | -------- | -------- | ------------------ | --------------------------------------- |
-| `cardType` | `string` | ❌       | `Vocab`, `Grammar` | Lọc theo loại card. Bỏ trống = tìm cả 2 |
-| `q`        | `string` | ❌       | —                  | Từ khóa tìm kiếm                        |
-| `level`    | `string` | ❌       | `JlptLevel`        | Lọc theo trình độ JLPT                  |
-| `page`     | `int`    | ❌       | —                  | Mặc định `1`                            |
-| `pageSize` | `int`    | ❌       | —                  | Mặc định `20`                           |
+| Param      | Type     | Bắt buộc | Enum                          | Mô tả                                   |
+| ---------- | -------- | -------- | ----------------------------- | --------------------------------------- |
+| `cardType` | `string` | ❌       | `Vocab`, `Grammar`, `Kanji`   | Lọc theo loại card. Bỏ trống = tìm cả 3 |
+| `q`        | `string` | ❌       | —                             | Từ khóa tìm kiếm                        |
+| `level`    | `string` | ❌       | `JlptLevel`                   | Lọc theo trình độ JLPT                  |
+| `page`     | `int`    | ❌       | —                             | Mặc định `1`                            |
+| `pageSize` | `int`    | ❌       | —                             | Mặc định `20`                           |
 
 **Quy tắc search:**
 
@@ -442,13 +444,14 @@ Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar.
 - `q` tìm theo:
   - **Vocabulary:** `title`, `summary`, `writing`, `reading`
   - **Grammar:** `title`, `summary`, `alternateForms`, `structures.pattern` (KHÔNG search trong `explanation`)
+  - **Kanji:** `title`, `summary`, `kanji`, `meaningVi`, `hanViet`
 
 **Response data item:**
 
 ```json
 {
   "id": "string",
-  "cardType": "Vocab | Grammar",
+  "cardType": "Vocab | Grammar | Kanji",
   "title": "string",
   "summary": "string",
   "level": "N5 | N4 | N3 | N2 | N1 | null",
@@ -456,7 +459,7 @@ Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar.
 }
 ```
 
-> ℹ `alternateForms` chỉ có dữ liệu khi `cardType = Grammar`. Với `Vocab` luôn trả `[]`.
+> ℹ `alternateForms` chỉ có dữ liệu khi `cardType = Grammar`. Với `Vocab` và `Kanji` luôn trả `[]`.
 
 ---
 

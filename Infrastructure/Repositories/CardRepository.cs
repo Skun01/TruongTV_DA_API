@@ -1,3 +1,4 @@
+using Application.Helper;
 using Application.IRepositories;
 using Domain.Entities;
 using Domain.Enums;
@@ -235,14 +236,17 @@ public class CardRepository : Repository<Card>, ICardRepository
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var pattern = $"%{query.Trim()}%";
+            var normalizedQuery = query.Trim();
+            var pattern = $"%{normalizedQuery}%";
+            var kanjiCharacters = StringHelper.ExtractDistinctKanjiCharacters(normalizedQuery);
             cardsQuery = cardsQuery.Where(c =>
                 EF.Functions.ILike(c.Title, pattern)
                 || EF.Functions.ILike(c.Summary, pattern)
                 || (c.KanjiDetail != null
                     && (EF.Functions.ILike(c.KanjiDetail.Kanji, pattern)
                         || EF.Functions.ILike(c.KanjiDetail.MeaningVi, pattern)
-                        || (c.KanjiDetail.HanViet != null && EF.Functions.ILike(c.KanjiDetail.HanViet, pattern)))));
+                        || (c.KanjiDetail.HanViet != null && EF.Functions.ILike(c.KanjiDetail.HanViet, pattern))
+                        || kanjiCharacters.Contains(c.KanjiDetail.Kanji))));
         }
 
         if (level.HasValue)
@@ -295,14 +299,17 @@ public class CardRepository : Repository<Card>, ICardRepository
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var pattern = $"%{query.Trim()}%";
+            var normalizedQuery = query.Trim();
+            var pattern = $"%{normalizedQuery}%";
+            var kanjiCharacters = StringHelper.ExtractDistinctKanjiCharacters(normalizedQuery);
             cardsQuery = cardsQuery.Where(c =>
                 EF.Functions.ILike(c.Title, pattern)
                 || EF.Functions.ILike(c.Summary, pattern)
                 || (c.KanjiDetail != null
                     && (EF.Functions.ILike(c.KanjiDetail.Kanji, pattern)
                         || EF.Functions.ILike(c.KanjiDetail.MeaningVi, pattern)
-                        || (c.KanjiDetail.HanViet != null && EF.Functions.ILike(c.KanjiDetail.HanViet, pattern)))));
+                        || (c.KanjiDetail.HanViet != null && EF.Functions.ILike(c.KanjiDetail.HanViet, pattern))
+                        || kanjiCharacters.Contains(c.KanjiDetail.Kanji))));
         }
 
         if (level.HasValue)
