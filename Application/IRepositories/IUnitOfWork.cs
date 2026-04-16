@@ -1,3 +1,5 @@
+using Domain.Entities;
+
 namespace Application.IRepositories;
 
 public interface IUnitOfWork
@@ -7,6 +9,11 @@ public interface IUnitOfWork
     IMediaAssetRepository MediaAssets { get; }
     
     ICardRepository Cards { get; }
+    IDeckTypeRepository DeckTypes { get; }
+    IDeckRepository Decks { get; }
+    IRepository<DeckFolder> DeckFolders { get; }
+    IRepository<FolderCard> FolderCards { get; }
+    IDeckBookmarkRepository DeckBookmarks { get; }
     IVocabularyDetailRepository VocabularyDetails { get; }
     IGrammarDetailRepository GrammarDetails { get; }
     IKanjiDetailRepository KanjiDetails { get; }

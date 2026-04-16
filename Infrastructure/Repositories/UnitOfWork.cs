@@ -1,4 +1,5 @@
 using Application.IRepositories;
+using Domain.Entities;
 using Infrastructure.Persistence;
 
 namespace Infrastructure.Repositories;
@@ -11,6 +12,11 @@ public class UnitOfWork : IUnitOfWork
     private IMediaAssetRepository? _mediaAssets;
     
     private ICardRepository? _cards;
+    private IDeckTypeRepository? _deckTypes;
+    private IDeckRepository? _decks;
+    private IRepository<DeckFolder>? _deckFolders;
+    private IRepository<FolderCard>? _folderCards;
+    private IDeckBookmarkRepository? _deckBookmarks;
     private IVocabularyDetailRepository? _vocabularyDetails;
     private IGrammarDetailRepository? _grammarDetails;
     private IKanjiDetailRepository? _kanjiDetails;
@@ -33,6 +39,11 @@ public class UnitOfWork : IUnitOfWork
     public IMediaAssetRepository MediaAssets => _mediaAssets ??= new MediaAssetRepository(_context);
     
     public ICardRepository Cards => _cards ??= new CardRepository(_context);
+    public IDeckTypeRepository DeckTypes => _deckTypes ??= new DeckTypeRepository(_context);
+    public IDeckRepository Decks => _decks ??= new DeckRepository(_context);
+    public IRepository<DeckFolder> DeckFolders => _deckFolders ??= new Repository<DeckFolder>(_context);
+    public IRepository<FolderCard> FolderCards => _folderCards ??= new Repository<FolderCard>(_context);
+    public IDeckBookmarkRepository DeckBookmarks => _deckBookmarks ??= new DeckBookmarkRepository(_context);
     public IVocabularyDetailRepository VocabularyDetails => _vocabularyDetails ??= new VocabularyDetailRepository(_context);
     public IGrammarDetailRepository GrammarDetails => _grammarDetails ??= new GrammarDetailRepository(_context);
     public IKanjiDetailRepository KanjiDetails => _kanjiDetails ??= new KanjiDetailRepository(_context);

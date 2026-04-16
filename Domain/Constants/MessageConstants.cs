@@ -98,6 +98,17 @@ public static class MessageConstants
         public const string WRONG_CURRENT_PASSWORD = "Wrong_Current_Password_400";
     }
 
+    public static class DeckMessage
+    {
+        public const string NOT_FOUND = "Deck_NotFound_404";
+        public const string READ_FORBIDDEN = "Deck_Forbidden_403";
+        public const string FORK_SOURCE_INVALID = "Deck_ForkSourceInvalid_400";
+        public const string FOLDER_NOT_FOUND = "Deck_FolderNotFound_404";
+        public const string CARD_NOT_FOUND = "Deck_CardNotFound_404";
+        public const string CARD_DUPLICATED_IN_DECK = "Deck_CardDuplicatedInDeck_400";
+        public const string INVALID_REORDER_PAYLOAD = "Deck_InvalidReorderPayload_400";
+    }
+
     public static class FileUploadMessage
     {
         public const string CLOUDINARY_UPLOAD_FAILED = "FileUpload_CloudinaryUploadFailed_500";

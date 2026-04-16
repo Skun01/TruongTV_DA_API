@@ -81,6 +81,216 @@ namespace Infrastructure.Migrations
                     b.ToTable("card_sentences", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Deck", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CardsCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("CoverImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("FoldersCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ForkedFromId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsOfficial")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Draft");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TypeId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Public");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ForkedFromId")
+                        .HasDatabaseName("idx_decks_forked_from");
+
+                    b.HasIndex("TypeId")
+                        .HasDatabaseName("idx_decks_type_id");
+
+                    b.HasIndex("CreatedBy", "CreatedAt")
+                        .HasDatabaseName("idx_decks_owner_created_at");
+
+                    b.HasIndex("Visibility", "Status")
+                        .HasDatabaseName("idx_decks_visibility_status");
+
+                    b.ToTable("decks", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckBookmark", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("DeckId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("SavedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("UserId", "DeckId");
+
+                    b.HasIndex("DeckId")
+                        .HasDatabaseName("idx_deck_bookmarks_deck_id");
+
+                    b.ToTable("deck_bookmarks", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckFolder", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CardsCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DeckId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeckId", "Position")
+                        .HasDatabaseName("idx_deck_folders_deck_position");
+
+                    b.ToTable("deck_folders", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("deck_types", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.FolderCard", b =>
+                {
+                    b.Property<string>("FolderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CardId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AddedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DeckId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.HasKey("FolderId", "CardId");
+
+                    b.HasIndex("CardId")
+                        .HasDatabaseName("idx_folder_cards_card_id");
+
+                    b.HasIndex("DeckId", "CardId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_folder_cards_deck_card");
+
+                    b.HasIndex("DeckId", "FolderId");
+
+                    b.HasIndex("FolderId", "Position")
+                        .HasDatabaseName("idx_folder_cards_folder_position");
+
+                    b.ToTable("folder_cards", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.GrammarDetail", b =>
                 {
                     b.Property<string>("CardId")
@@ -572,6 +782,89 @@ namespace Infrastructure.Migrations
                     b.Navigation("Sentence");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Deck", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "Creator")
+                        .WithMany("CreatedDecks")
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Deck", "ForkedFrom")
+                        .WithMany("Forks")
+                        .HasForeignKey("ForkedFromId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Domain.Entities.DeckType", "Type")
+                        .WithMany("Decks")
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("ForkedFrom");
+
+                    b.Navigation("Type");
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckBookmark", b =>
+                {
+                    b.HasOne("Domain.Entities.Deck", "Deck")
+                        .WithMany("Bookmarks")
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany("DeckBookmarks")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Deck");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckFolder", b =>
+                {
+                    b.HasOne("Domain.Entities.Deck", "Deck")
+                        .WithMany("Folders")
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Deck");
+                });
+
+            modelBuilder.Entity("Domain.Entities.FolderCard", b =>
+                {
+                    b.HasOne("Domain.Entities.Card", "Card")
+                        .WithMany("FolderCards")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Deck", "Deck")
+                        .WithMany("FolderCards")
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.DeckFolder", "Folder")
+                        .WithMany("FolderCards")
+                        .HasForeignKey("DeckId", "FolderId")
+                        .HasPrincipalKey("DeckId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+
+                    b.Navigation("Deck");
+
+                    b.Navigation("Folder");
+                });
+
             modelBuilder.Entity("Domain.Entities.GrammarDetail", b =>
                 {
                     b.HasOne("Domain.Entities.Card", "Card")
@@ -756,6 +1049,8 @@ namespace Infrastructure.Migrations
                 {
                     b.Navigation("CardSentences");
 
+                    b.Navigation("FolderCards");
+
                     b.Navigation("GrammarDetail");
 
                     b.Navigation("GrammarResources");
@@ -767,6 +1062,27 @@ namespace Infrastructure.Migrations
                     b.Navigation("UserCardNotes");
 
                     b.Navigation("VocabularyDetail");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Deck", b =>
+                {
+                    b.Navigation("Bookmarks");
+
+                    b.Navigation("FolderCards");
+
+                    b.Navigation("Folders");
+
+                    b.Navigation("Forks");
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckFolder", b =>
+                {
+                    b.Navigation("FolderCards");
+                });
+
+            modelBuilder.Entity("Domain.Entities.DeckType", b =>
+                {
+                    b.Navigation("Decks");
                 });
 
             modelBuilder.Entity("Domain.Entities.RadicalDetail", b =>
@@ -781,6 +1097,10 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.User", b =>
                 {
+                    b.Navigation("CreatedDecks");
+
+                    b.Navigation("DeckBookmarks");
+
                     b.Navigation("MediaAssets");
                 });
 

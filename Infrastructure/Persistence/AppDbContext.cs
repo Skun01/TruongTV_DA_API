@@ -13,6 +13,11 @@ public class AppDbContext : DbContext
     public DbSet<MediaAsset> MediaAssets { set; get; }
     
     public DbSet<Card> Cards { set; get; }
+    public DbSet<DeckType> DeckTypes { set; get; }
+    public DbSet<Deck> Decks { set; get; }
+    public DbSet<DeckFolder> DeckFolders { set; get; }
+    public DbSet<FolderCard> FolderCards { set; get; }
+    public DbSet<DeckBookmark> DeckBookmarks { set; get; }
     public DbSet<VocabularyDetail> VocabularyDetails { set; get; }
     public DbSet<GrammarDetail> GrammarDetails { set; get; }
     public DbSet<KanjiDetail> KanjiDetails { set; get; }

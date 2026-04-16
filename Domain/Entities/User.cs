@@ -14,4 +14,6 @@ public class User : BaseEntity
     public DateTime? PasswordResetTokenExpiry { set; get; }
 
     public ICollection<MediaAsset> MediaAssets { set; get; } = new List<MediaAsset>();
+    public ICollection<Deck> CreatedDecks { get; set; } = new List<Deck>();
+    public ICollection<DeckBookmark> DeckBookmarks { get; set; } = new List<DeckBookmark>();
 }

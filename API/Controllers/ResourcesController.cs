@@ -42,7 +42,7 @@ public class ResourcesController : BaseController
     /// <summary>
     /// Tải lên tệp ảnh và trả về thông tin tài nguyên.
     /// </summary>
-    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [Authorize]
     [HttpPost("image")]
     public async Task<ApiResponse<UploadImageResponse>> UploadImage([FromForm] UploadImageFormRequest request, CancellationToken cancellationToken)
     {

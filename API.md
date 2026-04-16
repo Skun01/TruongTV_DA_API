@@ -1,6 +1,6 @@
 # Tacho Learning API — Frontend Integration Guide
 
-> **Last updated:** 2026-04-11
+> **Last updated:** 2026-04-16
 
 ---
 
@@ -17,6 +17,7 @@
 9. [Uploads Module — Admin](#9-uploads-module--admin)
 10. [Voicevox Module — Admin](#10-voicevox-module--admin)
 11. [Kanji Module — Admin](#8-kanji-module--admin)
+12. [Decks Module — User](#12-decks-module--user)
 
 ---
 
@@ -2170,6 +2171,480 @@ Generate audio preview để phát thử khi admin đổi speaker.
 
 ---
 
+## 12. Decks Module — User
+
+> User-facing deck APIs for discovery, bookmarks, fork, and personal deck management.
+
+### Overview
+
+| Method | Endpoint                                  | Auth      | Description |
+| ------ | ----------------------------------------- | --------- | ----------- |
+| GET    | `/api/deck-types`                         | 🌐 Public | List deck types for filters |
+| GET    | `/api/decks`                              | 🌐 Public | List public published decks |
+| GET    | `/api/decks/{deckId}`                     | 🌐 Public | Get deck detail. Private decks are owner-only |
+| POST   | `/api/decks/{deckId}/bookmark`            | 🔒 Auth   | Bookmark or unbookmark a readable deck |
+| POST   | `/api/decks/{deckId}/fork`                | 🔒 Auth   | Fork a public published deck into personal library |
+| GET    | `/api/me/decks`                           | 🔒 Auth   | List my own decks |
+| POST   | `/api/me/decks`                           | 🔒 Auth   | Create my own deck |
+| PATCH  | `/api/me/decks/{deckId}`                  | 🔒 Auth   | Update my own deck |
+| DELETE | `/api/me/decks/{deckId}`                  | 🔒 Auth   | Delete my own deck |
+| GET    | `/api/me/decks/bookmarks`                 | 🔒 Auth   | List my bookmarked decks |
+| POST   | `/api/me/decks/{deckId}/folders`          | 🔒 Auth   | Create folder inside my deck |
+| PUT    | `/api/me/decks/{deckId}/folders/order`    | 🔒 Auth   | Reorder folders inside my deck |
+| PATCH  | `/api/me/folders/{folderId}`              | 🔒 Auth   | Update my folder |
+| DELETE | `/api/me/folders/{folderId}`              | 🔒 Auth   | Delete my folder |
+| POST   | `/api/me/folders/{folderId}/cards`        | 🔒 Auth   | Add card into my folder |
+| DELETE | `/api/me/folders/{folderId}/cards/{cardId}` | 🔒 Auth | Remove card from my folder |
+| PUT    | `/api/me/folders/{folderId}/cards/order`  | 🔒 Auth   | Reorder cards inside my folder |
+
+### Visibility and access rules
+
+- `GET /api/decks` only returns decks with `status = Published` and `visibility = Public`.
+- `GET /api/decks/{deckId}` returns:
+  - public published decks for everyone
+  - private decks only for the owner
+- Bookmark is allowed only when the current user can read the deck.
+- Fork is allowed only for `Published + Public` source decks.
+- A forked deck is created with:
+  - `visibility = Private`
+  - `status = Published`
+  - `isOfficial = false`
+- Personal deck write endpoints are strictly owner-only.
+- A card can appear only once inside a deck, even if the deck has multiple folders.
+
+### Common response shapes
+
+**DeckTypeResponse**
+
+```json
+{
+  "id": "string",
+  "name": "string"
+}
+```
+
+**DeckListItemResponse**
+
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "coverImageUrl": "string | null",
+  "visibility": "Public | Private",
+  "status": "Draft | Published | Archived",
+  "isOfficial": false,
+  "cardsCount": 12,
+  "foldersCount": 3,
+  "type": {
+    "id": "string | null",
+    "name": "string | null"
+  },
+  "createdBy": {
+    "id": "string",
+    "username": "string",
+    "avatarUrl": "string | null"
+  },
+  "forkedFromId": "string | null",
+  "isBookmarked": false,
+  "isOwner": false,
+  "createdAt": "2026-04-16T08:00:00Z",
+  "updatedAt": "2026-04-16T08:00:00Z"
+}
+```
+
+**DeckDetailResponse**
+
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "coverImageUrl": "string | null",
+  "visibility": "Private",
+  "status": "Published",
+  "isOfficial": false,
+  "cardsCount": 12,
+  "foldersCount": 2,
+  "type": {
+    "id": "string | null",
+    "name": "string | null"
+  },
+  "createdBy": {
+    "id": "string",
+    "username": "string",
+    "avatarUrl": "string | null"
+  },
+  "forkedFromId": "string | null",
+  "isBookmarked": false,
+  "isOwner": true,
+  "folders": [
+    {
+      "id": "string",
+      "title": "Basic",
+      "description": "",
+      "position": 1000,
+      "cardsCount": 2,
+      "cards": [
+        {
+          "cardId": "string",
+          "position": 1000,
+          "addedAt": "2026-04-16T08:00:00Z",
+          "card": {
+            "id": "string",
+            "title": "食べる",
+            "summary": "to eat",
+            "cardType": "Vocab",
+            "level": "N5"
+          }
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-04-16T08:00:00Z",
+  "updatedAt": "2026-04-16T08:00:00Z"
+}
+```
+
+### GET `/api/deck-types` 🌐
+
+List deck types for filter dropdowns and deck creation forms.
+
+**Response data:** `DeckTypeResponse[]`
+
+### GET `/api/decks` 🌐
+
+List public published decks for the user app.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `q` | `string` | `null` | Search by title or description |
+| `typeId` | `string` | `null` | Filter by deck type |
+| `officialOnly` | `bool` | `null` | When `true`, only official decks are returned |
+| `page` | `int` | `1` | Pagination |
+| `pageSize` | `int` | `20` | Max `100` |
+
+**Frontend notes**
+
+- Frontend must not send `status` or `visibility` filters here.
+- Backend already enforces `Published + Public`.
+- If the user is authenticated, each item includes `isBookmarked`.
+
+### GET `/api/decks/{deckId}` 🌐
+
+Get full deck detail including folders and cards.
+
+**Access**
+
+- Public published deck: readable by everyone.
+- Private or non-public deck: readable only by owner.
+
+**Frontend notes**
+
+- Use `isOwner` to decide whether to show edit/manage actions.
+- For personal decks, user app can reuse the same detail page as public decks.
+
+### POST `/api/decks/{deckId}/bookmark` 🔒
+
+Create or remove bookmark for a readable deck.
+
+**Request body**
+
+```json
+{
+  "bookmarked": true
+}
+```
+
+**Response data**
+
+```json
+{
+  "deckId": "string",
+  "bookmarked": true,
+  "savedAt": "2026-04-16T08:00:00Z"
+}
+```
+
+**Frontend notes**
+
+- This endpoint is idempotent for the requested final state.
+- When `bookmarked = false`, `savedAt` returns `null`.
+
+### POST `/api/decks/{deckId}/fork` 🔒
+
+Fork a public published deck into the current user's library.
+
+**Request body:** none
+
+**Response data:** `DeckDetailResponse`
+
+**Frontend notes**
+
+- The returned deck is already the newly created personal deck.
+- Fork result is `Private + Published`, so the user can use it immediately.
+- Recommended UX: after success, redirect to personal deck detail or edit page.
+
+### GET `/api/me/decks` 🔒
+
+List all decks created by the current user.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `q` | `string` | `null` | Search by title or description |
+| `typeId` | `string` | `null` | Filter by deck type |
+| `page` | `int` | `1` | Pagination |
+| `pageSize` | `int` | `20` | Max `100` |
+
+**Frontend notes**
+
+- Returns both `Public` and `Private` decks of the owner.
+- Current implementation also returns personal decks regardless of status, but user-created decks are created as `Published` in the current flow.
+
+### POST `/api/me/decks` 🔒
+
+Create a personal deck.
+
+**Request body**
+
+```json
+{
+  "title": "My N5 deck",
+  "description": "Optional",
+  "coverImageUrl": "https://... | null",
+  "visibility": "Private",
+  "typeId": "string | null"
+}
+```
+
+**Response data:** `DeckDetailResponse`
+
+**Frontend notes**
+
+- If `visibility` is omitted, backend defaults to `Private`.
+- New personal deck is created as `Published`.
+- `isOfficial` is always `false`.
+
+### PATCH `/api/me/decks/{deckId}` 🔒
+
+Update a personal deck.
+
+**Request body**
+
+```json
+{
+  "title": "Updated title",
+  "description": "Updated description",
+  "coverImageUrl": "https://...",
+  "visibility": "Public",
+  "typeId": "string | null"
+}
+```
+
+**Response data:** `DeckDetailResponse`
+
+**Frontend notes**
+
+- All fields are optional.
+- Sending `"typeId": null` removes the current type.
+- If `visibility` changes to `Public`, the deck still remains owner-created, not official.
+
+### DELETE `/api/me/decks/{deckId}` 🔒
+
+Delete a personal deck.
+
+**Response data**
+
+```json
+true
+```
+
+### GET `/api/me/decks/bookmarks` 🔒
+
+List decks bookmarked by the current user.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `q` | `string` | `null` | Search by title or description |
+| `typeId` | `string` | `null` | Filter by deck type |
+| `page` | `int` | `1` | Pagination |
+| `pageSize` | `int` | `20` | Max `100` |
+
+**Frontend notes**
+
+- If a bookmarked deck is no longer readable, it will not be returned.
+- Owner's own bookmarked decks may also appear here.
+
+### POST `/api/me/decks/{deckId}/folders` 🔒
+
+Create a folder inside the current user's deck.
+
+**Request body**
+
+```json
+{
+  "title": "Basic",
+  "description": "Optional",
+  "position": 1000
+}
+```
+
+**Response data:** `DeckFolderResponse`
+
+**Frontend notes**
+
+- If `position` is omitted, backend appends to the end using sparse positions.
+- Current sparse position convention is `1000`, `2000`, `3000`, ...
+
+### PUT `/api/me/decks/{deckId}/folders/order` 🔒
+
+Replace folder order for the entire deck.
+
+**Request body**
+
+```json
+{
+  "items": [
+    { "folderId": "folder-1", "position": 1000 },
+    { "folderId": "folder-2", "position": 2000 }
+  ]
+}
+```
+
+**Response data:** `DeckFolderResponse[]`
+
+**Frontend notes**
+
+- Payload must contain every folder in the deck exactly once.
+- Backend rejects partial reorder payloads.
+
+### PATCH `/api/me/folders/{folderId}` 🔒
+
+Update a folder owned by the current user.
+
+**Request body**
+
+```json
+{
+  "title": "Updated folder",
+  "description": "Updated description"
+}
+```
+
+**Response data:** `DeckFolderResponse`
+
+### DELETE `/api/me/folders/{folderId}` 🔒
+
+Delete a folder owned by the current user.
+
+**Response data**
+
+```json
+true
+```
+
+**Frontend notes**
+
+- Deleting a folder also removes all folder-card links in that folder.
+- Deck-level `cardsCount` and `foldersCount` are updated by backend.
+
+### POST `/api/me/folders/{folderId}/cards` 🔒
+
+Add a card into a folder in the current user's deck.
+
+**Request body**
+
+```json
+{
+  "cardId": "string",
+  "position": 1000
+}
+```
+
+**Response data:** `DeckFolderResponse`
+
+**Frontend notes**
+
+- If `position` is omitted, backend appends to the end.
+- The same card cannot appear twice in the same deck, even across different folders.
+- Current rule allows adding:
+  - `Published` cards
+  - or cards created by the same user
+
+### DELETE `/api/me/folders/{folderId}/cards/{cardId}` 🔒
+
+Remove a card from a folder.
+
+**Response data**
+
+```json
+true
+```
+
+### PUT `/api/me/folders/{folderId}/cards/order` 🔒
+
+Replace card order for the entire folder.
+
+**Request body**
+
+```json
+{
+  "items": [
+    { "cardId": "card-1", "position": 1000 },
+    { "cardId": "card-2", "position": 2000 }
+  ]
+}
+```
+
+**Response data:** `DeckFolderCardItemResponse[]`
+
+**Frontend notes**
+
+- Payload must contain every card in the folder exactly once.
+- Backend rejects partial reorder payloads.
+
+### Error codes
+
+| Code | Description |
+| ---- | ----------- |
+| `Deck_NotFound_404` | Deck does not exist |
+| `Deck_FolderNotFound_404` | Folder does not exist or does not belong to the current user |
+| `Deck_CardNotFound_404` | Card does not exist or is not found in the target folder |
+| `Deck_Forbidden_403` | Current user cannot read or mutate this deck |
+| `Deck_ForkSourceInvalid_400` | Fork source is not `Published + Public` |
+| `Deck_CardDuplicatedInDeck_400` | The same card already exists somewhere else in the deck |
+| `Deck_InvalidReorderPayload_400` | Reorder payload is incomplete, duplicated, or inconsistent |
+
+### Suggested frontend flows
+
+1. Library discovery
+- Load `GET /api/deck-types`
+- Load `GET /api/decks`
+- Open `GET /api/decks/{deckId}` on click
+
+2. Bookmark flow
+- Optimistically toggle bookmark in UI
+- Call `POST /api/decks/{deckId}/bookmark`
+- If request fails, rollback local state
+
+3. Fork flow
+- Call `POST /api/decks/{deckId}/fork`
+- Redirect to the returned personal deck
+
+4. Personal deck edit flow
+- Load `GET /api/me/decks`
+- Create deck with `POST /api/me/decks`
+- Add folders and cards incrementally
+- Use full reorder payloads for drag-and-drop save
+
+---
+
 ## Phụ lục: Tổng hợp Error Codes
 
 ### Common
@@ -2216,3 +2691,15 @@ Generate audio preview để phát thử khi admin đổi speaker.
 | ----------------------------------- | --------------------------- |
 | `Sentence_NotFound_404`             | Sentence không tồn tại      |
 | `Sentence_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX |
+
+### Deck
+
+| Code | Mô tả |
+| ---- | ----- |
+| `Deck_NotFound_404` | Deck không tồn tại |
+| `Deck_FolderNotFound_404` | Folder không tồn tại hoặc không thuộc user hiện tại |
+| `Deck_CardNotFound_404` | Card không tồn tại hoặc không có trong folder mục tiêu |
+| `Deck_Forbidden_403` | Không có quyền xem hoặc sửa deck |
+| `Deck_ForkSourceInvalid_400` | Deck nguồn để fork không hợp lệ |
+| `Deck_CardDuplicatedInDeck_400` | Card đã tồn tại ở folder khác trong cùng deck |
+| `Deck_InvalidReorderPayload_400` | Payload reorder không hợp lệ |
