@@ -3077,6 +3077,134 @@ true
 | `DeckType_NameExists_409` | Deck type name already exists |
 | `DeckType_InUse_400` | Deck type cannot be deleted because at least one deck still uses it |
 
+### Frontend integration notes for `learning-admin`
+
+#### Suggested screen split
+
+1. Deck list page
+- Main table uses `GET /api/admin/decks`.
+- Filters should include `q`, `status`, `visibility`, `typeId`, and `isOfficial`.
+- Row actions should include `Publish`, `Unpublish`, `Archive`, `Edit`, and `Delete`.
+
+2. Deck edit page
+- Load `GET /api/admin/decks/{deckId}` once on page open.
+- Use the same detail payload as the source of truth for deck metadata, folders, and folder cards.
+- After every write mutation, either invalidate detail and refetch or patch local state carefully.
+
+3. Deck type page
+- Table or modal list uses `GET /api/admin/deck-types`.
+- Create and rename can be inline or modal-based.
+- Delete must handle `DeckType_InUse_400` explicitly.
+
+#### Recommended query key shape
+
+If `learning-admin` uses React Query, keep query keys stable and filter-driven.
+
+```ts
+const deckAdminKeys = {
+  all: ['admin-decks'] as const,
+  lists: () => [...deckAdminKeys.all, 'list'] as const,
+  list: (params: Record<string, unknown>) => [...deckAdminKeys.lists(), params] as const,
+  details: () => [...deckAdminKeys.all, 'detail'] as const,
+  detail: (deckId: string) => [...deckAdminKeys.details(), deckId] as const,
+  deckTypes: ['admin-deck-types'] as const,
+  deckTypeList: (params: Record<string, unknown>) => [...deckAdminKeys.deckTypes, 'list', params] as const,
+  deckTypeDetail: (id: string) => [...deckAdminKeys.deckTypes, 'detail', id] as const,
+}
+```
+
+#### Query param serialization notes
+
+- Send enums exactly as backend expects:
+  - `status`: `Draft`, `Published`, `Archived`
+  - `visibility`: `Public`, `Private`
+- Do not send empty strings for optional filters.
+- For list filters, omit nullish values from query params instead of sending `status=` or `typeId=`.
+- Keep `page` and `pageSize` numeric.
+
+#### Mutation invalidation rules
+
+1. After `POST/PATCH/DELETE /api/admin/deck-types`
+- Invalidate `admin-deck-types` list queries.
+- If editing inside a deck form, refresh the deck type dropdown source.
+
+2. After `POST/PATCH/DELETE /api/admin/decks`
+- Invalidate deck list queries.
+- Invalidate the affected deck detail query when applicable.
+
+3. After `POST /api/admin/decks/{deckId}/publish`
+- Invalidate deck list queries.
+- Invalidate detail for that `deckId`.
+
+4. After `POST /api/admin/decks/{deckId}/archive`
+- Invalidate deck list queries.
+- Invalidate detail for that `deckId`.
+
+5. After `POST /api/admin/decks/{deckId}/unpublish`
+- Invalidate deck list queries.
+- Invalidate detail for that `deckId`.
+
+6. After folder or card mutations
+- At minimum invalidate detail for the owning deck.
+- If the admin table shows `cardsCount` or `foldersCount`, also invalidate deck list queries.
+
+#### Form behavior notes
+
+- `Create deck` should default to:
+  - `visibility = Public`
+  - `status = Draft`
+  - `isOfficial = false`
+- `createdBy` can stay hidden in the first admin UI version and let backend fall back to current admin user.
+- `typeId = null` should be treated as "no type selected".
+- `coverImageUrl` is plain text URL in current backend contract. There is no dedicated upload endpoint for deck cover yet.
+
+#### Drag and drop notes
+
+- Folder reorder endpoint requires the full folder set in one payload.
+- Folder card reorder endpoint requires the full card set in one payload.
+- Frontend should not send only changed rows.
+- Sparse positions like `1000`, `2000`, `3000` are accepted, but backend also accepts any integer values as long as the payload is complete.
+
+#### Error handling notes
+
+- Business errors still come back inside the standard JSON envelope, not necessarily as HTTP 4xx.
+- Frontend should inspect:
+  - `success`
+  - `code`
+  - `message`
+- Recommended error mapping:
+  - `DeckType_NameExists_409`: show duplicate-name message on deck type form
+  - `DeckType_InUse_400`: show dependency warning on delete action
+  - `Deck_CardDuplicatedInDeck_400`: show "card already exists in this deck"
+  - `Deck_InvalidReorderPayload_400`: refetch current detail state and ask user to retry reorder
+  - `Deck_NotFound_404` or `Deck_FolderNotFound_404`: redirect back to list if the resource was removed elsewhere
+
+#### Minimal service split recommendation
+
+- `deckAdminService`
+  - `getDecks`
+  - `getDeckDetail`
+  - `createDeck`
+  - `updateDeck`
+  - `deleteDeck`
+  - `publishDeck`
+  - `archiveDeck`
+  - `unpublishDeck`
+  - `createFolder`
+  - `updateFolder`
+  - `deleteFolder`
+  - `addCardToFolder`
+  - `removeCardFromFolder`
+  - `reorderFolders`
+  - `reorderFolderCards`
+
+- `deckTypeAdminService`
+  - `getDeckTypes`
+  - `getDeckTypeDetail`
+  - `createDeckType`
+  - `updateDeckType`
+  - `deleteDeckType`
+
 ### Suggested admin frontend flows
 
 1. Deck admin table
