@@ -1,6 +1,6 @@
 # Tacho Learning API — Frontend Integration Guide
 
-> **Last updated:** 2026-04-16
+> **Last updated:** 2026-04-17
 
 ---
 
@@ -18,6 +18,7 @@
 10. [Voicevox Module — Admin](#10-voicevox-module--admin)
 11. [Kanji Module — Admin](#8-kanji-module--admin)
 12. [Decks Module — User](#12-decks-module--user)
+13. [Decks Module — Admin](#13-decks-module--admin)
 
 ---
 
@@ -2642,6 +2643,457 @@ Replace card order for the entire folder.
 - Create deck with `POST /api/me/decks`
 - Add folders and cards incrementally
 - Use full reorder payloads for drag-and-drop save
+
+---
+
+## 13. Decks Module — Admin
+
+> Implemented admin-facing API surface for `learning-admin` deck and deck type management.
+
+### Overview
+
+| Method | Endpoint | Auth | Purpose |
+| ------ | -------- | ---- | ------- |
+| GET | `/api/admin/deck-types` | 🔑 Editor/Admin | List deck types |
+| GET | `/api/admin/deck-types/{id}` | 🔑 Editor/Admin | Get deck type detail |
+| POST | `/api/admin/deck-types` | 🔑 Editor/Admin | Create deck type |
+| PATCH | `/api/admin/deck-types/{id}` | 🔑 Editor/Admin | Update deck type |
+| DELETE | `/api/admin/deck-types/{id}` | 🔑 Editor/Admin | Delete deck type |
+| GET | `/api/admin/decks` | 🔑 Editor/Admin | Search all decks |
+| GET | `/api/admin/decks/{deckId}` | 🔑 Editor/Admin | Get deck detail |
+| POST | `/api/admin/decks` | 🔑 Editor/Admin | Create deck |
+| PATCH | `/api/admin/decks/{deckId}` | 🔑 Editor/Admin | Update deck |
+| DELETE | `/api/admin/decks/{deckId}` | 🔑 Editor/Admin | Delete deck |
+| POST | `/api/admin/decks/{deckId}/publish` | 🔑 Editor/Admin | Publish deck |
+| POST | `/api/admin/decks/{deckId}/archive` | 🔑 Editor/Admin | Archive deck |
+| POST | `/api/admin/decks/{deckId}/unpublish` | 🔑 Editor/Admin | Move deck back to draft |
+| POST | `/api/admin/decks/{deckId}/folders` | 🔑 Editor/Admin | Create folder in deck |
+| PUT | `/api/admin/decks/{deckId}/folders/order` | 🔑 Editor/Admin | Reorder folders |
+| PATCH | `/api/admin/folders/{folderId}` | 🔑 Editor/Admin | Update folder |
+| DELETE | `/api/admin/folders/{folderId}` | 🔑 Editor/Admin | Delete folder |
+| POST | `/api/admin/folders/{folderId}/cards` | 🔑 Editor/Admin | Add card to folder |
+| DELETE | `/api/admin/folders/{folderId}/cards/{cardId}` | 🔑 Editor/Admin | Remove card from folder |
+| PUT | `/api/admin/folders/{folderId}/cards/order` | 🔑 Editor/Admin | Reorder cards in folder |
+
+### Admin access rules
+
+- Admin endpoints can read `Draft`, `Published`, and `Archived` decks.
+- Admin list endpoints are not restricted by `visibility`.
+- Admin can manage both official decks and user-created decks.
+- `deckType` is admin-managed only. User app remains read-only for deck types.
+- `isOfficial` is mutable only through admin deck create/update.
+
+### Shared response shapes
+
+Admin reuses most user-facing models and extends list/detail items with management fields.
+
+`AdminDeckTypeResponse`
+
+```json
+{
+  "id": "string",
+  "name": "string",
+  "createdAt": "2026-04-17T08:00:00Z"
+}
+```
+
+`AdminDeckListItemResponse`
+
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "coverImageUrl": "string | null",
+  "visibility": "Public | Private",
+  "status": "Draft | Published | Archived",
+  "isOfficial": false,
+  "cardsCount": 12,
+  "foldersCount": 3,
+  "type": {
+    "id": "string | null",
+    "name": "string | null"
+  },
+  "createdBy": {
+    "id": "string",
+    "username": "string",
+    "avatarUrl": "string | null"
+  },
+  "forkedFromId": "string | null",
+  "bookmarkCount": 5,
+  "createdAt": "2026-04-17T08:00:00Z",
+  "updatedAt": "2026-04-17T08:00:00Z | null"
+}
+```
+
+`AdminDeckDetailResponse`
+
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "coverImageUrl": "string | null",
+  "visibility": "Public | Private",
+  "status": "Draft | Published | Archived",
+  "isOfficial": false,
+  "cardsCount": 12,
+  "foldersCount": 3,
+  "type": {
+    "id": "string | null",
+    "name": "string | null"
+  },
+  "createdBy": {
+    "id": "string",
+    "username": "string",
+    "avatarUrl": "string | null"
+  },
+  "forkedFromId": "string | null",
+  "bookmarkCount": 5,
+  "folders": [DeckFolderResponse],
+  "createdAt": "2026-04-17T08:00:00Z",
+  "updatedAt": "2026-04-17T08:00:00Z | null"
+}
+```
+
+### DeckType endpoints
+
+### GET `/api/admin/deck-types` 🔑
+
+List all deck types for admin management.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `q` | `string` | `null` | Search by type name |
+| `page` | `int` | `1` | Pagination |
+| `pageSize` | `int` | `20` | Max `100` |
+
+**Response data:** `AdminDeckTypeResponse[]`
+
+### GET `/api/admin/deck-types/{id}` 🔑
+
+Get a single deck type.
+
+**Response data:** `AdminDeckTypeResponse`
+
+### POST `/api/admin/deck-types` 🔑
+
+Create a new deck type.
+
+**Request body**
+
+```json
+{
+  "name": "Kanji by Radical"
+}
+```
+
+**Response data:** `AdminDeckTypeResponse`
+
+**Frontend notes**
+
+- `name` must be unique.
+- Recommended max length: `100`.
+
+### PATCH `/api/admin/deck-types/{id}` 🔑
+
+Update a deck type.
+
+**Request body**
+
+```json
+{
+  "name": "Updated type name"
+}
+```
+
+**Response data:** `AdminDeckTypeResponse`
+
+### DELETE `/api/admin/deck-types/{id}` 🔑
+
+Delete a deck type.
+
+**Response data**
+
+```json
+true
+```
+
+**Frontend notes**
+
+- Backend should reject delete when the type is still referenced by any deck.
+- Frontend should show a dependency warning instead of assuming hard delete always succeeds.
+
+### Deck endpoints
+
+### GET `/api/admin/decks` 🔑
+
+Search all decks for admin moderation and management.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `q` | `string` | `null` | Search by title or description |
+| `typeId` | `string` | `null` | Filter by deck type |
+| `createdBy` | `string` | `null` | Filter by creator id |
+| `status` | `PublishStatus` | `null` | Filter by `Draft`, `Published`, or `Archived` |
+| `visibility` | `DeckVisibility` | `null` | Filter by `Public` or `Private` |
+| `isOfficial` | `bool` | `null` | Filter official vs non-official |
+| `page` | `int` | `1` | Pagination |
+| `pageSize` | `int` | `20` | Max `100` |
+
+**Response data:** `AdminDeckListItemResponse[]`
+
+**Frontend notes**
+
+- Admin table should support combined filtering by `status`, `visibility`, and `isOfficial`.
+- `bookmarkCount` is intended for table insight only, not for optimistic mutations.
+
+### GET `/api/admin/decks/{deckId}` 🔑
+
+Get full deck detail for admin.
+
+**Response data:** `AdminDeckDetailResponse`
+
+### POST `/api/admin/decks` 🔑
+
+Create a new deck from admin panel.
+
+**Request body**
+
+```json
+{
+  "title": "JLPT N5 Core Vocabulary",
+  "description": "Optional",
+  "coverImageUrl": null,
+  "visibility": "Public",
+  "status": "Draft",
+  "isOfficial": true,
+  "typeId": "string | null",
+  "createdBy": "string"
+}
+```
+
+**Response data:** `AdminDeckDetailResponse`
+
+**Frontend notes**
+
+- `createdBy` should normally default to the current admin user.
+- If admin UI does not support impersonated ownership yet, keep `createdBy` hidden and let backend fill it.
+
+### PATCH `/api/admin/decks/{deckId}` 🔑
+
+Update deck metadata.
+
+**Request body**
+
+```json
+{
+  "title": "Updated title",
+  "description": "Updated description",
+  "coverImageUrl": "https://cdn.example.com/decks/cover.png",
+  "visibility": "Public",
+  "status": "Published",
+  "isOfficial": true,
+  "typeId": "string | null"
+}
+```
+
+**Response data:** `AdminDeckDetailResponse`
+
+**Frontend notes**
+
+- `typeId: null` removes the current type.
+- Admin can directly update `status`, but dedicated status actions below are still recommended for table UX.
+
+### DELETE `/api/admin/decks/{deckId}` 🔑
+
+Delete a deck.
+
+**Response data**
+
+```json
+true
+```
+
+**Frontend notes**
+
+- Delete should cascade to folders, folder cards, and bookmarks.
+- Admin UI should confirm destructive action explicitly.
+
+### POST `/api/admin/decks/{deckId}/publish` 🔑
+
+Publish a deck.
+
+**Request body**
+
+```json
+{}
+```
+
+**Response data:** `AdminDeckDetailResponse`
+
+### POST `/api/admin/decks/{deckId}/archive` 🔑
+
+Archive a deck.
+
+**Request body**
+
+```json
+{}
+```
+
+**Response data:** `AdminDeckDetailResponse`
+
+### POST `/api/admin/decks/{deckId}/unpublish` 🔑
+
+Move a deck back to draft.
+
+**Request body**
+
+```json
+{}
+```
+
+**Response data:** `AdminDeckDetailResponse`
+
+**Frontend notes**
+
+- Recommended table actions:
+  - `Draft -> Publish`
+  - `Published -> Unpublish`
+  - `Draft/Published -> Archive`
+- Admin status actions should refresh both detail and table query caches.
+
+### Folder and card management endpoints
+
+Admin folder and card mutations mirror the personal deck endpoints, but without owner restriction.
+
+### POST `/api/admin/decks/{deckId}/folders` 🔑
+
+**Request body**
+
+```json
+{
+  "title": "Basic expressions",
+  "description": "Optional",
+  "position": 1000
+}
+```
+
+**Response data:** `DeckFolderResponse`
+
+### PUT `/api/admin/decks/{deckId}/folders/order` 🔑
+
+**Request body**
+
+```json
+{
+  "items": [
+    { "folderId": "folder-1", "position": 1000 },
+    { "folderId": "folder-2", "position": 2000 }
+  ]
+}
+```
+
+**Response data:** `DeckFolderResponse[]`
+
+### PATCH `/api/admin/folders/{folderId}` 🔑
+
+**Request body**
+
+```json
+{
+  "title": "Updated folder title",
+  "description": "Updated description"
+}
+```
+
+**Response data:** `DeckFolderResponse`
+
+### DELETE `/api/admin/folders/{folderId}` 🔑
+
+**Response data**
+
+```json
+true
+```
+
+### POST `/api/admin/folders/{folderId}/cards` 🔑
+
+**Request body**
+
+```json
+{
+  "cardId": "string",
+  "position": 1000
+}
+```
+
+**Response data:** `DeckFolderResponse`
+
+### DELETE `/api/admin/folders/{folderId}/cards/{cardId}` 🔑
+
+**Response data**
+
+```json
+true
+```
+
+### PUT `/api/admin/folders/{folderId}/cards/order` 🔑
+
+**Request body**
+
+```json
+{
+  "items": [
+    { "cardId": "card-1", "position": 1000 },
+    { "cardId": "card-2", "position": 2000 }
+  ]
+}
+```
+
+**Response data:** `DeckFolderCardItemResponse[]`
+
+**Frontend notes**
+
+- Reorder payloads remain full-replacement payloads.
+- The same card must not appear twice in the same deck, even across folders.
+- Admin can add cards regardless of original deck ownership, but card-level publish/edit policy should still follow existing admin card rules.
+
+### Admin error codes
+
+| Code | Description |
+| ---- | ----------- |
+| `Deck_NotFound_404` | Deck does not exist |
+| `Deck_FolderNotFound_404` | Folder does not exist |
+| `Deck_CardNotFound_404` | Card does not exist or is not found in target folder |
+| `Deck_CardDuplicatedInDeck_400` | The same card already exists somewhere else in the deck |
+| `Deck_InvalidReorderPayload_400` | Reorder payload is incomplete, duplicated, or inconsistent |
+| `DeckType_NotFound_404` | Deck type does not exist |
+| `DeckType_NameExists_409` | Deck type name already exists |
+| `DeckType_InUse_400` | Deck type cannot be deleted because at least one deck still uses it |
+
+### Suggested admin frontend flows
+
+1. Deck admin table
+- Load `GET /api/admin/deck-types` for type filter
+- Load `GET /api/admin/decks` with status and visibility filters
+- Open `GET /api/admin/decks/{deckId}` from table row
+
+2. Deck editor
+- Create draft with `POST /api/admin/decks`
+- Add folders and cards incrementally
+- Save drag-and-drop order with full reorder payloads
+- Publish from detail page or table action
+
+3. Deck type management
+- Load `GET /api/admin/deck-types`
+- Create or rename types inline or in modal
+- Handle in-use delete failure gracefully
 
 ---
 

@@ -109,6 +109,13 @@ public static class MessageConstants
         public const string INVALID_REORDER_PAYLOAD = "Deck_InvalidReorderPayload_400";
     }
 
+    public static class DeckTypeMessage
+    {
+        public const string NOT_FOUND = "DeckType_NotFound_404";
+        public const string NAME_EXISTS = "DeckType_NameExists_409";
+        public const string IN_USE = "DeckType_InUse_400";
+    }
+
     public static class FileUploadMessage
     {
         public const string CLOUDINARY_UPLOAD_FAILED = "FileUpload_CloudinaryUploadFailed_500";

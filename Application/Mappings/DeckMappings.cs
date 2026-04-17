@@ -14,6 +14,16 @@ public static class DeckMappings
         };
     }
 
+    public static AdminDeckTypeResponse ToAdminResponse(this DeckType deckType)
+    {
+        return new AdminDeckTypeResponse
+        {
+            Id = deckType.Id,
+            Name = deckType.Name,
+            CreatedAt = deckType.CreatedAt,
+        };
+    }
+
     public static DeckListItemResponse ToListItemResponse(this Deck deck, string? currentUserId)
     {
         return new DeckListItemResponse
@@ -55,6 +65,54 @@ public static class DeckMappings
             ForkedFromId = deck.ForkedFromId,
             IsBookmarked = deck.Bookmarks.Any(b => string.IsNullOrWhiteSpace(currentUserId) ? false : b.UserId == currentUserId),
             IsOwner = !string.IsNullOrWhiteSpace(currentUserId) && deck.CreatedBy == currentUserId,
+            Folders = deck.Folders
+                .OrderBy(f => f.Position)
+                .Select(f => f.ToResponse())
+                .ToList(),
+            CreatedAt = deck.CreatedAt,
+            UpdatedAt = deck.UpdatedAt,
+        };
+    }
+
+    public static AdminDeckListItemResponse ToAdminListItemResponse(this Deck deck)
+    {
+        return new AdminDeckListItemResponse
+        {
+            Id = deck.Id,
+            Title = deck.Title,
+            Description = deck.Description,
+            CoverImageUrl = deck.CoverImageUrl,
+            Visibility = deck.Visibility.ToString(),
+            Status = deck.Status.ToString(),
+            IsOfficial = deck.IsOfficial,
+            CardsCount = deck.CardsCount,
+            FoldersCount = deck.FoldersCount,
+            Type = deck.Type.ToSummaryResponse(),
+            CreatedBy = deck.Creator.ToResponse(),
+            ForkedFromId = deck.ForkedFromId,
+            BookmarkCount = deck.Bookmarks.Count,
+            CreatedAt = deck.CreatedAt,
+            UpdatedAt = deck.UpdatedAt,
+        };
+    }
+
+    public static AdminDeckDetailResponse ToAdminDetailResponse(this Deck deck)
+    {
+        return new AdminDeckDetailResponse
+        {
+            Id = deck.Id,
+            Title = deck.Title,
+            Description = deck.Description,
+            CoverImageUrl = deck.CoverImageUrl,
+            Visibility = deck.Visibility.ToString(),
+            Status = deck.Status.ToString(),
+            IsOfficial = deck.IsOfficial,
+            CardsCount = deck.CardsCount,
+            FoldersCount = deck.FoldersCount,
+            Type = deck.Type.ToSummaryResponse(),
+            CreatedBy = deck.Creator.ToResponse(),
+            ForkedFromId = deck.ForkedFromId,
+            BookmarkCount = deck.Bookmarks.Count,
             Folders = deck.Folders
                 .OrderBy(f => f.Position)
                 .Select(f => f.ToResponse())

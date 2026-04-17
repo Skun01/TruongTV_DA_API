@@ -30,7 +30,9 @@ public static class DependencyInjection
         services.AddScoped<IKanjiService, KanjiService>();
         services.AddScoped<ICardService, CardService>();
         services.AddScoped<IDeckTypeService, DeckTypeService>();
+        services.AddScoped<IDeckTypeAdminService, DeckTypeAdminService>();
         services.AddScoped<IDeckUserService, DeckUserService>();
+        services.AddScoped<IDeckAdminService, DeckAdminService>();
         services.AddScoped<ICardNoteService, CardNoteService>();
         services.AddScoped<ISentenceService, SentenceService>();
         services.AddScoped<IResourceService, ResourceService>();
