@@ -42,6 +42,18 @@ public class AdminLearningController : BaseController
     }
 
     /// <summary>
+    /// Gắn thêm một sentence vào card cùng metadata learning.
+    /// </summary>
+    [HttpPost("cards/{cardId}/sentences")]
+    public async Task<ApiResponse<LearningAdminCardSentenceConfigResponse>> AttachSentence(
+        [FromRoute] string cardId,
+        [FromBody] AttachLearningCardSentenceRequest request)
+    {
+        var result = await _adminLearningService.AttachSentenceAsync(cardId, request);
+        return ApiResponse<LearningAdminCardSentenceConfigResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
     /// Cập nhật metadata learning của một sentence đã gắn vào card.
     /// </summary>
     [HttpPut("cards/{cardId}/sentences/{sentenceId}")]
@@ -52,6 +64,28 @@ public class AdminLearningController : BaseController
     {
         var result = await _adminLearningService.UpdateSentenceConfigAsync(cardId, sentenceId, request);
         return ApiResponse<LearningAdminCardSentenceConfigResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Gỡ một sentence khỏi card.
+    /// </summary>
+    [HttpDelete("cards/{cardId}/sentences/{sentenceId}")]
+    public async Task<ApiResponse<bool>> DeleteSentence([FromRoute] string cardId, [FromRoute] string sentenceId)
+    {
+        var result = await _adminLearningService.DeleteSentenceAsync(cardId, sentenceId);
+        return ApiResponse<bool>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Cập nhật thứ tự hiển thị sentence của một card.
+    /// </summary>
+    [HttpPost("cards/{cardId}/sentences/reorder")]
+    public async Task<ApiResponse<List<LearningAdminCardSentenceConfigResponse>>> ReorderSentences(
+        [FromRoute] string cardId,
+        [FromBody] ReorderLearningCardSentencesRequest request)
+    {
+        var result = await _adminLearningService.ReorderSentencesAsync(cardId, request);
+        return ApiResponse<List<LearningAdminCardSentenceConfigResponse>>.SuccessResponse(result);
     }
 
     /// <summary>

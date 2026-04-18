@@ -3861,6 +3861,7 @@ Current responsibilities covered:
 
 - inspect one card’s learning configuration
 - update card-level learning config and sentence metadata
+- attach, remove, and reorder card sentences for learning
 - list cards with learning-content issues
 - inspect deck-level learning coverage
 - preview the exact study content that user-facing APIs will generate
@@ -3871,7 +3872,10 @@ Current responsibilities covered:
 | ------ | ----- | ------- |
 | `GET` | `/api/admin/learning/cards/{cardId}/config` | Load the full learning configuration of one card |
 | `PUT` | `/api/admin/learning/cards/{cardId}/config` | Save summary and all sentence learning metadata for one card |
+| `POST` | `/api/admin/learning/cards/{cardId}/sentences` | Attach one sentence to the card with learning metadata |
 | `PUT` | `/api/admin/learning/cards/{cardId}/sentences/{sentenceId}` | Update one attached sentence relation |
+| `DELETE` | `/api/admin/learning/cards/{cardId}/sentences/{sentenceId}` | Remove one attached sentence relation |
+| `POST` | `/api/admin/learning/cards/{cardId}/sentences/reorder` | Reorder sentence positions for one card |
 | `GET` | `/api/admin/learning/cards/issues` | List cards that currently have learning-content issues |
 | `GET` | `/api/admin/learning/decks/{deckId}/coverage` | Return learning readiness statistics for one deck |
 | `GET` | `/api/admin/learning/cards/{cardId}/preview` | Preview one generated exercise for the selected card and mode |
@@ -4047,7 +4051,62 @@ Frontend notes:
 - this is the preferred save endpoint for the admin learning tab
 - frontend should send the full desired sentence config list, not only changed items
 
-### 15.5 `PUT /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+### 15.5 `POST /api/admin/learning/cards/{cardId}/sentences`
+
+Attach one existing sentence to the card with learning metadata.
+
+This endpoint is useful when admin UI adds a sentence row from a searchable sentence picker.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+
+Request body:
+
+```json
+{
+  "sentenceId": "sentence-1",
+  "position": 3,
+  "blankWord": "食べる",
+  "hint": "Dictionary form",
+  "answerList": ["食べる", "たべる"]
+}
+```
+
+Request field rules:
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `sentenceId` | `string` | Yes | Existing sentence id, max `50` |
+| `position` | `int` | Yes | Must be `> 0` |
+| `blankWord` | `string?` | No | Max `500` |
+| `hint` | `string?` | No | Max `1000` |
+| `answerList` | `string[]` | No | Backend normalizes values |
+
+Success response:
+
+```json
+{
+  "sentenceId": "sentence-1",
+  "position": 3,
+  "jp": "毎日パンを食べる。",
+  "en": "I eat bread every day.",
+  "audioUrl": "https://...",
+  "level": "N5",
+  "blankWord": "食べる",
+  "hint": "Dictionary form",
+  "answerList": ["食べる", "たべる"]
+}
+```
+
+Frontend notes:
+
+- backend rejects duplicate relations with `Learning_SentenceAlreadyAttached_400`
+- this endpoint does not modify other attached sentences
+
+### 15.6 `PUT /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
 
 Update the learning metadata of one sentence relation already attached to the card.
 
@@ -4101,7 +4160,89 @@ Frontend notes:
 - if the sentence is not attached to the card, backend returns `Learning_SentenceNotAttached_404`
 - this endpoint does not add a new relation; it only updates an existing one
 
-### 15.6 `GET /api/admin/learning/cards/issues`
+### 15.7 `DELETE /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+
+Remove one attached sentence relation from the card.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+| `sentenceId` | `string` | Yes | Attached sentence id |
+
+Success response:
+
+```json
+true
+```
+
+Frontend notes:
+
+- if the sentence is not attached, backend returns `Learning_SentenceNotAttached_404`
+- deleting the relation does not delete the sentence entity itself
+
+### 15.8 `POST /api/admin/learning/cards/{cardId}/sentences/reorder`
+
+Update sentence positions for one card in bulk.
+
+This endpoint is intended for drag-and-drop reorder UIs.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+
+Request body:
+
+```json
+{
+  "items": [
+    { "sentenceId": "sentence-1", "position": 1 },
+    { "sentenceId": "sentence-2", "position": 2 },
+    { "sentenceId": "sentence-3", "position": 3 }
+  ]
+}
+```
+
+Request field rules:
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `items` | `object[]` | Yes | Must not be empty |
+| `items[].sentenceId` | `string` | Yes | Must already be attached to the card |
+| `items[].position` | `int` | Yes | Must be `> 0` |
+
+Validation notes:
+
+- duplicated `sentenceId` values are rejected
+- duplicated `position` values are rejected
+
+Success response:
+
+```json
+[
+  {
+    "sentenceId": "sentence-1",
+    "position": 1,
+    "jp": "毎日パンを食べる。",
+    "en": "I eat bread every day.",
+    "audioUrl": "https://...",
+    "level": "N5",
+    "blankWord": "食べる",
+    "hint": "Dictionary form",
+    "answerList": ["食べる", "たべる"]
+  }
+]
+```
+
+Frontend notes:
+
+- the response returns the full attached sentence list ordered by the new positions
+- if any sentence in the request is not attached to the card, backend returns `Learning_SentenceNotAttached_404`
+
+### 15.9 `GET /api/admin/learning/cards/issues`
 
 List cards that currently have one or more learning-content issues.
 
@@ -4160,7 +4301,7 @@ Frontend notes:
 - use `metaData.total` for issue count after filters
 - `availableModes` already reflects the remaining usable modes for the card
 
-### 15.7 `GET /api/admin/learning/decks/{deckId}/coverage`
+### 15.10 `GET /api/admin/learning/decks/{deckId}/coverage`
 
 Return learning readiness statistics for one deck.
 
@@ -4211,7 +4352,7 @@ Frontend notes:
 - ideal for deck QA pages and publish-readiness banners
 - combine with `GET /api/admin/learning/cards/issues?deckId=...` for drill-down
 
-### 15.8 `GET /api/admin/learning/cards/{cardId}/preview`
+### 15.11 `GET /api/admin/learning/cards/{cardId}/preview`
 
 Preview one generated exercise for the selected card and mode without creating a study session.
 
@@ -4307,13 +4448,10 @@ Frontend notes:
 - `warnings[]` is intended for admin UI hints, not blocking errors
 - preview never creates `study_sessions` or `user_card_progress`
 
-### 15.9 Next recommended admin phases
+### 15.12 Next recommended admin phases
 
 The following admin APIs are still recommended for later phases:
 
-- `POST /api/admin/learning/cards/{cardId}/sentences`
-- `DELETE /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
-- `POST /api/admin/learning/cards/{cardId}/sentences/reorder`
 - `GET /api/admin/learning/overview`
 - `GET /api/admin/learning/decks/{deckId}/analytics`
 - `GET /api/admin/learning/cards/{cardId}/analytics`
@@ -4387,6 +4525,7 @@ The following admin APIs are still recommended for later phases:
 | `Learning_SessionNotFound_404` | Session không tồn tại hoặc không thuộc user hiện tại |
 | `Learning_CardNotFound_404` | Card không tồn tại |
 | `Learning_SentenceNotAttached_404` | Sentence không được gắn với card hiện tại |
+| `Learning_SentenceAlreadyAttached_400` | Sentence đã được gắn với card hiện tại |
 | `Learning_SessionCompleted_400` | Session đã hoàn thành và không thể submit tiếp |
 | `Learning_InvalidMode_400` | Mode học không hợp lệ |
 | `Learning_InvalidScope_400` | Card hoặc folder không thuộc deck được chọn |

@@ -121,6 +121,7 @@ public static class MessageConstants
         public const string CARD_NOT_FOUND = "Learning_CardNotFound_404";
         public const string SESSION_NOT_FOUND = "Learning_SessionNotFound_404";
         public const string SENTENCE_NOT_ATTACHED = "Learning_SentenceNotAttached_404";
+        public const string SENTENCE_ALREADY_ATTACHED = "Learning_SentenceAlreadyAttached_400";
         public const string SESSION_COMPLETED = "Learning_SessionCompleted_400";
         public const string INVALID_MODE = "Learning_InvalidMode_400";
         public const string INVALID_SCOPE = "Learning_InvalidScope_400";

@@ -75,6 +75,37 @@ public class AdminLearningService : IAdminLearningService
         return await GetCardConfigAsync(cardId);
     }
 
+    public async Task<LearningAdminCardSentenceConfigResponse> AttachSentenceAsync(
+        string cardId,
+        AttachLearningCardSentenceRequest request)
+    {
+        await EnsureCardExistsAsync(cardId);
+        await EnsureSentenceExistsAsync(request.SentenceId);
+
+        var existingLink = await _unitOfWork.CardSentences.GetByCardAndSentenceIdAsync(cardId, request.SentenceId);
+        if (existingLink != null)
+            throw new AppException(MessageConstants.LearningMessage.SENTENCE_ALREADY_ATTACHED, 400);
+
+        var link = new CardSentence
+        {
+            CardId = cardId,
+            SentenceId = request.SentenceId,
+            Position = request.Position,
+            BlankWord = StringHelper.NormalizeOptional(request.BlankWord),
+            Hint = StringHelper.NormalizeOptional(request.Hint),
+            AnswerList = StringHelper.NormalizeAnswerList(request.AnswerList, request.BlankWord),
+        };
+
+        await _unitOfWork.CardSentences.AddAsync(link);
+        await _unitOfWork.SaveChangesAsync();
+
+        var updatedCard = await GetLearningCardRequiredAsync(cardId);
+        var updatedLink = updatedCard.CardSentences.FirstOrDefault(x => x.SentenceId == request.SentenceId)
+            ?? throw new AppException(MessageConstants.LearningMessage.SENTENCE_NOT_ATTACHED, 404);
+
+        return updatedLink.ToAdminSentenceConfigResponse();
+    }
+
     public async Task<LearningAdminCardSentenceConfigResponse> UpdateSentenceConfigAsync(
         string cardId,
         string sentenceId,
@@ -94,6 +125,46 @@ public class AdminLearningService : IAdminLearningService
             ?? throw new AppException(MessageConstants.LearningMessage.SENTENCE_NOT_ATTACHED, 404);
 
         return updatedLink.ToAdminSentenceConfigResponse();
+    }
+
+    public async Task<bool> DeleteSentenceAsync(string cardId, string sentenceId)
+    {
+        await EnsureCardExistsAsync(cardId);
+
+        var link = await _unitOfWork.CardSentences.GetByCardAndSentenceIdAsync(cardId, sentenceId)
+            ?? throw new AppException(MessageConstants.LearningMessage.SENTENCE_NOT_ATTACHED, 404);
+
+        _unitOfWork.CardSentences.DeleteAsync(link);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<List<LearningAdminCardSentenceConfigResponse>> ReorderSentencesAsync(
+        string cardId,
+        ReorderLearningCardSentencesRequest request)
+    {
+        await EnsureCardExistsAsync(cardId);
+
+        var existingLinks = await _unitOfWork.CardSentences.GetByCardIdAsync(cardId);
+        var linkMap = existingLinks.ToDictionary(x => x.SentenceId, StringComparer.Ordinal);
+
+        foreach (var item in request.Items)
+        {
+            if (!linkMap.TryGetValue(item.SentenceId, out var link))
+                throw new AppException(MessageConstants.LearningMessage.SENTENCE_NOT_ATTACHED, 404);
+
+            link.Position = item.Position;
+            _unitOfWork.CardSentences.UpdateAsync(link);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        var updatedCard = await GetLearningCardRequiredAsync(cardId);
+        return updatedCard.CardSentences
+            .Where(cs => cs.Sentence != null)
+            .OrderBy(cs => cs.Position)
+            .Select(cs => cs.ToAdminSentenceConfigResponse())
+            .ToList();
     }
 
     public async Task<(List<LearningAdminCardIssueResponse> Items, MetaData Meta)> GetCardIssuesAsync(LearningAdminCardIssuesQuery query)
