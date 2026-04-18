@@ -15,6 +15,13 @@ public class CardSentenceRepository : Repository<CardSentence>, ICardSentenceRep
     {
         return await _context.CardSentences
             .Where(cs => cs.CardId == cardId)
+            .OrderBy(cs => cs.Position)
             .ToListAsync();
+    }
+
+    public async Task<CardSentence?> GetByCardAndSentenceIdAsync(string cardId, string sentenceId)
+    {
+        return await _context.CardSentences
+            .FirstOrDefaultAsync(cs => cs.CardId == cardId && cs.SentenceId == sentenceId);
     }
 }

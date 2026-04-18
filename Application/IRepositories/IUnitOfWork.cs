@@ -23,6 +23,8 @@ public interface IUnitOfWork
     IGrammarResourceRepository GrammarResources { get; }
     ISentenceRepository Sentences { get; }
     ICardSentenceRepository CardSentences { get; }
+    IUserCardProgressRepository UserCardProgresses { get; }
+    IStudySessionRepository StudySessions { get; }
     IUserCardNoteRepository UserCardNotes { get; }
     INoteLikeRepository NoteLikes { get; }
 

@@ -64,4 +64,5 @@ public interface ICardRepository : IRepository<Card>
 		JlptLevel? level,
 		int page,
 		int pageSize);
+	Task<Card?> GetStudyCardByIdAsync(string cardId);
 }

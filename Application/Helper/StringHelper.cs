@@ -23,6 +23,20 @@ public static class StringHelper
             .ToList();
     }
 
+    public static List<string> NormalizeAnswerList(List<string>? values, string? fallbackValue = null)
+    {
+        var results = NormalizeList(values);
+        var normalizedFallback = NormalizeOptional(fallbackValue);
+
+        if (!string.IsNullOrWhiteSpace(normalizedFallback)
+            && !results.Contains(normalizedFallback, StringComparer.OrdinalIgnoreCase))
+        {
+            results.Insert(0, normalizedFallback);
+        }
+
+        return results;
+    }
+
     public static List<string> ExtractDistinctKanjiCharacters(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

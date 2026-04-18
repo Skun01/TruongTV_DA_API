@@ -37,15 +37,19 @@ public static class VocabularyMappings
             Antonyms = card.VocabularyDetail?.Antonyms ?? new List<string>(),
             RelatedPhrases = card.VocabularyDetail?.RelatedPhrases ?? new List<string>(),
             Sentences = card.CardSentences
-                .Select(cs => cs.Sentence)
-                .Where(s => s != null)
-                .Select(s => new VocabularySentenceResponse
+                .Where(cs => cs.Sentence != null)
+                .OrderBy(cs => cs.Position)
+                .Select(cs => new VocabularySentenceResponse
                 {
-                    Id = s!.Id,
-                    Text = s.Text,
-                    Meaning = s.Meaning,
-                    AudioUrl = s.AudioUrl,
-                    Level = s.Level?.ToString(),
+                    Id = cs.Sentence!.Id,
+                    Position = cs.Position,
+                    Text = cs.Sentence.Text,
+                    Meaning = cs.Sentence.Meaning,
+                    AudioUrl = cs.Sentence.AudioUrl,
+                    Level = cs.Sentence.Level?.ToString(),
+                    BlankWord = cs.BlankWord,
+                    Hint = cs.Hint,
+                    AnswerList = cs.AnswerList.ToList(),
                 })
                 .ToList(),
             UserNotes = notes.Select(n => n.ToCardNoteResponse(currentUserId ?? string.Empty)).ToList(),

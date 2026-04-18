@@ -26,4 +26,5 @@ public class Card : BaseEntity
      public ICollection<GrammarResource> GrammarResources { get; set; } = new List<GrammarResource>();
      public ICollection<KanjiRadical> KanjiRadicals { get; set; } = new List<KanjiRadical>();
      public ICollection<FolderCard> FolderCards { get; set; } = new List<FolderCard>();
+     public ICollection<UserCardProgress> UserCardProgresses { get; set; } = new List<UserCardProgress>();
 }

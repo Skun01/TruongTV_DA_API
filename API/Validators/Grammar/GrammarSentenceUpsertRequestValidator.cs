@@ -15,6 +15,9 @@ public class GrammarSentenceUpsertRequestValidator : AbstractValidator<GrammarSe
             .NotEmpty()
             .MaximumLength(500);
 
+        RuleFor(x => x.Position)
+            .GreaterThan(0);
+
         RuleFor(x => x.Meaning)
             .NotEmpty()
             .MaximumLength(500);
@@ -26,5 +29,17 @@ public class GrammarSentenceUpsertRequestValidator : AbstractValidator<GrammarSe
         RuleFor(x => x.Level)
             .Must(level => level is "N5" or "N4" or "N3" or "N2" or "N1")
             .When(x => !string.IsNullOrWhiteSpace(x.Level));
+
+        RuleFor(x => x.BlankWord)
+            .MaximumLength(200)
+            .When(x => !string.IsNullOrWhiteSpace(x.BlankWord));
+
+        RuleFor(x => x.Hint)
+            .MaximumLength(500)
+            .When(x => !string.IsNullOrWhiteSpace(x.Hint));
+
+        RuleForEach(x => x.AnswerList)
+            .NotEmpty()
+            .MaximumLength(200);
     }
 }

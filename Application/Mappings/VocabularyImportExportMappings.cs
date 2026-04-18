@@ -34,12 +34,18 @@ public static class VocabularyImportExportMappings
             RelatedPhrases = detail?.RelatedPhrases.ToList() ?? new List<string>(),
             Sentences = card.CardSentences
                 .Where(cs => cs.Sentence != null)
+                .OrderBy(cs => cs.Position)
                 .Select(cs => new VocabularySentenceUpsertRequest
                 {
+                    Id = cs.Sentence!.Id,
+                    Position = cs.Position,
                     Text = cs.Sentence.Text,
                     Meaning = cs.Sentence.Meaning,
                     SpeakerId = cs.Sentence.SpeakerId,
                     Level = cs.Sentence.Level?.ToString(),
+                    BlankWord = cs.BlankWord,
+                    Hint = cs.Hint,
+                    AnswerList = cs.AnswerList.ToList(),
                 })
                 .ToList(),
         };
@@ -72,10 +78,15 @@ public static class VocabularyImportExportMappings
             Sentences = (item.Sentences ?? new List<VocabularySentenceUpsertRequest>())
                 .Select(sentence => new VocabularySentenceUpsertRequest
                 {
+                    Id = sentence.Id,
+                    Position = sentence.Position,
                     Text = sentence.Text,
                     Meaning = sentence.Meaning,
                     SpeakerId = sentence.SpeakerId,
                     Level = sentence.Level,
+                    BlankWord = sentence.BlankWord,
+                    Hint = sentence.Hint,
+                    AnswerList = sentence.AnswerList.ToList(),
                 })
                 .ToList(),
         };

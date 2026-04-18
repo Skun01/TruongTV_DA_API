@@ -27,6 +27,8 @@ public class AppDbContext : DbContext
     public DbSet<GrammarResource> GrammarResources { set; get; }
     public DbSet<Sentence> Sentences { set; get; }
     public DbSet<CardSentence> CardSentences { set; get; }
+    public DbSet<UserCardProgress> UserCardProgresses { set; get; }
+    public DbSet<StudySession> StudySessions { set; get; }
     public DbSet<UserCardNote> UserCardNotes { set; get; }
     public DbSet<NoteLike> NoteLikes { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

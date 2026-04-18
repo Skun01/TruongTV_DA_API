@@ -116,6 +116,17 @@ public static class MessageConstants
         public const string IN_USE = "DeckType_InUse_400";
     }
 
+    public static class LearningMessage
+    {
+        public const string SESSION_NOT_FOUND = "Learning_SessionNotFound_404";
+        public const string SESSION_COMPLETED = "Learning_SessionCompleted_400";
+        public const string INVALID_MODE = "Learning_InvalidMode_400";
+        public const string INVALID_SCOPE = "Learning_InvalidScope_400";
+        public const string CARD_NOT_IN_SESSION = "Learning_CardNotInSession_400";
+        public const string INVALID_SUBMISSION = "Learning_InvalidSubmission_400";
+        public const string NO_CARDS_AVAILABLE = "Learning_NoCardsAvailable_400";
+    }
+
     public static class FileUploadMessage
     {
         public const string CLOUDINARY_UPLOAD_FAILED = "FileUpload_CloudinaryUploadFailed_500";

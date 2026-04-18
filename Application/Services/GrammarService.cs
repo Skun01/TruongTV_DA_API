@@ -416,13 +416,25 @@ public class GrammarService : IGrammarService
             if (!keptSentenceIds.Add(sentence.Id))
                 continue;
 
-            if (existingLinks.Any(link => link.SentenceId == sentence.Id))
+            var existingLink = existingLinks.FirstOrDefault(link => link.SentenceId == sentence.Id);
+            if (existingLink != null)
+            {
+                existingLink.Position = request.Position;
+                existingLink.BlankWord = StringHelper.NormalizeOptional(request.BlankWord);
+                existingLink.Hint = StringHelper.NormalizeOptional(request.Hint);
+                existingLink.AnswerList = StringHelper.NormalizeAnswerList(request.AnswerList, request.BlankWord);
+                _unitOfWork.CardSentences.UpdateAsync(existingLink);
                 continue;
+            }
 
             await _unitOfWork.CardSentences.AddAsync(new CardSentence
             {
                 CardId = cardId,
                 SentenceId = sentence.Id,
+                Position = request.Position,
+                BlankWord = StringHelper.NormalizeOptional(request.BlankWord),
+                Hint = StringHelper.NormalizeOptional(request.Hint),
+                AnswerList = StringHelper.NormalizeAnswerList(request.AnswerList, request.BlankWord),
             });
         }
 

@@ -26,6 +26,8 @@ public class UnitOfWork : IUnitOfWork
     private IGrammarResourceRepository? _grammarResources;
     private ISentenceRepository? _sentences;
     private ICardSentenceRepository? _cardSentences;
+    private IUserCardProgressRepository? _userCardProgresses;
+    private IStudySessionRepository? _studySessions;
     private IUserCardNoteRepository? _userCardNotes;
     private INoteLikeRepository? _noteLikes;
     
@@ -53,6 +55,8 @@ public class UnitOfWork : IUnitOfWork
     public IGrammarResourceRepository GrammarResources => _grammarResources ??= new GrammarResourceRepository(_context);
     public ISentenceRepository Sentences => _sentences ??= new SentenceRepository(_context);
     public ICardSentenceRepository CardSentences => _cardSentences ??= new CardSentenceRepository(_context);
+    public IUserCardProgressRepository UserCardProgresses => _userCardProgresses ??= new UserCardProgressRepository(_context);
+    public IStudySessionRepository StudySessions => _studySessions ??= new StudySessionRepository(_context);
     public IUserCardNoteRepository UserCardNotes => _userCardNotes ??= new UserCardNoteRepository(_context);
     public INoteLikeRepository NoteLikes => _noteLikes ??= new NoteLikeRepository(_context);
 

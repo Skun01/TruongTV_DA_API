@@ -39,14 +39,19 @@ public static class GrammarMappings
                 Url = r.Url,
             }).ToList(),
             Sentences = card.CardSentences
-                .Select(cs => cs.Sentence)
-                .Where(s => s != null)
-                .Select(s => new GrammarSentenceUpsertRequest
+                .Where(cs => cs.Sentence != null)
+                .OrderBy(cs => cs.Position)
+                .Select(cs => new GrammarSentenceUpsertRequest
                 {
-                    Text = s!.Text,
-                    Meaning = s.Meaning,
-                    SpeakerId = s.SpeakerId,
-                    Level = s.Level?.ToString(),
+                    Id = cs.Sentence!.Id,
+                    Position = cs.Position,
+                    Text = cs.Sentence.Text,
+                    Meaning = cs.Sentence.Meaning,
+                    SpeakerId = cs.Sentence.SpeakerId,
+                    Level = cs.Sentence.Level?.ToString(),
+                    BlankWord = cs.BlankWord,
+                    Hint = cs.Hint,
+                    AnswerList = cs.AnswerList.ToList(),
                 })
                 .ToList(),
         };
@@ -109,15 +114,19 @@ public static class GrammarMappings
                 Url = r.Url,
             }).ToList(),
             Sentences = card.CardSentences
-                .Select(cs => cs.Sentence)
-                .Where(s => s != null)
-                .Select(s => new GrammarSentenceResponse
+                .Where(cs => cs.Sentence != null)
+                .OrderBy(cs => cs.Position)
+                .Select(cs => new GrammarSentenceResponse
                 {
-                    Id = s!.Id,
-                    Text = s.Text,
-                    Meaning = s.Meaning,
-                    AudioUrl = s.AudioUrl,
-                    Level = s.Level?.ToString(),
+                    Id = cs.Sentence!.Id,
+                    Position = cs.Position,
+                    Text = cs.Sentence.Text,
+                    Meaning = cs.Sentence.Meaning,
+                    AudioUrl = cs.Sentence.AudioUrl,
+                    Level = cs.Sentence.Level?.ToString(),
+                    BlankWord = cs.BlankWord,
+                    Hint = cs.Hint,
+                    AnswerList = cs.AnswerList.ToList(),
                 })
                 .ToList(),
             UserNotes = notes.Select(n => n.ToCardNoteResponse(currentUserId ?? string.Empty)).ToList(),

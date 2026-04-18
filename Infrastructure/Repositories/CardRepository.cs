@@ -400,4 +400,16 @@ public class CardRepository : Repository<Card>, ICardRepository
 
         return (items, total);
     }
+
+    public async Task<Card?> GetStudyCardByIdAsync(string cardId)
+    {
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .Include(c => c.GrammarDetail)
+            .Include(c => c.KanjiDetail)
+            .Include(c => c.CardSentences.OrderBy(cs => cs.Position))
+                .ThenInclude(cs => cs.Sentence)
+            .FirstOrDefaultAsync(c => c.Id == cardId && c.Status == PublishStatus.Published);
+    }
 }
