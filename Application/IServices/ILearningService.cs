@@ -14,5 +14,5 @@ public interface ILearningService
     Task<StudySessionResultResponse> GetSessionResultAsync(string sessionId, string userId);
     Task<StudySessionResponse> RestartSessionAsync(string sessionId, string userId);
     Task<TodayReviewSummaryResponse> GetTodayReviewAsync(TodayReviewQuery query, string userId);
-    Task<List<DueReviewCardResponse>> GetDueCardsAsync(DueReviewCardsQuery query, string userId);
+    Task<DueReviewCardsResponse> GetDueCardsAsync(DueReviewCardsQuery query, string userId);
 }

@@ -7,9 +7,5 @@ public class DueReviewCardsQueryValidator : AbstractValidator<DueReviewCardsQuer
 {
     public DueReviewCardsQueryValidator()
     {
-        RuleFor(x => x.Limit)
-            .GreaterThan(0)
-            .LessThanOrEqualTo(100)
-            .When(x => x.Limit.HasValue);
     }
 }

@@ -5,7 +5,7 @@ namespace Application.Mappings;
 
 public static class LearningMappings
 {
-    public static StudySessionResponse ToResponse(this StudySession session, Deck deck)
+    public static StudySessionResponse ToResponse(this StudySession session, Deck? deck)
     {
         var completedCards = session.CompletedCardIds.Count;
         var totalCards = session.CardIds.Count;
@@ -14,7 +14,7 @@ public static class LearningMappings
         {
             Id = session.Id,
             DeckId = session.DeckId,
-            DeckTitle = deck.Title,
+            DeckTitle = deck?.Title,
             Mode = session.Mode.ToString(),
             FolderIds = session.SelectedFolderIds.ToList(),
             TotalCards = totalCards,

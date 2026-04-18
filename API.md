@@ -3298,15 +3298,17 @@ const deckAdminKeys = {
 
 - User must be authenticated.
 - Session ownership is enforced. A user can only read, submit, restart, or delete their own sessions.
-- `deckId` must be readable by the current user under existing deck visibility rules.
-- `cardIds[]` used when creating a session must belong to the selected deck. Invalid scope returns `Learning_InvalidScope_400`.
+- If `deckId` is provided, it must be readable by the current user under existing deck visibility rules.
+- If `deckId` is provided, `cardIds[]` must belong to the selected deck. Invalid scope returns `Learning_InvalidScope_400`.
+- If `deckId` is omitted, backend creates a global review session from the provided `cardIds[]`.
 - `GET /api/learning/review/due-cards` is global-only and does not accept `deckId`.
 
 ### Shared business rules
 
 - Session creation now uses `cardIds[]`, not `folderIds[]`.
-- If `cardIds[]` is empty, backend uses all cards inside the selected deck.
-- Session response still includes `folderIds`. These are derived from the selected cards and should be treated as informational scope metadata.
+- If `deckId` is provided and `cardIds[]` is empty, backend uses all cards inside the selected deck.
+- If `deckId` is omitted, `cardIds[]` is required.
+- Session response still includes `folderIds`. These are derived from the selected cards only when the session belongs to a specific deck. Global review sessions return `[]`.
 - Session settings are resolved with this precedence:
   1. `settings` sent in `POST /api/learning/sessions`
   2. user default settings from `GET /api/learning/settings/me`
@@ -3356,10 +3358,10 @@ const deckAdminKeys = {
 ```json
 {
   "id": "session-id",
-  "deckId": "deck-id",
-  "deckTitle": "JLPT N5 Core Vocabulary",
+  "deckId": null,
+  "deckTitle": null,
   "mode": "MultipleChoice",
-  "folderIds": ["folder-1", "folder-2"],
+  "folderIds": [],
   "totalCards": 20,
   "completedCards": 4,
   "remainingCards": 16,
@@ -3379,10 +3381,10 @@ const deckAdminKeys = {
 | Field | Type | Notes |
 | ----- | ---- | ----- |
 | `id` | `string` | Session id |
-| `deckId` | `string` | Owning deck id |
-| `deckTitle` | `string` | Owning deck title |
+| `deckId` | `string \| null` | Owning deck id, `null` for global review session |
+| `deckTitle` | `string \| null` | Owning deck title, `null` for global review session |
 | `mode` | `StudyMode` | Session mode |
-| `folderIds` | `string[]` | Derived folder scope from selected cards |
+| `folderIds` | `string[]` | Derived folder scope from selected cards; empty for global review session |
 | `totalCards` | `int` | Total cards in the session |
 | `completedCards` | `int` | Number of cards already submitted |
 | `remainingCards` | `int` | `totalCards - completedCards` |
@@ -3471,7 +3473,7 @@ Create a new study session.
 
 ```json
 {
-  "deckId": "deck-id",
+  "deckId": null,
   "cardIds": ["card-1", "card-2", "card-3"],
   "mode": "MultipleChoice",
   "settings": {
@@ -3483,8 +3485,8 @@ Create a new study session.
 
 | Field | Type | Required | Notes |
 | ----- | ---- | -------- | ----- |
-| `deckId` | `string` | Yes | Max length `100` |
-| `cardIds` | `string[]` | No | Each item max length `100`; empty array means all cards in deck |
+| `deckId` | `string \| null` | No | Max length `100`; omit for global review session |
+| `cardIds` | `string[]` | No | Each item max length `100`; if `deckId` exists, empty array means all cards in deck |
 | `mode` | `string` | Yes | `FillInBlank`, `MultipleChoice`, or `Flashcard` |
 | `settings` | `StudySessionSettingsRequest \| null` | No | Optional per-session override |
 
@@ -3494,6 +3496,7 @@ Create a new study session.
 
 - Use `cardIds[]` when building a custom review session from `GET /api/learning/review/due-cards`.
 - If frontend needs "study whole deck", send `cardIds: []`.
+- If frontend needs a global due-card review session, omit `deckId` and send only the `cardIds[]` returned by `GET /api/learning/review/due-cards`.
 - If frontend already filtered cards by folder, it should still send the final card ids only.
 
 ### GET `/api/learning/sessions/{sessionId}` 🔒
@@ -3632,8 +3635,8 @@ Get session result summary.
 ```json
 {
   "sessionId": "session-id",
-  "deckId": "deck-id",
-  "deckTitle": "JLPT N5 Core Vocabulary",
+  "deckId": null,
+  "deckTitle": null,
   "mode": "Flashcard",
   "totalCards": 20,
   "completedCards": 20,
@@ -3709,52 +3712,34 @@ Get due-card count summary for today.
 
 ### GET `/api/learning/review/due-cards` 🔒
 
-Get the global list of due card progresses for the current user.
+Get all globally due card ids for the current user.
 
 **Query params**
 
-| Param | Type | Default | Notes |
-| ----- | ---- | ------- | ----- |
-| `limit` | `int` | `20` | Optional, must be `1..100` |
+No query params.
 
 **Response data**
 
 ```json
-[
-  {
-    "cardId": "card-id",
-    "cardType": "Vocab",
-    "title": "食べる",
-    "summary": "Động từ ăn",
-    "deckId": "deck-id",
-    "deckTitle": "JLPT N5 Core Vocabulary",
-    "srsLevel": "level_2",
-    "nextReviewAt": "2026-04-18T09:00:00Z",
-    "isMastered": false
-  }
-]
+{
+  "dueCount": 3,
+  "cardIds": ["card-1", "card-2", "card-3"]
+}
 ```
 
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `cardId` | `string` | Use this value in `POST /api/learning/sessions` |
-| `cardType` | `CardType` | Card type |
-| `title` | `string` | Card title |
-| `summary` | `string` | Card summary |
-| `deckId` | `string \| null` | The readable deck picked by backend for this card |
-| `deckTitle` | `string \| null` | Deck title for display |
-| `srsLevel` | `SrsLevel` | Current progress level |
-| `nextReviewAt` | `datetime` | Due time |
-| `isMastered` | `boolean` | Mastered flag |
+| `dueCount` | `int` | Number of globally due cards |
+| `cardIds` | `string[]` | Full list of due card ids. Use directly in `POST /api/learning/sessions` |
 
 **Frontend notes**
 
 - To create a review session:
   1. call `GET /api/learning/review/due-cards`
   2. let user choose any subset
-  3. group selected cards by `deckId`
-  4. call `POST /api/learning/sessions` once per deck with the selected `cardIds[]`
-- If cross-deck mixed-card sessions are needed in the future, backend contract will need a new endpoint because current session still belongs to one `deckId`.
+  3. call `POST /api/learning/sessions` with:
+     - `deckId = null`
+     - selected `cardIds[]`
 
 ### GET `/api/learning/progress/cards/{cardId}` 🔒
 
@@ -3788,7 +3773,7 @@ Get current user progress for one card.
   - `srsLevel = level_1`
   - `consecutiveCorrect = 0`
   - `isMastered = false`
-  - `nextReviewAt = now`
+  - `nextReviewAt = current server time`
 
 ### GET `/api/learning/settings/me` 🔒
 
@@ -3854,8 +3839,7 @@ Create or update user default learning settings.
 2. Review due cards
 - Call `GET /api/learning/review/due-cards`.
 - Let user select an arbitrary number of cards.
-- Group by `deckId`.
-- Create one session per deck with `cardIds[]`.
+- Create one global review session with the selected `cardIds[]`.
 
 3. Settings flow
 - Load `GET /api/learning/settings/me` on settings page.

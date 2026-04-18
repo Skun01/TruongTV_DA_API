@@ -7,8 +7,8 @@ public class StudySession : BaseEntity
     public string UserId { get; set; } = string.Empty;
     public User User { get; set; } = null!;
 
-    public string DeckId { get; set; } = string.Empty;
-    public Deck Deck { get; set; } = null!;
+    public string? DeckId { get; set; }
+    public Deck? Deck { get; set; }
 
     public StudyMode Mode { get; set; }
     public FlashcardContentType FlashcardFront { get; set; } = FlashcardContentType.Title;

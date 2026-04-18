@@ -18,7 +18,7 @@ public class StudySessionConfiguration : IEntityTypeConfiguration<StudySession>
             .HasMaxLength(50);
 
         builder.Property(x => x.DeckId)
-            .IsRequired()
+            .IsRequired(false)
             .HasMaxLength(50);
 
         builder.Property(x => x.Mode)
@@ -76,7 +76,7 @@ public class StudySessionConfiguration : IEntityTypeConfiguration<StudySession>
         builder.HasOne(x => x.Deck)
             .WithMany()
             .HasForeignKey(x => x.DeckId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(x => new { x.UserId, x.CompletedAt })
             .HasDatabaseName("idx_study_sessions_user_completed");

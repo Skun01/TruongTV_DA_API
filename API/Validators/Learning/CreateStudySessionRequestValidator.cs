@@ -8,8 +8,8 @@ public class CreateStudySessionRequestValidator : AbstractValidator<CreateStudyS
     public CreateStudySessionRequestValidator()
     {
         RuleFor(x => x.DeckId)
-            .NotEmpty()
-            .MaximumLength(100);
+            .MaximumLength(100)
+            .When(x => !string.IsNullOrWhiteSpace(x.DeckId));
 
         RuleFor(x => x.Mode)
             .NotEmpty()
@@ -22,5 +22,9 @@ public class CreateStudySessionRequestValidator : AbstractValidator<CreateStudyS
         RuleFor(x => x.Settings)
             .SetValidator(new StudySessionSettingsRequestValidator()!)
             .When(x => x.Settings != null);
+
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.DeckId) || x.CardIds.Count > 0)
+            .WithMessage("Either deckId or cardIds must be provided.");
     }
 }

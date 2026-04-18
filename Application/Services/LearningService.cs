@@ -23,9 +23,29 @@ public class LearningService : ILearningService
     public async Task<StudySessionResponse> CreateSessionAsync(CreateStudySessionRequest request, string userId)
     {
         var mode = ParseStudyMode(request.Mode);
-        var deck = await GetReadableDeckAsync(request.DeckId, userId);
         var settings = await ResolveSessionSettingsAsync(userId, request.Settings);
-        var cardIds = ResolveCardScope(deck, request.CardIds);
+        Deck? deck = null;
+        List<string> cardIds;
+        List<string> selectedFolderIds;
+
+        if (!string.IsNullOrWhiteSpace(request.DeckId))
+        {
+            deck = await GetReadableDeckAsync(request.DeckId, userId);
+            cardIds = ResolveCardScope(deck, request.CardIds);
+            selectedFolderIds = ResolveSelectedFolderIds(deck, cardIds);
+        }
+        else
+        {
+            cardIds = NormalizeRequestedCardIds(request.CardIds);
+            if (cardIds.Count == 0)
+                throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
+
+            var cards = await _unitOfWork.Cards.GetStudyCardsByIdsAsync(cardIds);
+            if (cards.Count != cardIds.Count)
+                throw new AppException(MessageConstants.LearningMessage.INVALID_SCOPE, 400);
+
+            selectedFolderIds = new List<string>();
+        }
 
         if (cardIds.Count == 0)
             throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
@@ -34,13 +54,13 @@ public class LearningService : ILearningService
         {
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
-            DeckId = deck.Id,
+            DeckId = deck?.Id,
             Mode = mode,
             FlashcardFront = settings.FlashcardFront,
             FlashcardBack = settings.FlashcardBack,
             MultipleChoiceQuestion = settings.MultipleChoiceQuestion,
             ShuffleOptions = settings.ShuffleOptions,
-            SelectedFolderIds = ResolveSelectedFolderIds(deck, cardIds),
+            SelectedFolderIds = selectedFolderIds,
             CardIds = cardIds,
         };
 
@@ -53,7 +73,7 @@ public class LearningService : ILearningService
     public async Task<StudySessionResponse> GetSessionAsync(string sessionId, string userId)
     {
         var session = await GetOwnedSessionAsync(sessionId, userId);
-        var deck = await GetReadableDeckAsync(session.DeckId, userId);
+        var deck = await GetSessionDeckAsync(session, userId);
         return session.ToResponse(deck);
     }
 
@@ -69,13 +89,19 @@ public class LearningService : ILearningService
     {
         var limit = NormalizeLimit(query.Limit, 20, 100);
         var sessions = await _unitOfWork.StudySessions.GetRecentByUserAsync(userId, limit);
-        var deckIds = sessions.Select(x => x.DeckId).Distinct(StringComparer.Ordinal).ToList();
+        var deckIds = sessions
+            .Where(x => !string.IsNullOrWhiteSpace(x.DeckId))
+            .Select(x => x.DeckId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         var decks = await Task.WhenAll(deckIds.Select(deckId => GetReadableDeckAsync(deckId, userId)));
         var deckMap = decks.ToDictionary(x => x.Id, StringComparer.Ordinal);
 
         return sessions
-            .Where(session => deckMap.ContainsKey(session.DeckId))
-            .Select(session => session.ToResponse(deckMap[session.DeckId]))
+            .Select(session => session.ToResponse(
+                !string.IsNullOrWhiteSpace(session.DeckId) && deckMap.ContainsKey(session.DeckId)
+                    ? deckMap[session.DeckId]
+                    : null))
             .ToList();
     }
 
@@ -188,14 +214,14 @@ public class LearningService : ILearningService
     public async Task<StudySessionResultResponse> GetSessionResultAsync(string sessionId, string userId)
     {
         var session = await GetOwnedSessionAsync(sessionId, userId);
-        var deck = await GetReadableDeckAsync(session.DeckId, userId);
+        var deck = await GetSessionDeckAsync(session, userId);
         var attempts = session.CorrectCount + session.IncorrectCount;
 
         return new StudySessionResultResponse
         {
             SessionId = session.Id,
             DeckId = session.DeckId,
-            DeckTitle = deck.Title,
+            DeckTitle = deck?.Title,
             Mode = session.Mode.ToString(),
             TotalCards = session.CardIds.Count,
             CompletedCards = session.CompletedCardIds.Count,
@@ -217,8 +243,26 @@ public class LearningService : ILearningService
     public async Task<StudySessionResponse> RestartSessionAsync(string sessionId, string userId)
     {
         var existingSession = await GetOwnedSessionAsync(sessionId, userId);
-        var deck = await GetReadableDeckAsync(existingSession.DeckId, userId);
-        var cardIds = ResolveCardScope(deck, existingSession.CardIds);
+        Deck? deck = null;
+        List<string> cardIds;
+        List<string> selectedFolderIds;
+
+        if (!string.IsNullOrWhiteSpace(existingSession.DeckId))
+        {
+            deck = await GetReadableDeckAsync(existingSession.DeckId, userId);
+            cardIds = ResolveCardScope(deck, existingSession.CardIds);
+            selectedFolderIds = ResolveSelectedFolderIds(deck, cardIds);
+        }
+        else
+        {
+            cardIds = NormalizeRequestedCardIds(existingSession.CardIds);
+            var cards = await _unitOfWork.Cards.GetStudyCardsByIdsAsync(cardIds);
+            if (cards.Count != cardIds.Count)
+                throw new AppException(MessageConstants.LearningMessage.INVALID_SCOPE, 400);
+
+            selectedFolderIds = new List<string>();
+        }
+
         if (cardIds.Count == 0)
             throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
@@ -232,7 +276,7 @@ public class LearningService : ILearningService
             FlashcardBack = existingSession.FlashcardBack,
             MultipleChoiceQuestion = existingSession.MultipleChoiceQuestion,
             ShuffleOptions = existingSession.ShuffleOptions,
-            SelectedFolderIds = ResolveSelectedFolderIds(deck, cardIds),
+            SelectedFolderIds = selectedFolderIds,
             CardIds = cardIds,
         };
 
@@ -276,43 +320,20 @@ public class LearningService : ILearningService
         };
     }
 
-    public async Task<List<DueReviewCardResponse>> GetDueCardsAsync(DueReviewCardsQuery query, string userId)
+    public async Task<DueReviewCardsResponse> GetDueCardsAsync(DueReviewCardsQuery query, string userId)
     {
-        var limit = NormalizeLimit(query.Limit, 20, 100);
         var dueProgresses = await _unitOfWork.UserCardProgresses.GetDueByUserAsync(userId, DateTime.UtcNow);
-
-        var orderedProgresses = dueProgresses
+        var orderedCardIds = dueProgresses
             .OrderBy(x => x.NextReviewAt)
-            .Take(limit)
+            .Select(x => x.CardId)
+            .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        var cardIds = orderedProgresses.Select(x => x.CardId).Distinct(StringComparer.Ordinal).ToList();
-        var cards = await _unitOfWork.Cards.GetStudyCardsByIdsAsync(cardIds);
-        var cardMap = cards.ToDictionary(x => x.Id, StringComparer.Ordinal);
-        var decks = await _unitOfWork.Decks.GetReadableDecksContainingCardIdsAsync(userId, cardIds);
-        var deckMap = decks.ToDictionary(x => x.Id, StringComparer.Ordinal);
-
-        return orderedProgresses
-            .Where(progress => cardMap.ContainsKey(progress.CardId))
-            .Select(progress =>
-            {
-                var card = cardMap[progress.CardId];
-                var deck = deckMap.Values.FirstOrDefault(d => d.Folders.Any(f => f.FolderCards.Any(fc => fc.CardId == card.Id)));
-
-                return new DueReviewCardResponse
-                {
-                    CardId = card.Id,
-                    CardType = card.CardType.ToString(),
-                    Title = card.Title,
-                    Summary = card.Summary,
-                    DeckId = deck?.Id,
-                    DeckTitle = deck?.Title,
-                    SrsLevel = progress.SrsLevel.ToString(),
-                    NextReviewAt = progress.NextReviewAt,
-                    IsMastered = progress.IsMastered,
-                };
-            })
-            .ToList();
+        return new DueReviewCardsResponse
+        {
+            DueCount = orderedCardIds.Count,
+            CardIds = orderedCardIds,
+        };
     }
 
     private async Task<StudyQuestionResponse> BuildQuestionResponseAsync(StudySession session, Card card, UserCardProgress? progress)
@@ -547,6 +568,14 @@ public class LearningService : ILearningService
             ?? throw new AppException(MessageConstants.LearningMessage.SESSION_NOT_FOUND, 404);
     }
 
+    private async Task<Deck?> GetSessionDeckAsync(StudySession session, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(session.DeckId))
+            return null;
+
+        return await GetReadableDeckAsync(session.DeckId, userId);
+    }
+
     private async Task<Deck> GetReadableDeckAsync(string deckId, string userId)
     {
         var deck = await _unitOfWork.Decks.GetDetailByIdAsync(deckId, userId)
@@ -610,6 +639,15 @@ public class LearningService : ILearningService
         return deck.Folders
             .Where(folder => folder.FolderCards.Any(folderCard => cardIds.Contains(folderCard.CardId, StringComparer.Ordinal)))
             .Select(folder => folder.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static List<string> NormalizeRequestedCardIds(IEnumerable<string> cardIds)
+    {
+        return cardIds
+            .Where(cardId => !string.IsNullOrWhiteSpace(cardId))
+            .Select(cardId => cardId.Trim())
             .Distinct(StringComparer.Ordinal)
             .ToList();
     }

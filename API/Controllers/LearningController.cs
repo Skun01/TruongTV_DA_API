@@ -19,7 +19,7 @@ public class LearningController : BaseController
     }
 
     /// <summary>
-    /// Tạo một phiên học mới cho user theo deck, folder và mode đã chọn.
+    /// Tạo một phiên học mới cho user theo deck hoặc theo danh sách card đã chọn.
     /// Nếu không truyền settings, backend sẽ lấy theo user default settings.
     /// </summary>
     [HttpPost("sessions")]
@@ -117,10 +117,10 @@ public class LearningController : BaseController
     /// Có thể giới hạn số lượng card trả về.
     /// </summary>
     [HttpGet("review/due-cards")]
-    public async Task<ApiResponse<List<DueReviewCardResponse>>> GetDueCards([FromQuery] DueReviewCardsQuery query)
+    public async Task<ApiResponse<DueReviewCardsResponse>> GetDueCards([FromQuery] DueReviewCardsQuery query)
     {
         var result = await _learningService.GetDueCardsAsync(query, GetCurrentUserId());
-        return ApiResponse<List<DueReviewCardResponse>>.SuccessResponse(result);
+        return ApiResponse<DueReviewCardsResponse>.SuccessResponse(result);
     }
 
     /// <summary>

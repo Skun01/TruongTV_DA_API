@@ -3,8 +3,8 @@ namespace Application.DTOs.Learning;
 public class StudySessionResponse
 {
     public string Id { get; set; } = string.Empty;
-    public string DeckId { get; set; } = string.Empty;
-    public string DeckTitle { get; set; } = string.Empty;
+    public string? DeckId { get; set; }
+    public string? DeckTitle { get; set; }
     public string Mode { get; set; } = string.Empty;
     public List<string> FolderIds { get; set; } = new();
     public int TotalCards { get; set; }
