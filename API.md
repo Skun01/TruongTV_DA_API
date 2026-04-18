@@ -20,6 +20,7 @@
 12. [Decks Module — User](#12-decks-module--user)
 13. [Decks Module — Admin](#13-decks-module--admin)
 14. [Learning Module — User](#14-learning-module--user)
+15. [Learning Module — Admin (Proposed)](#15-learning-module--admin-proposed)
 
 ---
 
@@ -3848,6 +3849,478 @@ Create or update user default learning settings.
 
 ---
 
+## 15. Learning Module — Admin
+
+This section documents the currently implemented admin-facing APIs for learning management.
+
+Authorization:
+
+- all endpoints in this section require `🔑 Editor/Admin`
+
+Current responsibilities covered:
+
+- inspect one card’s learning configuration
+- update card-level learning config and sentence metadata
+- list cards with learning-content issues
+- inspect deck-level learning coverage
+- preview the exact study content that user-facing APIs will generate
+
+### 15.1 Endpoint inventory
+
+| Method | Route | Purpose |
+| ------ | ----- | ------- |
+| `GET` | `/api/admin/learning/cards/{cardId}/config` | Load the full learning configuration of one card |
+| `PUT` | `/api/admin/learning/cards/{cardId}/config` | Save summary and all sentence learning metadata for one card |
+| `PUT` | `/api/admin/learning/cards/{cardId}/sentences/{sentenceId}` | Update one attached sentence relation |
+| `GET` | `/api/admin/learning/cards/issues` | List cards that currently have learning-content issues |
+| `GET` | `/api/admin/learning/decks/{deckId}/coverage` | Return learning readiness statistics for one deck |
+| `GET` | `/api/admin/learning/cards/{cardId}/preview` | Preview one generated exercise for the selected card and mode |
+
+### 15.2 Shared concepts
+
+#### LearningIssueType
+
+| Value | Meaning |
+| ----- | ------- |
+| `MissingSummary` | Card summary is empty |
+| `MissingSentence` | Non-Kanji card has no attached sentence for fill-in mode |
+| `MissingAnswerList` | Sentence has no `answerList` and no `blankWord` |
+| `BlankWordNotFoundInSentence` | `blankWord` does not appear in the sentence text |
+| `DuplicateSentencePosition` | Sentence positions are duplicated or invalid |
+| `UnsupportedCardTypeForMode` | Reserved for future use |
+
+#### Readiness rules
+
+- `fill_in_blank`
+  - `Kanji` cards are considered ready by fallback behavior
+  - other card types need at least one attached sentence
+  - duplicated or invalid sentence positions make the card not ready
+- `multiple_choice`
+  - requires non-empty `summary`
+- `flashcard`
+  - requires non-empty `summary`
+
+#### Source of truth
+
+- fill-in metadata is stored on `card_sentences`
+- important fields:
+  - `position`
+  - `blankWord`
+  - `hint`
+  - `answerList`
+
+### 15.3 `GET /api/admin/learning/cards/{cardId}/config`
+
+Load the admin editing payload for one card.
+
+Typical use cases:
+
+- open the learning tab in card detail
+- inspect whether the card is ready for each study mode
+- load sentence-level fill-in config in one request
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+
+Success response:
+
+```json
+{
+  "cardId": "card-id",
+  "cardType": "Vocab",
+  "title": "食べる",
+  "summary": "to eat",
+  "isFillInBlankReady": true,
+  "isMultipleChoiceReady": true,
+  "isFlashcardReady": true,
+  "availableModes": ["FillInBlank", "MultipleChoice", "Flashcard"],
+  "issues": [],
+  "sentences": [
+    {
+      "sentenceId": "sentence-1",
+      "position": 1,
+      "jp": "毎日パンを食べる。",
+      "en": "I eat bread every day.",
+      "audioUrl": "https://...",
+      "level": "N5",
+      "blankWord": "食べる",
+      "hint": "Dictionary form",
+      "answerList": ["食べる", "たべる"]
+    }
+  ]
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `cardId` | `string` | Card id |
+| `cardType` | `CardType` | `Vocab`, `Grammar`, `Kanji` |
+| `title` | `string` | Card title |
+| `summary` | `string` | Card summary used by multiple-choice and flashcard |
+| `isFillInBlankReady` | `bool` | Calculated by backend |
+| `isMultipleChoiceReady` | `bool` | Calculated by backend |
+| `isFlashcardReady` | `bool` | Calculated by backend |
+| `availableModes` | `string[]` | Calculated available user study modes |
+| `issues` | `LearningAdminCardIssueItemResponse[]` | Detailed problems found on the card |
+| `sentences` | `LearningAdminCardSentenceConfigResponse[]` | Attached sentences ordered by `position` |
+
+Frontend notes:
+
+- `issues` is always based on current backend validation logic
+- admin UI can use `availableModes` directly for badges or readiness chips
+
+### 15.4 `PUT /api/admin/learning/cards/{cardId}/config`
+
+Save the card-level learning configuration in a single request.
+
+This endpoint updates:
+
+- card `summary`
+- the complete attached sentence config list for the card
+
+Behavior:
+
+- sentences sent in `sentences[]` are kept or updated
+- sentences currently attached to the card but omitted from the payload are removed from the relation
+- `answerList` is normalized by trim + distinct
+- if `blankWord` is present and not already in `answerList`, backend inserts it automatically
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+
+Request body:
+
+```json
+{
+  "summary": "to eat",
+  "sentences": [
+    {
+      "sentenceId": "sentence-1",
+      "position": 1,
+      "blankWord": "食べる",
+      "hint": "Dictionary form",
+      "answerList": ["食べる", "たべる"]
+    },
+    {
+      "sentenceId": "sentence-2",
+      "position": 2,
+      "blankWord": "食べます",
+      "hint": "Polite form",
+      "answerList": ["食べます", "たべます"]
+    }
+  ]
+}
+```
+
+Request field rules:
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `summary` | `string` | Yes | Must not be empty, max `1000` |
+| `sentences` | `object[]` | Yes | Full desired sentence config list |
+| `sentences[].sentenceId` | `string` | Yes | Must reference an existing sentence, max `50` |
+| `sentences[].position` | `int` | Yes | Must be `> 0`, unique within the request |
+| `sentences[].blankWord` | `string?` | No | Max `500` |
+| `sentences[].hint` | `string?` | No | Max `1000` |
+| `sentences[].answerList` | `string[]` | No | Backend normalizes values |
+
+Validation notes:
+
+- duplicated `sentenceId` values are rejected
+- duplicated `position` values are rejected
+- non-existing `sentenceId` returns `Sentence_NotFound_404`
+
+Success response:
+
+- same shape as `GET /api/admin/learning/cards/{cardId}/config`
+
+Frontend notes:
+
+- this is the preferred save endpoint for the admin learning tab
+- frontend should send the full desired sentence config list, not only changed items
+
+### 15.5 `PUT /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+
+Update the learning metadata of one sentence relation already attached to the card.
+
+Use this endpoint when admin UI edits one sentence row inline instead of saving the whole config form.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+| `sentenceId` | `string` | Yes | Attached sentence id |
+
+Request body:
+
+```json
+{
+  "position": 1,
+  "blankWord": "食べる",
+  "hint": "Dictionary form",
+  "answerList": ["食べる", "たべる"]
+}
+```
+
+Request field rules:
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `position` | `int` | Yes | Must be `> 0` |
+| `blankWord` | `string?` | No | Max `500` |
+| `hint` | `string?` | No | Max `1000` |
+| `answerList` | `string[]` | No | Backend normalizes values |
+
+Success response:
+
+```json
+{
+  "sentenceId": "sentence-1",
+  "position": 1,
+  "jp": "毎日パンを食べる。",
+  "en": "I eat bread every day.",
+  "audioUrl": "https://...",
+  "level": "N5",
+  "blankWord": "食べる",
+  "hint": "Dictionary form",
+  "answerList": ["食べる", "たべる"]
+}
+```
+
+Frontend notes:
+
+- if the sentence is not attached to the card, backend returns `Learning_SentenceNotAttached_404`
+- this endpoint does not add a new relation; it only updates an existing one
+
+### 15.6 `GET /api/admin/learning/cards/issues`
+
+List cards that currently have one or more learning-content issues.
+
+This endpoint is designed for:
+
+- admin QA pages
+- publish readiness dashboards
+- filtered issue lists by deck, mode, or issue type
+
+Query params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `page` | `int` | No | Default `1` |
+| `pageSize` | `int` | No | Default `20`, max `100` |
+| `cardType` | `CardType?` | No | `Vocab`, `Grammar`, `Kanji` |
+| `mode` | `StudyMode?` | No | `FillInBlank`, `MultipleChoice`, `Flashcard` |
+| `issueType` | `LearningIssueType?` | No | One issue category |
+| `q` | `string?` | No | Search by card title or summary |
+| `deckId` | `string?` | No | Restrict result to cards currently used by one deck |
+
+Success response item:
+
+```json
+{
+  "cardId": "card-id",
+  "cardType": "Grammar",
+  "title": "〜ている",
+  "summary": "",
+  "availableModes": ["FillInBlank"],
+  "issues": [
+    {
+      "type": "MissingSummary",
+      "message": "Card summary is required for flashcard and multiple-choice.",
+      "sentenceId": null
+    },
+    {
+      "type": "BlankWordNotFoundInSentence",
+      "message": "blankWord does not appear in the attached sentence text.",
+      "sentenceId": "sentence-1"
+    }
+  ]
+}
+```
+
+Filtering behavior:
+
+- `mode=FillInBlank` only keeps fill-in-related issue types
+- `mode=MultipleChoice` only keeps multiple-choice-related issue types
+- `mode=Flashcard` only keeps flashcard-related issue types
+- `issueType` is applied after the optional `mode` filter
+
+Frontend notes:
+
+- only cards with at least one matching issue are returned
+- use `metaData.total` for issue count after filters
+- `availableModes` already reflects the remaining usable modes for the card
+
+### 15.7 `GET /api/admin/learning/decks/{deckId}/coverage`
+
+Return learning readiness statistics for one deck.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `deckId` | `string` | Yes | Target deck id |
+
+Success response:
+
+```json
+{
+  "deckId": "deck-id",
+  "deckTitle": "N5 Week 1",
+  "totalCards": 120,
+  "fillInBlankReadyCount": 72,
+  "multipleChoiceReadyCount": 110,
+  "flashcardReadyCount": 118,
+  "issueCount": 24,
+  "cardsByType": [
+    {
+      "cardType": "Vocab",
+      "total": 80,
+      "fillInBlankReady": 60,
+      "multipleChoiceReady": 78,
+      "flashcardReady": 80
+    },
+    {
+      "cardType": "Grammar",
+      "total": 30,
+      "fillInBlankReady": 12,
+      "multipleChoiceReady": 25,
+      "flashcardReady": 28
+    }
+  ]
+}
+```
+
+Response notes:
+
+- `totalCards` counts distinct cards in the deck
+- `issueCount` counts cards that currently have at least one issue
+- `cardsByType` groups the same readiness metrics by `cardType`
+
+Frontend notes:
+
+- ideal for deck QA pages and publish-readiness banners
+- combine with `GET /api/admin/learning/cards/issues?deckId=...` for drill-down
+
+### 15.8 `GET /api/admin/learning/cards/{cardId}/preview`
+
+Preview one generated exercise for the selected card and mode without creating a study session.
+
+This endpoint uses the same content-generation rules as the user learning flow where applicable.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+
+Query params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `mode` | `StudyMode` | Yes | `FillInBlank`, `MultipleChoice`, `Flashcard` |
+| `multipleChoiceQuestion` | `MultipleChoiceQuestionType?` | No | `TitleToSummary`, `SummaryToTitle` |
+| `flashcardFront` | `FlashcardContentType?` | No | `Title`, `Summary` |
+| `flashcardBack` | `FlashcardContentType?` | No | `Title`, `Summary` |
+| `shuffleOptions` | `bool?` | No | Only affects multiple-choice preview |
+
+Example: fill-in preview
+
+```json
+{
+  "cardId": "card-id",
+  "mode": "FillInBlank",
+  "prompt": "Điền vào chỗ trống",
+  "questionText": "毎日パンを____。",
+  "secondaryText": "I eat bread every day.",
+  "hint": "Dictionary form",
+  "frontText": null,
+  "backText": null,
+  "allowsMultipleSelection": true,
+  "options": [],
+  "warnings": []
+}
+```
+
+Example: multiple-choice preview
+
+```json
+{
+  "cardId": "card-id",
+  "mode": "MultipleChoice",
+  "prompt": "Chọn nghĩa đúng của thẻ",
+  "questionText": "食べる",
+  "secondaryText": null,
+  "hint": null,
+  "frontText": null,
+  "backText": null,
+  "allowsMultipleSelection": false,
+  "options": [
+    { "id": "to eat", "text": "to eat", "isCorrect": true },
+    { "id": "to drink", "text": "to drink", "isCorrect": false }
+  ],
+  "warnings": []
+}
+```
+
+Example: flashcard preview
+
+```json
+{
+  "cardId": "card-id",
+  "mode": "Flashcard",
+  "prompt": "Xem flashcard rồi đánh dấu đang học hoặc đã biết",
+  "questionText": null,
+  "secondaryText": null,
+  "hint": null,
+  "frontText": "食べる",
+  "backText": "to eat",
+  "allowsMultipleSelection": false,
+  "options": [],
+  "warnings": []
+}
+```
+
+Preview behavior notes:
+
+- fill-in:
+  - uses the first attached sentence ordered by `position`
+  - if that sentence has no explicit `answerList`, backend may generate fallback answers
+  - if no sentence exists, backend returns a fallback fill-in preview based on the card itself
+- multiple-choice:
+  - correct answer is derived from the selected `multipleChoiceQuestion` direction
+  - distractors come from other cards of the same `cardType`
+- flashcard:
+  - front/back are derived from `flashcardFront` and `flashcardBack`
+
+Frontend notes:
+
+- `warnings[]` is intended for admin UI hints, not blocking errors
+- preview never creates `study_sessions` or `user_card_progress`
+
+### 15.9 Next recommended admin phases
+
+The following admin APIs are still recommended for later phases:
+
+- `POST /api/admin/learning/cards/{cardId}/sentences`
+- `DELETE /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+- `POST /api/admin/learning/cards/{cardId}/sentences/reorder`
+- `GET /api/admin/learning/overview`
+- `GET /api/admin/learning/decks/{deckId}/analytics`
+- `GET /api/admin/learning/cards/{cardId}/analytics`
+- `GET /api/admin/learning/users/{userId}/progress`
+
+---
+
 ## Phụ lục: Tổng hợp Error Codes
 
 ### Common
@@ -3912,6 +4385,8 @@ Create or update user default learning settings.
 | Code | Mô tả |
 | ---- | ----- |
 | `Learning_SessionNotFound_404` | Session không tồn tại hoặc không thuộc user hiện tại |
+| `Learning_CardNotFound_404` | Card không tồn tại |
+| `Learning_SentenceNotAttached_404` | Sentence không được gắn với card hiện tại |
 | `Learning_SessionCompleted_400` | Session đã hoàn thành và không thể submit tiếp |
 | `Learning_InvalidMode_400` | Mode học không hợp lệ |
 | `Learning_InvalidScope_400` | Card hoặc folder không thuộc deck được chọn |

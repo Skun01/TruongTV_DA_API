@@ -401,6 +401,45 @@ public class CardRepository : Repository<Card>, ICardRepository
         return (items, total);
     }
 
+    public async Task<Card?> GetLearningAdminCardByIdAsync(string cardId)
+    {
+        return await BuildLearningAdminQuery()
+            .FirstOrDefaultAsync(c => c.Id == cardId);
+    }
+
+    public async Task<List<Card>> GetLearningAdminCardsByIdsAsync(List<string> cardIds)
+    {
+        return await BuildLearningAdminQuery()
+            .Where(c => cardIds.Contains(c.Id))
+            .ToListAsync();
+    }
+
+    public async Task<List<Card>> SearchLearningAdminCardsAsync(
+        CardType? cardType,
+        string? query,
+        List<string>? cardIds)
+    {
+        var cardsQuery = BuildLearningAdminQuery();
+
+        if (cardType.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.CardType == cardType.Value);
+
+        if (cardIds != null && cardIds.Count > 0)
+            cardsQuery = cardsQuery.Where(c => cardIds.Contains(c.Id));
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var pattern = $"%{query.Trim()}%";
+            cardsQuery = cardsQuery.Where(c =>
+                EF.Functions.ILike(c.Title, pattern)
+                || EF.Functions.ILike(c.Summary, pattern));
+        }
+
+        return await cardsQuery
+            .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<Card?> GetStudyCardByIdAsync(string cardId)
     {
         return await _context.Cards
@@ -422,5 +461,17 @@ public class CardRepository : Repository<Card>, ICardRepository
             .Include(c => c.KanjiDetail)
             .Where(c => cardIds.Contains(c.Id) && c.Status == PublishStatus.Published)
             .ToListAsync();
+    }
+
+    private IQueryable<Card> BuildLearningAdminQuery()
+    {
+        return _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .Include(c => c.GrammarDetail)
+            .Include(c => c.KanjiDetail)
+            .Include(c => c.CardSentences.OrderBy(cs => cs.Position))
+                .ThenInclude(cs => cs.Sentence)
+            .AsQueryable();
     }
 }

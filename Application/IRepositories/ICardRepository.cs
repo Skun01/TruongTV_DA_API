@@ -64,6 +64,12 @@ public interface ICardRepository : IRepository<Card>
 		JlptLevel? level,
 		int page,
 		int pageSize);
+	Task<Card?> GetLearningAdminCardByIdAsync(string cardId);
+	Task<List<Card>> GetLearningAdminCardsByIdsAsync(List<string> cardIds);
+	Task<List<Card>> SearchLearningAdminCardsAsync(
+		CardType? cardType,
+		string? query,
+		List<string>? cardIds);
 	Task<Card?> GetStudyCardByIdAsync(string cardId);
 	Task<List<Card>> GetStudyCardsByIdsAsync(List<string> cardIds);
 }
