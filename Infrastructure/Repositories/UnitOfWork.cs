@@ -28,6 +28,7 @@ public class UnitOfWork : IUnitOfWork
     private ICardSentenceRepository? _cardSentences;
     private IUserCardProgressRepository? _userCardProgresses;
     private IStudySessionRepository? _studySessions;
+    private IUserLearningSettingsRepository? _userLearningSettings;
     private IUserCardNoteRepository? _userCardNotes;
     private INoteLikeRepository? _noteLikes;
     
@@ -57,6 +58,7 @@ public class UnitOfWork : IUnitOfWork
     public ICardSentenceRepository CardSentences => _cardSentences ??= new CardSentenceRepository(_context);
     public IUserCardProgressRepository UserCardProgresses => _userCardProgresses ??= new UserCardProgressRepository(_context);
     public IStudySessionRepository StudySessions => _studySessions ??= new StudySessionRepository(_context);
+    public IUserLearningSettingsRepository UserLearningSettings => _userLearningSettings ??= new UserLearningSettingsRepository(_context);
     public IUserCardNoteRepository UserCardNotes => _userCardNotes ??= new UserCardNoteRepository(_context);
     public INoteLikeRepository NoteLikes => _noteLikes ??= new NoteLikeRepository(_context);
 

@@ -15,8 +15,12 @@ public class CreateStudySessionRequestValidator : AbstractValidator<CreateStudyS
             .NotEmpty()
             .Must(mode => mode is "FillInBlank" or "MultipleChoice" or "Flashcard");
 
-        RuleForEach(x => x.FolderIds)
+        RuleForEach(x => x.CardIds)
             .NotEmpty()
             .MaximumLength(100);
+
+        RuleFor(x => x.Settings)
+            .SetValidator(new StudySessionSettingsRequestValidator()!)
+            .When(x => x.Settings != null);
     }
 }

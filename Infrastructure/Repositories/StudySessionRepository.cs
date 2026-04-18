@@ -16,4 +16,14 @@ public class StudySessionRepository : Repository<StudySession>, IStudySessionRep
         return await _context.StudySessions
             .FirstOrDefaultAsync(x => x.Id == sessionId && x.UserId == userId);
     }
+
+    public async Task<List<StudySession>> GetRecentByUserAsync(string userId, int limit)
+    {
+        return await _context.StudySessions
+            .AsNoTracking()
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(limit)
+            .ToListAsync();
+    }
 }

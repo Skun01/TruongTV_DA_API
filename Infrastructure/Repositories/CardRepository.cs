@@ -412,4 +412,15 @@ public class CardRepository : Repository<Card>, ICardRepository
                 .ThenInclude(cs => cs.Sentence)
             .FirstOrDefaultAsync(c => c.Id == cardId && c.Status == PublishStatus.Published);
     }
+
+    public async Task<List<Card>> GetStudyCardsByIdsAsync(List<string> cardIds)
+    {
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .Include(c => c.GrammarDetail)
+            .Include(c => c.KanjiDetail)
+            .Where(c => cardIds.Contains(c.Id) && c.Status == PublishStatus.Published)
+            .ToListAsync();
+    }
 }

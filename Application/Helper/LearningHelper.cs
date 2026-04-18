@@ -7,13 +7,13 @@ public static class LearningHelper
 {
     public static SrsLevel IncreaseLevel(SrsLevel level, int step = 1)
     {
-        var nextValue = Math.Min((int)level + Math.Max(step, 1), (int)SrsLevel.Level5);
+        var nextValue = Math.Min((int)level + Math.Max(step, 1), (int)SrsLevel.level_12);
         return (SrsLevel)nextValue;
     }
 
     public static SrsLevel DecreaseLevel(SrsLevel level, int step = 1)
     {
-        var nextValue = Math.Max((int)level - Math.Max(step, 1), (int)SrsLevel.Level1);
+        var nextValue = Math.Max((int)level - Math.Max(step, 1), (int)SrsLevel.level_1);
         return (SrsLevel)nextValue;
     }
 
@@ -21,12 +21,19 @@ public static class LearningHelper
     {
         return level switch
         {
-            SrsLevel.Level1 => nowUtc.AddHours(8),
-            SrsLevel.Level2 => nowUtc.AddDays(1),
-            SrsLevel.Level3 => nowUtc.AddDays(3),
-            SrsLevel.Level4 => nowUtc.AddDays(7),
-            SrsLevel.Level5 => nowUtc.AddDays(14),
-            _ => nowUtc.AddHours(8),
+            SrsLevel.level_1 => nowUtc.AddHours(4),
+            SrsLevel.level_2 => nowUtc.AddHours(8),
+            SrsLevel.level_3 => nowUtc.AddHours(23),
+            SrsLevel.level_4 => nowUtc.AddDays(2),
+            SrsLevel.level_5 => nowUtc.AddDays(4),
+            SrsLevel.level_6 => nowUtc.AddDays(8),
+            SrsLevel.level_7 => nowUtc.AddDays(14),
+            SrsLevel.level_8 => nowUtc.AddMonths(1),
+            SrsLevel.level_9 => nowUtc.AddMonths(2),
+            SrsLevel.level_10 => nowUtc.AddMonths(4),
+            SrsLevel.level_11 => nowUtc.AddMonths(8),
+            SrsLevel.level_12 => nowUtc.AddYears(100),
+            _ => nowUtc.AddHours(4),
         };
     }
 

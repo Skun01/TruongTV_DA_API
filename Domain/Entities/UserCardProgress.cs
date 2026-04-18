@@ -10,7 +10,7 @@ public class UserCardProgress
     public string CardId { get; set; } = string.Empty;
     public Card Card { get; set; } = null!;
 
-    public SrsLevel SrsLevel { get; set; } = SrsLevel.Level1;
+    public SrsLevel SrsLevel { get; set; } = SrsLevel.level_1;
     public DateTime NextReviewAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastReviewedAt { get; set; }
     public int ConsecutiveCorrect { get; set; }

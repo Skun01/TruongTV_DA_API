@@ -25,6 +25,7 @@ public interface IUnitOfWork
     ICardSentenceRepository CardSentences { get; }
     IUserCardProgressRepository UserCardProgresses { get; }
     IStudySessionRepository StudySessions { get; }
+    IUserLearningSettingsRepository UserLearningSettings { get; }
     IUserCardNoteRepository UserCardNotes { get; }
     INoteLikeRepository NoteLikes { get; }
 

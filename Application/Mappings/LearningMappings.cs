@@ -24,6 +24,13 @@ public static class LearningMappings
             IncorrectCount = session.IncorrectCount,
             CreatedAt = session.CreatedAt,
             CompletedAt = session.CompletedAt,
+            Settings = new StudySessionSettingsResponse
+            {
+                FlashcardFront = session.FlashcardFront.ToString(),
+                FlashcardBack = session.FlashcardBack.ToString(),
+                MultipleChoiceQuestion = session.MultipleChoiceQuestion.ToString(),
+                ShuffleOptions = session.ShuffleOptions,
+            },
         };
     }
 }

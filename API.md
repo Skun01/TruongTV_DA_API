@@ -1,6 +1,6 @@
 # Tacho Learning API — Frontend Integration Guide
 
-> **Last updated:** 2026-04-17
+> **Last updated:** 2026-04-18
 
 ---
 
@@ -19,6 +19,7 @@
 11. [Kanji Module — Admin](#8-kanji-module--admin)
 12. [Decks Module — User](#12-decks-module--user)
 13. [Decks Module — Admin](#13-decks-module--admin)
+14. [Learning Module — User](#14-learning-module--user)
 
 ---
 
@@ -183,6 +184,52 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 | ------------- | ------------------- |
 | `Similar`     | Ngữ pháp tương tự   |
 | `Contrasting` | Ngữ pháp tương phản |
+
+### StudyMode
+
+| Value | Description |
+| ----- | ----------- |
+| `FillInBlank` | Fill-in-blank exercise |
+| `MultipleChoice` | Multiple-choice exercise |
+| `Flashcard` | Flashcard review |
+
+### FlashcardContentType
+
+| Value | Description |
+| ----- | ----------- |
+| `Title` | Use card `title` |
+| `Summary` | Use card `summary` |
+
+### MultipleChoiceQuestionType
+
+| Value | Description |
+| ----- | ----------- |
+| `TitleToSummary` | Question is `title`, answer options are `summary` |
+| `SummaryToTitle` | Question is `summary`, answer options are `title` |
+
+### FlashcardReviewResult
+
+| Value | Description |
+| ----- | ----------- |
+| `Learning` | User still does not know the card |
+| `Known` | User knows the card |
+
+### SrsLevel
+
+| Value | Description |
+| ----- | ----------- |
+| `level_1` | Review again after `4 hours` |
+| `level_2` | Review again after `8 hours` |
+| `level_3` | Review again after `23 hours` |
+| `level_4` | Review again after `2 days` |
+| `level_5` | Review again after `4 days` |
+| `level_6` | Review again after `8 days` |
+| `level_7` | Review again after `2 weeks` |
+| `level_8` | Review again after `1 month` |
+| `level_9` | Review again after `2 months` |
+| `level_10` | Review again after `4 months` |
+| `level_11` | Review again after `8 months` |
+| `level_12` | Mastered, no more review |
 
 ---
 
@@ -3225,6 +3272,598 @@ const deckAdminKeys = {
 
 ---
 
+## 14. Learning Module — User
+
+> User-facing study APIs for `learning-app`. All endpoints in this section require authentication.
+
+### Overview
+
+| Method | Endpoint | Auth | Purpose |
+| ------ | -------- | ---- | ------- |
+| POST | `/api/learning/sessions` | 🔒 Auth | Create a new study session from a deck and a selected set of cards |
+| GET | `/api/learning/sessions/{sessionId}` | 🔒 Auth | Get session overview |
+| DELETE | `/api/learning/sessions/{sessionId}` | 🔒 Auth | Delete a study session |
+| GET | `/api/learning/history` | 🔒 Auth | Get recent study sessions |
+| GET | `/api/learning/sessions/{sessionId}/next` | 🔒 Auth | Get the next question in the session |
+| POST | `/api/learning/sessions/{sessionId}/submit` | 🔒 Auth | Submit one answer for the current card |
+| GET | `/api/learning/sessions/{sessionId}/result` | 🔒 Auth | Get final or current session result summary |
+| POST | `/api/learning/sessions/{sessionId}/restart` | 🔒 Auth | Create a new session from an existing session scope |
+| GET | `/api/learning/review/today` | 🔒 Auth | Get today due-count summary |
+| GET | `/api/learning/review/due-cards` | 🔒 Auth | Get globally due card progresses for the current user |
+| GET | `/api/learning/progress/cards/{cardId}` | 🔒 Auth | Get current user progress for one card |
+| GET | `/api/learning/settings/me` | 🔒 Auth | Get user default learning settings |
+| PUT | `/api/learning/settings/me` | 🔒 Auth | Create or update user default learning settings |
+
+### Authorization and access rules
+
+- User must be authenticated.
+- Session ownership is enforced. A user can only read, submit, restart, or delete their own sessions.
+- `deckId` must be readable by the current user under existing deck visibility rules.
+- `cardIds[]` used when creating a session must belong to the selected deck. Invalid scope returns `Learning_InvalidScope_400`.
+- `GET /api/learning/review/due-cards` is global-only and does not accept `deckId`.
+
+### Shared business rules
+
+- Session creation now uses `cardIds[]`, not `folderIds[]`.
+- If `cardIds[]` is empty, backend uses all cards inside the selected deck.
+- Session response still includes `folderIds`. These are derived from the selected cards and should be treated as informational scope metadata.
+- Session settings are resolved with this precedence:
+  1. `settings` sent in `POST /api/learning/sessions`
+  2. user default settings from `GET /api/learning/settings/me`
+  3. system defaults:
+     - `flashcardFront = Title`
+     - `flashcardBack = Summary`
+     - `multipleChoiceQuestion = TitleToSummary`
+     - `shuffleOptions = true`
+- `MultipleChoice` distractors only use cards of the same `cardType` as the current card.
+- `MultipleChoice` prefers distractors from the current session scope first, then falls back to same-type cards outside the session.
+- `Flashcard` uses `flashcardResult = Known` as correct and `flashcardResult = Learning` as incorrect.
+- `GET /api/learning/review/due-cards` is intended to feed `cardIds[]` into `POST /api/learning/sessions`.
+
+### Request and response models
+
+`StudySessionSettingsRequest`
+
+```json
+{
+  "flashcardFront": "Title",
+  "flashcardBack": "Summary",
+  "multipleChoiceQuestion": "TitleToSummary",
+  "shuffleOptions": true
+}
+```
+
+| Field | Type | Required | Enum | Notes |
+| ----- | ---- | -------- | ---- | ----- |
+| `flashcardFront` | `string \| null` | No | `Title`, `Summary` | Overrides default flashcard front |
+| `flashcardBack` | `string \| null` | No | `Title`, `Summary` | Overrides default flashcard back |
+| `multipleChoiceQuestion` | `string \| null` | No | `TitleToSummary`, `SummaryToTitle` | Controls MCQ direction |
+| `shuffleOptions` | `boolean \| null` | No | — | `null` means fallback to user default or system default |
+
+`StudySessionSettingsResponse`
+
+```json
+{
+  "flashcardFront": "Title",
+  "flashcardBack": "Summary",
+  "multipleChoiceQuestion": "TitleToSummary",
+  "shuffleOptions": true
+}
+```
+
+`StudySessionResponse`
+
+```json
+{
+  "id": "session-id",
+  "deckId": "deck-id",
+  "deckTitle": "JLPT N5 Core Vocabulary",
+  "mode": "MultipleChoice",
+  "folderIds": ["folder-1", "folder-2"],
+  "totalCards": 20,
+  "completedCards": 4,
+  "remainingCards": 16,
+  "correctCount": 3,
+  "incorrectCount": 1,
+  "createdAt": "2026-04-18T11:00:00Z",
+  "completedAt": null,
+  "settings": {
+    "flashcardFront": "Title",
+    "flashcardBack": "Summary",
+    "multipleChoiceQuestion": "TitleToSummary",
+    "shuffleOptions": true
+  }
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | `string` | Session id |
+| `deckId` | `string` | Owning deck id |
+| `deckTitle` | `string` | Owning deck title |
+| `mode` | `StudyMode` | Session mode |
+| `folderIds` | `string[]` | Derived folder scope from selected cards |
+| `totalCards` | `int` | Total cards in the session |
+| `completedCards` | `int` | Number of cards already submitted |
+| `remainingCards` | `int` | `totalCards - completedCards` |
+| `correctCount` | `int` | Number of correct or known submissions |
+| `incorrectCount` | `int` | Number of incorrect or learning submissions |
+| `createdAt` | `datetime` | Session creation time |
+| `completedAt` | `datetime \| null` | Set when all cards are submitted |
+| `settings` | `StudySessionSettingsResponse` | Snapshot stored on the session |
+
+`StudyQuestionResponse`
+
+```json
+{
+  "sessionId": "session-id",
+  "cardId": "card-id",
+  "cardType": "Vocab",
+  "mode": "MultipleChoice",
+  "prompt": "Chọn nghĩa đúng của thẻ",
+  "questionText": "食べる",
+  "secondaryText": null,
+  "hint": null,
+  "frontText": null,
+  "backText": null,
+  "allowsMultipleSelection": false,
+  "options": [
+    { "id": "ăn", "text": "ăn" },
+    { "id": "uống", "text": "uống" },
+    { "id": "ngủ", "text": "ngủ" },
+    { "id": "đi", "text": "đi" }
+  ],
+  "isCompleted": false
+}
+```
+
+| Field | Type | When used |
+| ----- | ---- | --------- |
+| `sessionId` | `string` | Always |
+| `cardId` | `string` | Always |
+| `cardType` | `CardType` | Always |
+| `mode` | `StudyMode` | Always |
+| `prompt` | `string` | Always |
+| `questionText` | `string \| null` | Fill-in-blank and multiple-choice |
+| `secondaryText` | `string \| null` | Fill-in-blank support text, usually sentence meaning |
+| `hint` | `string \| null` | Fill-in-blank only when configured |
+| `frontText` | `string \| null` | Flashcard front |
+| `backText` | `string \| null` | Flashcard back |
+| `allowsMultipleSelection` | `boolean` | Currently always `false` for multiple-choice |
+| `options` | `StudyQuestionOptionResponse[]` | Multiple-choice only |
+| `isCompleted` | `boolean` | Currently returned as `false` for active question payloads |
+
+`SubmitStudyAnswerResponse`
+
+```json
+{
+  "isCorrect": true,
+  "cardId": "card-id",
+  "mode": "Flashcard",
+  "acceptedAnswers": [],
+  "srsLevel": "level_2",
+  "nextReviewAt": "2026-04-19T11:05:00Z",
+  "isMastered": false,
+  "consecutiveCorrect": 1,
+  "completedCards": 1,
+  "remainingCards": 9
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `isCorrect` | `boolean` | For flashcard, `Known = true`, `Learning = false` |
+| `cardId` | `string` | Submitted card id |
+| `mode` | `StudyMode` | Mode used for evaluation |
+| `acceptedAnswers` | `string[]` | Correct answers used to judge submission |
+| `srsLevel` | `SrsLevel` | Progress level after update |
+| `nextReviewAt` | `datetime` | Next due time after update |
+| `isMastered` | `boolean` | `true` when level reaches `level_12` |
+| `consecutiveCorrect` | `int` | Current correct streak |
+| `completedCards` | `int` | Session progress after this submit |
+| `remainingCards` | `int` | Remaining cards after this submit |
+
+### POST `/api/learning/sessions` 🔒
+
+Create a new study session.
+
+**Request body**
+
+```json
+{
+  "deckId": "deck-id",
+  "cardIds": ["card-1", "card-2", "card-3"],
+  "mode": "MultipleChoice",
+  "settings": {
+    "multipleChoiceQuestion": "TitleToSummary",
+    "shuffleOptions": true
+  }
+}
+```
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `deckId` | `string` | Yes | Max length `100` |
+| `cardIds` | `string[]` | No | Each item max length `100`; empty array means all cards in deck |
+| `mode` | `string` | Yes | `FillInBlank`, `MultipleChoice`, or `Flashcard` |
+| `settings` | `StudySessionSettingsRequest \| null` | No | Optional per-session override |
+
+**Response data:** `StudySessionResponse`
+
+**Frontend notes**
+
+- Use `cardIds[]` when building a custom review session from `GET /api/learning/review/due-cards`.
+- If frontend needs "study whole deck", send `cardIds: []`.
+- If frontend already filtered cards by folder, it should still send the final card ids only.
+
+### GET `/api/learning/sessions/{sessionId}` 🔒
+
+Get session overview.
+
+**Response data:** `StudySessionResponse`
+
+### DELETE `/api/learning/sessions/{sessionId}` 🔒
+
+Delete a session owned by the current user.
+
+**Response data**
+
+```json
+true
+```
+
+### GET `/api/learning/history` 🔒
+
+Get recent sessions for the current user.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `limit` | `int` | `20` | Optional, must be `1..100` |
+
+**Response data:** `StudySessionResponse[]`
+
+**Frontend notes**
+
+- Order is newest first.
+- Use this endpoint for recent activity UI, "continue learning", or history list screens.
+
+### GET `/api/learning/sessions/{sessionId}/next` 🔒
+
+Get the next question for the session.
+
+**Response data:** `StudyQuestionResponse | null`
+
+Mode-specific behavior:
+
+- `FillInBlank`
+  - `prompt` explains fill-in action.
+  - `questionText` contains the sentence or fallback prompt.
+  - `secondaryText` usually contains sentence meaning or card title.
+  - `hint` is returned when sentence metadata has a hint.
+- `MultipleChoice`
+  - `questionText` is `title` when `multipleChoiceQuestion = TitleToSummary`.
+  - `questionText` is `summary` when `multipleChoiceQuestion = SummaryToTitle`.
+  - `options[].text` follows the inverse side of the same rule.
+  - Distractors use same `cardType` only.
+- `Flashcard`
+  - `frontText` and `backText` come from session settings.
+  - `questionText` and `options` are not used.
+
+**Frontend notes**
+
+- `null` means the session is completed or no more cards remain.
+- Frontend should call this endpoint after each successful submit to fetch the next card.
+
+### POST `/api/learning/sessions/{sessionId}/submit` 🔒
+
+Submit the answer for one card in the session.
+
+**Request body**
+
+```json
+{
+  "cardId": "card-id",
+  "answers": [],
+  "selectedOptionIds": ["ăn"],
+  "flashcardResult": null
+}
+```
+
+| Field | Type | Required | Used by | Validation |
+| ----- | ---- | -------- | ------- | ---------- |
+| `cardId` | `string` | Yes | All modes | Max length `100` |
+| `answers` | `string[]` | No | Fill-in-blank | Each item max length `200` |
+| `selectedOptionIds` | `string[]` | No | Multiple-choice | Each item max length `200` |
+| `flashcardResult` | `string \| null` | No | Flashcard | `Learning` or `Known` |
+
+**Valid examples**
+
+Fill-in-blank:
+
+```json
+{
+  "cardId": "card-id",
+  "answers": ["食べる"],
+  "selectedOptionIds": [],
+  "flashcardResult": null
+}
+```
+
+Multiple-choice:
+
+```json
+{
+  "cardId": "card-id",
+  "answers": [],
+  "selectedOptionIds": ["Động từ ăn"],
+  "flashcardResult": null
+}
+```
+
+Flashcard:
+
+```json
+{
+  "cardId": "card-id",
+  "answers": [],
+  "selectedOptionIds": [],
+  "flashcardResult": "Known"
+}
+```
+
+**Response data:** `SubmitStudyAnswerResponse`
+
+**Frontend notes**
+
+- Backend rejects submit if `cardId` is not in the session.
+- Backend rejects duplicate submit for a card already completed in the same session.
+- For flashcard UI, map buttons directly to:
+  - `Learning`
+  - `Known`
+
+### GET `/api/learning/sessions/{sessionId}/result` 🔒
+
+Get session result summary.
+
+**Response data**
+
+```json
+{
+  "sessionId": "session-id",
+  "deckId": "deck-id",
+  "deckTitle": "JLPT N5 Core Vocabulary",
+  "mode": "Flashcard",
+  "totalCards": 20,
+  "completedCards": 20,
+  "correctCount": 14,
+  "incorrectCount": 6,
+  "accuracy": 70.0,
+  "createdAt": "2026-04-18T11:00:00Z",
+  "completedAt": "2026-04-18T11:20:00Z",
+  "settings": {
+    "flashcardFront": "Title",
+    "flashcardBack": "Summary",
+    "multipleChoiceQuestion": "TitleToSummary",
+    "shuffleOptions": true
+  }
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `accuracy` | `double` | Percentage rounded to 2 decimals |
+| Other fields | Same semantics as session overview | — |
+
+### POST `/api/learning/sessions/{sessionId}/restart` 🔒
+
+Create a brand new session from the original session card scope and settings snapshot.
+
+**Request body**
+
+```json
+{}
+```
+
+**Response data:** `StudySessionResponse`
+
+**Frontend notes**
+
+- Restart does not mutate the old session.
+- Restart is useful for "study again" or "retry failed cards later" flows.
+
+### GET `/api/learning/review/today` 🔒
+
+Get due-card count summary for today.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `deckId` | `string` | `null` | Optional, max length `100` |
+| `folderIds` | `string[]` | `[]` | Optional filter inside a deck; each item max length `100` |
+
+**Response data**
+
+```json
+{
+  "deckId": "deck-id",
+  "folderIds": ["folder-1"],
+  "dueCount": 12,
+  "totalCards": 30
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `deckId` | `string \| null` | `null` when querying global due summary |
+| `folderIds` | `string[]` | Echoes effective folder scope when filtering by deck |
+| `dueCount` | `int` | Number of due cards matching the filter |
+| `totalCards` | `int` | Total cards in the filter scope |
+
+**Frontend notes**
+
+- If `deckId` is omitted, backend returns total due cards across all progress records for the current user.
+- If `deckId` is present and `folderIds` is empty, backend treats it as "all folders in that deck".
+
+### GET `/api/learning/review/due-cards` 🔒
+
+Get the global list of due card progresses for the current user.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `limit` | `int` | `20` | Optional, must be `1..100` |
+
+**Response data**
+
+```json
+[
+  {
+    "cardId": "card-id",
+    "cardType": "Vocab",
+    "title": "食べる",
+    "summary": "Động từ ăn",
+    "deckId": "deck-id",
+    "deckTitle": "JLPT N5 Core Vocabulary",
+    "srsLevel": "level_2",
+    "nextReviewAt": "2026-04-18T09:00:00Z",
+    "isMastered": false
+  }
+]
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `cardId` | `string` | Use this value in `POST /api/learning/sessions` |
+| `cardType` | `CardType` | Card type |
+| `title` | `string` | Card title |
+| `summary` | `string` | Card summary |
+| `deckId` | `string \| null` | The readable deck picked by backend for this card |
+| `deckTitle` | `string \| null` | Deck title for display |
+| `srsLevel` | `SrsLevel` | Current progress level |
+| `nextReviewAt` | `datetime` | Due time |
+| `isMastered` | `boolean` | Mastered flag |
+
+**Frontend notes**
+
+- To create a review session:
+  1. call `GET /api/learning/review/due-cards`
+  2. let user choose any subset
+  3. group selected cards by `deckId`
+  4. call `POST /api/learning/sessions` once per deck with the selected `cardIds[]`
+- If cross-deck mixed-card sessions are needed in the future, backend contract will need a new endpoint because current session still belongs to one `deckId`.
+
+### GET `/api/learning/progress/cards/{cardId}` 🔒
+
+Get current user progress for one card.
+
+**Response data**
+
+```json
+{
+  "cardId": "card-id",
+  "cardType": "Vocab",
+  "title": "食べる",
+  "summary": "Động từ ăn",
+  "srsLevel": "level_2",
+  "nextReviewAt": "2026-04-19T11:00:00Z",
+  "lastReviewedAt": "2026-04-18T11:00:00Z",
+  "consecutiveCorrect": 1,
+  "isMastered": false,
+  "lastSentenceId": "sentence-id"
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `lastReviewedAt` | `datetime \| null` | `null` when never reviewed |
+| `lastSentenceId` | `string \| null` | Used internally to reduce repeated fill-in sentence selection |
+
+**Frontend notes**
+
+- If the user never studied the card before, backend returns a synthetic default progress:
+  - `srsLevel = level_1`
+  - `consecutiveCorrect = 0`
+  - `isMastered = false`
+  - `nextReviewAt = now`
+
+### GET `/api/learning/settings/me` 🔒
+
+Get current user default learning settings.
+
+**Response data:** `StudySessionSettingsResponse`
+
+**Frontend notes**
+
+- This endpoint returns defaults even if the user has never saved settings before.
+- Current backend default values:
+  - `flashcardFront = Title`
+  - `flashcardBack = Summary`
+  - `multipleChoiceQuestion = TitleToSummary`
+  - `shuffleOptions = true`
+
+### PUT `/api/learning/settings/me` 🔒
+
+Create or update user default learning settings.
+
+**Request body**
+
+```json
+{
+  "flashcardFront": "Summary",
+  "flashcardBack": "Title",
+  "multipleChoiceQuestion": "SummaryToTitle",
+  "shuffleOptions": false
+}
+```
+
+**Response data:** `StudySessionSettingsResponse`
+
+**Frontend notes**
+
+- Partial update is supported. Omitted fields keep the previous value.
+- Use this endpoint for persistent user preferences.
+- Session-specific overrides should still be sent in `POST /api/learning/sessions`.
+
+### Learning error codes
+
+| Code | Description |
+| ---- | ----------- |
+| `Learning_SessionNotFound_404` | Session does not exist or does not belong to the current user |
+| `Learning_SessionCompleted_400` | Session is already completed and can no longer accept submit |
+| `Learning_InvalidMode_400` | Invalid study mode value |
+| `Learning_InvalidScope_400` | Provided `cardIds` or `folderIds` do not belong to the selected deck |
+| `Learning_CardNotInSession_400` | Submitted card is not part of the session |
+| `Learning_InvalidSubmission_400` | Duplicate submit or invalid submit state |
+| `Learning_NoCardsAvailable_400` | Session scope resolves to zero cards |
+
+### Suggested frontend flows
+
+1. Normal deck study
+- Load deck detail or folder cards from existing deck APIs.
+- Let user select mode and optional settings.
+- Call `POST /api/learning/sessions`.
+- Loop:
+  - `GET /api/learning/sessions/{sessionId}/next`
+  - `POST /api/learning/sessions/{sessionId}/submit`
+- End with `GET /api/learning/sessions/{sessionId}/result`.
+
+2. Review due cards
+- Call `GET /api/learning/review/due-cards`.
+- Let user select an arbitrary number of cards.
+- Group by `deckId`.
+- Create one session per deck with `cardIds[]`.
+
+3. Settings flow
+- Load `GET /api/learning/settings/me` on settings page.
+- Save persistent defaults with `PUT /api/learning/settings/me`.
+- When opening a one-off study modal, send temporary overrides in `POST /api/learning/sessions` instead of mutating user defaults.
+
+---
+
 ## Phụ lục: Tổng hợp Error Codes
 
 ### Common
@@ -3283,3 +3922,15 @@ const deckAdminKeys = {
 | `Deck_ForkSourceInvalid_400` | Deck nguồn để fork không hợp lệ |
 | `Deck_CardDuplicatedInDeck_400` | Card đã tồn tại ở folder khác trong cùng deck |
 | `Deck_InvalidReorderPayload_400` | Payload reorder không hợp lệ |
+
+### Learning
+
+| Code | Mô tả |
+| ---- | ----- |
+| `Learning_SessionNotFound_404` | Session không tồn tại hoặc không thuộc user hiện tại |
+| `Learning_SessionCompleted_400` | Session đã hoàn thành và không thể submit tiếp |
+| `Learning_InvalidMode_400` | Mode học không hợp lệ |
+| `Learning_InvalidScope_400` | Card hoặc folder không thuộc deck được chọn |
+| `Learning_CardNotInSession_400` | Card submit không nằm trong session |
+| `Learning_InvalidSubmission_400` | Submit không hợp lệ hoặc submit trùng card đã làm |
+| `Learning_NoCardsAvailable_400` | Không có card nào để tạo session |

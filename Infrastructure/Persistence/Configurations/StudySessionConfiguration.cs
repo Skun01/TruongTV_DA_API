@@ -26,6 +26,24 @@ public class StudySessionConfiguration : IEntityTypeConfiguration<StudySession>
             .HasMaxLength(30)
             .IsRequired();
 
+        builder.Property(x => x.FlashcardFront)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(FlashcardContentType.Title);
+
+        builder.Property(x => x.FlashcardBack)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(FlashcardContentType.Summary);
+
+        builder.Property(x => x.MultipleChoiceQuestion)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .HasDefaultValue(MultipleChoiceQuestionType.TitleToSummary);
+
+        builder.Property(x => x.ShuffleOptions)
+            .HasDefaultValue(true);
+
         builder.Property(x => x.SelectedFolderIds)
             .HasColumnType("text[]")
             .HasDefaultValueSql("'{}'::text[]");

@@ -65,4 +65,5 @@ public interface ICardRepository : IRepository<Card>
 		int page,
 		int pageSize);
 	Task<Card?> GetStudyCardByIdAsync(string cardId);
+	Task<List<Card>> GetStudyCardsByIdsAsync(List<string> cardIds);
 }

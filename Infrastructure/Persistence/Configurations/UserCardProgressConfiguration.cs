@@ -16,7 +16,7 @@ public class UserCardProgressConfiguration : IEntityTypeConfiguration<UserCardPr
         builder.Property(x => x.SrsLevel)
             .HasConversion<string>()
             .HasMaxLength(20)
-            .HasDefaultValue(SrsLevel.Level1);
+            .HasDefaultValue(SrsLevel.level_1);
 
         builder.Property(x => x.NextReviewAt)
             .IsRequired();

@@ -1,5 +1,6 @@
 using Application.IRepositories;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,11 @@ public class UserCardProgressRepository : Repository<UserCardProgress>, IUserCar
     {
         return await _context.UserCardProgresses
             .AsNoTracking()
-            .Where(x => x.UserId == userId && cardIds.Contains(x.CardId) && x.NextReviewAt <= reviewAt)
+            .Where(x => x.UserId == userId
+                && cardIds.Contains(x.CardId)
+                && !x.IsMastered
+                && x.SrsLevel != SrsLevel.level_12
+                && x.NextReviewAt <= reviewAt)
             .ToListAsync();
     }
 
@@ -29,7 +34,10 @@ public class UserCardProgressRepository : Repository<UserCardProgress>, IUserCar
     {
         return await _context.UserCardProgresses
             .AsNoTracking()
-            .Where(x => x.UserId == userId && x.NextReviewAt <= reviewAt)
+            .Where(x => x.UserId == userId
+                && !x.IsMastered
+                && x.SrsLevel != SrsLevel.level_12
+                && x.NextReviewAt <= reviewAt)
             .ToListAsync();
     }
 }
