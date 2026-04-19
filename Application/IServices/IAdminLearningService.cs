@@ -17,4 +17,5 @@ public interface IAdminLearningService
     Task<LearningAdminOverviewResponse> GetOverviewAsync();
     Task<DeckLearningAnalyticsResponse> GetDeckAnalyticsAsync(string deckId);
     Task<CardLearningAnalyticsResponse> GetCardAnalyticsAsync(string cardId);
+    Task<UserLearningProgressResponse> GetUserProgressAsync(string userId);
 }

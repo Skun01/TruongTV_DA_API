@@ -3864,7 +3864,19 @@ Current responsibilities covered:
 - attach, remove, and reorder card sentences for learning
 - list cards with learning-content issues
 - inspect deck-level learning coverage
+- inspect admin analytics at overview, deck, card, and user level
 - preview the exact study content that user-facing APIs will generate
+
+Recommended frontend admin screens that use this module:
+
+- card learning config tab
+- sentence management row editor / drag-and-drop list
+- learning QA issue list
+- deck learning coverage dashboard
+- admin learning overview dashboard
+- deck analytics page
+- card analytics drawer/page
+- user learning support page
 
 ### 15.1 Endpoint inventory
 
@@ -3881,7 +3893,42 @@ Current responsibilities covered:
 | `GET` | `/api/admin/learning/overview` | Return top-level learning analytics for the admin dashboard |
 | `GET` | `/api/admin/learning/decks/{deckId}/analytics` | Return session and progress analytics for one deck |
 | `GET` | `/api/admin/learning/cards/{cardId}/analytics` | Return progress and usage analytics for one card |
+| `GET` | `/api/admin/learning/users/{userId}/progress` | Return summary learning progress for one user |
 | `GET` | `/api/admin/learning/cards/{cardId}/preview` | Preview one generated exercise for the selected card and mode |
+
+### 15.1.1 Endpoint groups by frontend use case
+
+Use this grouping when splitting frontend work across pages or components.
+
+#### Card config page
+
+- `GET /api/admin/learning/cards/{cardId}/config`
+- `PUT /api/admin/learning/cards/{cardId}/config`
+- `POST /api/admin/learning/cards/{cardId}/sentences`
+- `PUT /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+- `DELETE /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+- `POST /api/admin/learning/cards/{cardId}/sentences/reorder`
+- `GET /api/admin/learning/cards/{cardId}/preview`
+
+#### QA / validation pages
+
+- `GET /api/admin/learning/cards/issues`
+- `GET /api/admin/learning/decks/{deckId}/coverage`
+
+#### Analytics pages
+
+- `GET /api/admin/learning/overview`
+- `GET /api/admin/learning/decks/{deckId}/analytics`
+- `GET /api/admin/learning/cards/{cardId}/analytics`
+- `GET /api/admin/learning/users/{userId}/progress`
+
+#### Typical admin flow
+
+1. Open card detail and call `GET /api/admin/learning/cards/{cardId}/config`.
+2. Edit summary or sentence metadata with `PUT /config` or row-level sentence APIs.
+3. Preview the generated exercise with `GET /api/admin/learning/cards/{cardId}/preview`.
+4. Check deck readiness with `GET /api/admin/learning/decks/{deckId}/coverage`.
+5. Investigate broken content with `GET /api/admin/learning/cards/issues`.
 
 ### 15.2 Shared concepts
 
@@ -3980,6 +4027,7 @@ Frontend notes:
 
 - `issues` is always based on current backend validation logic
 - admin UI can use `availableModes` directly for badges or readiness chips
+- this endpoint is the best source for initializing the full card learning form state
 
 ### 15.4 `PUT /api/admin/learning/cards/{cardId}/config`
 
@@ -4053,6 +4101,7 @@ Frontend notes:
 
 - this is the preferred save endpoint for the admin learning tab
 - frontend should send the full desired sentence config list, not only changed items
+- if your UI already has row-level edits, you can still keep `PUT /config` as the single save action for the whole tab
 
 ### 15.5 `POST /api/admin/learning/cards/{cardId}/sentences`
 
@@ -4108,6 +4157,7 @@ Frontend notes:
 
 - backend rejects duplicate relations with `Learning_SentenceAlreadyAttached_400`
 - this endpoint does not modify other attached sentences
+- good fit for a modal or command-palette style sentence picker
 
 ### 15.6 `PUT /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
 
@@ -4244,6 +4294,7 @@ Frontend notes:
 
 - the response returns the full attached sentence list ordered by the new positions
 - if any sentence in the request is not attached to the card, backend returns `Learning_SentenceNotAttached_404`
+- after reorder succeeds, frontend can replace local sentence state with the response payload directly
 
 ### 15.9 `GET /api/admin/learning/cards/issues`
 
@@ -4303,6 +4354,7 @@ Frontend notes:
 - only cards with at least one matching issue are returned
 - use `metaData.total` for issue count after filters
 - `availableModes` already reflects the remaining usable modes for the card
+- ideal query key shape for frontend caching: `learning-admin-issues`, `{ page, pageSize, cardType, mode, issueType, q, deckId }`
 
 ### 15.10 `GET /api/admin/learning/decks/{deckId}/coverage`
 
@@ -4354,6 +4406,7 @@ Frontend notes:
 
 - ideal for deck QA pages and publish-readiness banners
 - combine with `GET /api/admin/learning/cards/issues?deckId=...` for drill-down
+- this endpoint is summary-oriented; use `cards/issues` when frontend needs actionable rows
 
 ### 15.11 `GET /api/admin/learning/overview`
 
@@ -4392,6 +4445,7 @@ Frontend notes:
 
 - this endpoint is suitable for admin dashboard summary cards
 - all “today” metrics are computed from the current UTC day on the server
+- polling is optional; if you do poll, keep it coarse because these are aggregate metrics
 
 ### 15.12 `GET /api/admin/learning/decks/{deckId}/analytics`
 
@@ -4457,6 +4511,7 @@ Frontend notes:
 
 - this is useful for deck analytics dashboards, not for real-time per-attempt monitoring
 - `trackedCards`, `masteredCards`, and `dueCards` are card-level counts, not user-level counts
+- render `modeBreakdown` as a flat table or compact chart; it is already grouped for you
 
 ### 15.13 `GET /api/admin/learning/cards/{cardId}/analytics`
 
@@ -4515,8 +4570,79 @@ Frontend notes:
 
 - this endpoint is useful for content QA and operational visibility
 - because there is no per-submission log table yet, this endpoint does not expose wrong-answer breakdowns or sentence-level failure analytics
+- if frontend needs a richer analytics page later, backend will need attempt-log APIs rather than expanding this response only
 
-### 15.14 `GET /api/admin/learning/cards/{cardId}/preview`
+### 15.14 `GET /api/admin/learning/users/{userId}/progress`
+
+Return summary learning progress for one user.
+
+This endpoint is intended for:
+
+- support workflows
+- admin audit views
+- quick inspection of a user’s overall SRS state
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `userId` | `string` | Yes | Target user id |
+
+Success response:
+
+```json
+{
+  "userId": "user-id",
+  "username": "alice",
+  "email": "alice@example.com",
+  "totalTrackedCards": 420,
+  "masteredCards": 90,
+  "dueCards": 57,
+  "averageSrsLevel": 4.73,
+  "averageConsecutiveCorrect": 2.11,
+  "lastReviewedAt": "2026-04-19T05:21:14Z",
+  "recentSessionCount": 20,
+  "srsDistribution": [
+    { "srsLevel": "level_1", "cardCount": 80 },
+    { "srsLevel": "level_12", "cardCount": 90 }
+  ],
+  "decks": [
+    {
+      "deckId": "deck-1",
+      "deckTitle": "N5 Week 1",
+      "trackedCards": 120,
+      "masteredCards": 24,
+      "dueCards": 13
+    }
+  ]
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `userId` | `string` | Target user id |
+| `username` | `string` | User display/login name |
+| `email` | `string` | User email |
+| `totalTrackedCards` | `int` | Distinct cards with at least one progress row for the user |
+| `masteredCards` | `int` | Distinct tracked cards already mastered |
+| `dueCards` | `int` | Distinct tracked cards currently due |
+| `averageSrsLevel` | `double` | Average SRS level number across all progress rows |
+| `averageConsecutiveCorrect` | `double` | Average consecutive-correct streak across all progress rows |
+| `lastReviewedAt` | `datetime?` | Most recent review timestamp across all progress rows |
+| `recentSessionCount` | `int` | Count of the latest 20 sessions returned by backend for this user |
+| `srsDistribution` | `UserLearningSrsDistributionResponse[]` | Card count grouped by SRS level |
+| `decks` | `UserLearningDeckProgressResponse[]` | Deck summaries for decks that currently contain tracked cards |
+
+Frontend notes:
+
+- deck summaries are derived from decks that currently contain the user’s tracked cards
+- if the same card exists in multiple decks, it may contribute to multiple deck summaries
+- this endpoint is summary-only and does not return full card-level progress rows
+- this is intended for support/audit views, not for rendering a full student learning history page
+
+### 15.15 `GET /api/admin/learning/cards/{cardId}/preview`
 
 Preview one generated exercise for the selected card and mode without creating a study session.
 
@@ -4612,11 +4738,223 @@ Frontend notes:
 - `warnings[]` is intended for admin UI hints, not blocking errors
 - preview never creates `study_sessions` or `user_card_progress`
 
-### 15.15 Next recommended admin phases
+### 15.16 Frontend integration checklist
+
+If another agent is implementing the admin UI, this is the minimum contract they need to follow:
+
+1. Treat `GET /api/admin/learning/cards/{cardId}/config` as the source of truth for the card learning tab.
+2. Use `PUT /api/admin/learning/cards/{cardId}/config` for full-form save.
+3. Use row-level sentence APIs only when the UI needs inline add/edit/delete/reorder behavior.
+4. Use `GET /api/admin/learning/cards/{cardId}/preview` before publish or before saving if the UX needs immediate preview.
+5. Build QA pages from `GET /api/admin/learning/cards/issues` and `GET /api/admin/learning/decks/{deckId}/coverage`.
+6. Build dashboard/analytics screens from:
+   - `GET /api/admin/learning/overview`
+   - `GET /api/admin/learning/decks/{deckId}/analytics`
+   - `GET /api/admin/learning/cards/{cardId}/analytics`
+   - `GET /api/admin/learning/users/{userId}/progress`
+7. Treat all enums as case-sensitive strings exactly as documented in this file.
+
+### 15.17 Frontend task breakdown
+
+Use this breakdown when assigning work to a frontend admin agent.
+
+#### Page 1: Card learning config tab
+
+Primary queries:
+
+- `GET /api/admin/learning/cards/{cardId}/config`
+- optional preview query: `GET /api/admin/learning/cards/{cardId}/preview`
+
+Primary mutations:
+
+- `PUT /api/admin/learning/cards/{cardId}/config`
+- `POST /api/admin/learning/cards/{cardId}/sentences`
+- `PUT /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+- `DELETE /api/admin/learning/cards/{cardId}/sentences/{sentenceId}`
+- `POST /api/admin/learning/cards/{cardId}/sentences/reorder`
+
+Suggested UI blocks:
+
+- readiness badges: `isFillInBlankReady`, `isMultipleChoiceReady`, `isFlashcardReady`
+- issue list: `issues[]`
+- sentence table with inline edit actions
+- add sentence modal / picker
+- drag-and-drop sentence reorder
+- preview panel with mode switch
+
+Suggested query invalidation after mutation success:
+
+- invalidate `GET /api/admin/learning/cards/{cardId}/config`
+- invalidate preview query for the same `cardId`
+- optionally invalidate `GET /api/admin/learning/cards/issues`
+
+State guidance:
+
+- server state:
+  - config payload
+  - preview payload
+- local UI state:
+  - unsaved form edits
+  - sentence row edit mode
+  - preview mode selector
+
+#### Page 2: Learning issues page
+
+Primary query:
+
+- `GET /api/admin/learning/cards/issues`
+
+Suggested filters:
+
+- `cardType`
+- `mode`
+- `issueType`
+- `q`
+- `deckId`
+- pagination
+
+Suggested UI blocks:
+
+- filter bar
+- paginated issue table
+- mode availability chips from `availableModes`
+- issue badges or stacked text rows
+- deep links to card detail or deck detail
+
+Suggested query key shape:
+
+- `learning-admin-issues`, `{ page, pageSize, cardType, mode, issueType, q, deckId }`
+
+State guidance:
+
+- server state:
+  - issue list and pagination
+- local UI state:
+  - filter form before apply
+
+#### Page 3: Deck learning coverage page
+
+Primary query:
+
+- `GET /api/admin/learning/decks/{deckId}/coverage`
+
+Suggested companion query:
+
+- `GET /api/admin/learning/cards/issues?deckId={deckId}`
+
+Suggested UI blocks:
+
+- top summary cards
+- breakdown by card type
+- CTA links to filtered issue list
+
+Suggested invalidation:
+
+- after any card config mutation affecting a card in that deck, invalidate deck coverage and deck-scoped issue list
+
+#### Page 4: Admin learning dashboard
+
+Primary query:
+
+- `GET /api/admin/learning/overview`
+
+Suggested UI blocks:
+
+- summary metric cards
+- optional refresh action
+
+State guidance:
+
+- server state only
+- optional coarse polling if product wants near-live dashboard numbers
+
+#### Page 5: Deck analytics page
+
+Primary query:
+
+- `GET /api/admin/learning/decks/{deckId}/analytics`
+
+Suggested UI blocks:
+
+- summary cards for sessions, submissions, average accuracy
+- mode breakdown table or chart
+- tracked/mastered/due card counters
+
+State guidance:
+
+- server state only
+
+#### Page 6: Card analytics drawer/page
+
+Primary query:
+
+- `GET /api/admin/learning/cards/{cardId}/analytics`
+
+Suggested UI blocks:
+
+- summary section for tracked users and due users
+- SRS distribution chart
+- deck usage list
+
+State guidance:
+
+- server state only
+
+#### Page 7: User learning support page
+
+Primary query:
+
+- `GET /api/admin/learning/users/{userId}/progress`
+
+Suggested UI blocks:
+
+- user identity header
+- summary cards for tracked/mastered/due cards
+- SRS distribution chart
+- deck summaries table
+
+State guidance:
+
+- server state only
+
+#### Recommended cache invalidation map
+
+- After `PUT /cards/{cardId}/config`:
+  - invalidate card config
+  - invalidate card preview
+  - invalidate issues list
+  - invalidate deck coverage if current UI knows affected `deckId`
+- After `POST /cards/{cardId}/sentences`:
+  - invalidate card config
+  - invalidate card preview
+  - invalidate issues list
+- After `PUT /cards/{cardId}/sentences/{sentenceId}`:
+  - invalidate card config
+  - invalidate card preview
+  - invalidate issues list
+- After `DELETE /cards/{cardId}/sentences/{sentenceId}`:
+  - invalidate card config
+  - invalidate card preview
+  - invalidate issues list
+- After `POST /cards/{cardId}/sentences/reorder`:
+  - invalidate card config
+  - invalidate card preview only if preview currently depends on sentence order
+
+#### Suggested implementation order for frontend admin
+
+1. Card learning config tab
+2. Preview panel inside card config tab
+3. Learning issues page
+4. Deck learning coverage page
+5. Admin overview dashboard
+6. Deck analytics page
+7. Card analytics page
+8. User learning support page
+
+### 15.18 Next recommended admin phases
 
 The following admin APIs are still recommended for later phases:
 
-- `GET /api/admin/learning/users/{userId}/progress`
 - attempt history / answer logs if you want wrong-answer analytics, sentence-level failure rates, or common distractor reports
 
 ---

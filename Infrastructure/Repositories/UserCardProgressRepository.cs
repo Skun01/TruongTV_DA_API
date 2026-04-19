@@ -51,6 +51,14 @@ public class UserCardProgressRepository : Repository<UserCardProgress>, IUserCar
             .ToListAsync();
     }
 
+    public async Task<List<UserCardProgress>> GetByUserIdAsync(string userId)
+    {
+        return await _context.UserCardProgresses
+            .AsNoTracking()
+            .Where(x => x.UserId == userId)
+            .ToListAsync();
+    }
+
     public async Task<List<UserCardProgress>> GetByCardIdsAsync(List<string> cardIds)
     {
         return await _context.UserCardProgresses

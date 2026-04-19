@@ -139,6 +139,16 @@ public class AdminLearningController : BaseController
     }
 
     /// <summary>
+    /// Lấy summary tiến độ learning của một user.
+    /// </summary>
+    [HttpGet("users/{userId}/progress")]
+    public async Task<ApiResponse<UserLearningProgressResponse>> GetUserProgress([FromRoute] string userId)
+    {
+        var result = await _adminLearningService.GetUserProgressAsync(userId);
+        return ApiResponse<UserLearningProgressResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
     /// Preview nội dung câu hỏi mà user frontend sẽ thấy cho một card.
     /// </summary>
     [HttpGet("cards/{cardId}/preview")]

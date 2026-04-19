@@ -389,6 +389,93 @@ public class AdminLearningService : IAdminLearningService
         };
     }
 
+    public async Task<UserLearningProgressResponse> GetUserProgressAsync(string userId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId)
+            ?? throw new AppException(MessageConstants.CommonMessage.NOT_FOUND, 404);
+
+        var progresses = await _unitOfWork.UserCardProgresses.GetByUserIdAsync(userId);
+        var recentSessions = await _unitOfWork.StudySessions.GetRecentByUserAsync(userId, 20);
+        var trackedCardIds = progresses
+            .Select(x => x.CardId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var decks = trackedCardIds.Count == 0
+            ? new List<Deck>()
+            : await _unitOfWork.Decks.GetAdminDecksContainingCardIdsAsync(trackedCardIds);
+
+        return new UserLearningProgressResponse
+        {
+            UserId = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            TotalTrackedCards = trackedCardIds.Count,
+            MasteredCards = progresses
+                .Where(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12)
+                .Select(x => x.CardId)
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
+            DueCards = progresses
+                .Where(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow)
+                .Select(x => x.CardId)
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
+            AverageSrsLevel = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => (int)x.SrsLevel) + 1, 2),
+            AverageConsecutiveCorrect = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => x.ConsecutiveCorrect), 2),
+            LastReviewedAt = progresses
+                .Where(x => x.LastReviewedAt.HasValue)
+                .OrderByDescending(x => x.LastReviewedAt)
+                .Select(x => x.LastReviewedAt)
+                .FirstOrDefault(),
+            RecentSessionCount = recentSessions.Count,
+            SrsDistribution = progresses
+                .GroupBy(x => x.SrsLevel)
+                .OrderBy(x => x.Key)
+                .Select(group => new UserLearningSrsDistributionResponse
+                {
+                    SrsLevel = group.Key.ToString(),
+                    CardCount = group.Count(),
+                })
+                .ToList(),
+            Decks = decks
+                .OrderBy(x => x.Title)
+                .Select(deck =>
+                {
+                    var deckCardIds = deck.Folders
+                        .SelectMany(folder => folder.FolderCards)
+                        .Select(folderCard => folderCard.CardId)
+                        .Distinct(StringComparer.Ordinal)
+                        .ToList();
+
+                    var deckProgresses = progresses
+                        .Where(progress => deckCardIds.Contains(progress.CardId, StringComparer.Ordinal))
+                        .ToList();
+
+                    return new UserLearningDeckProgressResponse
+                    {
+                        DeckId = deck.Id,
+                        DeckTitle = deck.Title,
+                        TrackedCards = deckProgresses
+                            .Select(x => x.CardId)
+                            .Distinct(StringComparer.Ordinal)
+                            .Count(),
+                        MasteredCards = deckProgresses
+                            .Where(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12)
+                            .Select(x => x.CardId)
+                            .Distinct(StringComparer.Ordinal)
+                            .Count(),
+                        DueCards = deckProgresses
+                            .Where(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow)
+                            .Select(x => x.CardId)
+                            .Distinct(StringComparer.Ordinal)
+                            .Count(),
+                    };
+                })
+                .Where(x => x.TrackedCards > 0)
+                .ToList(),
+        };
+    }
+
     public async Task<LearningPreviewResponse> PreviewCardAsync(string cardId, LearningPreviewQuery query)
     {
         var card = await GetLearningCardRequiredAsync(cardId);
