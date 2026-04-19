@@ -14,4 +14,7 @@ public interface IAdminLearningService
     Task<(List<LearningAdminCardIssueResponse> Items, MetaData Meta)> GetCardIssuesAsync(LearningAdminCardIssuesQuery query);
     Task<DeckLearningCoverageResponse> GetDeckCoverageAsync(string deckId);
     Task<LearningPreviewResponse> PreviewCardAsync(string cardId, LearningPreviewQuery query);
+    Task<LearningAdminOverviewResponse> GetOverviewAsync();
+    Task<DeckLearningAnalyticsResponse> GetDeckAnalyticsAsync(string deckId);
+    Task<CardLearningAnalyticsResponse> GetCardAnalyticsAsync(string cardId);
 }

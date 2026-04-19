@@ -3878,6 +3878,9 @@ Current responsibilities covered:
 | `POST` | `/api/admin/learning/cards/{cardId}/sentences/reorder` | Reorder sentence positions for one card |
 | `GET` | `/api/admin/learning/cards/issues` | List cards that currently have learning-content issues |
 | `GET` | `/api/admin/learning/decks/{deckId}/coverage` | Return learning readiness statistics for one deck |
+| `GET` | `/api/admin/learning/overview` | Return top-level learning analytics for the admin dashboard |
+| `GET` | `/api/admin/learning/decks/{deckId}/analytics` | Return session and progress analytics for one deck |
+| `GET` | `/api/admin/learning/cards/{cardId}/analytics` | Return progress and usage analytics for one card |
 | `GET` | `/api/admin/learning/cards/{cardId}/preview` | Preview one generated exercise for the selected card and mode |
 
 ### 15.2 Shared concepts
@@ -4352,7 +4355,168 @@ Frontend notes:
 - ideal for deck QA pages and publish-readiness banners
 - combine with `GET /api/admin/learning/cards/issues?deckId=...` for drill-down
 
-### 15.11 `GET /api/admin/learning/cards/{cardId}/preview`
+### 15.11 `GET /api/admin/learning/overview`
+
+Return top-level learning analytics for the admin dashboard.
+
+This endpoint is derived from:
+
+- `study_sessions` created from the start of the current UTC day
+- global due-card count from `user_card_progress`
+
+Success response:
+
+```json
+{
+  "activeUsersToday": 245,
+  "sessionsToday": 612,
+  "completedSessionsToday": 480,
+  "submissionsToday": 4810,
+  "dueCardsNow": 1930,
+  "averageAccuracy": 78.42
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `activeUsersToday` | `int` | Distinct users with at least one session created today |
+| `sessionsToday` | `int` | Total sessions created today |
+| `completedSessionsToday` | `int` | Sessions with `completedAt != null` created today |
+| `submissionsToday` | `int` | Sum of `correctCount + incorrectCount` across today’s sessions |
+| `dueCardsNow` | `int` | Global count of non-mastered due progress rows at request time |
+| `averageAccuracy` | `double` | Accuracy percentage over today’s session submissions |
+
+Frontend notes:
+
+- this endpoint is suitable for admin dashboard summary cards
+- all “today” metrics are computed from the current UTC day on the server
+
+### 15.12 `GET /api/admin/learning/decks/{deckId}/analytics`
+
+Return session-level and progress-level analytics for one deck.
+
+This endpoint aggregates:
+
+- all `study_sessions` with `deckId = {deckId}`
+- all `user_card_progress` rows for cards that belong to the deck
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `deckId` | `string` | Yes | Target deck id |
+
+Success response:
+
+```json
+{
+  "deckId": "deck-id",
+  "deckTitle": "N5 Week 1",
+  "sessionCount": 842,
+  "completedSessionCount": 610,
+  "submissionCount": 5420,
+  "averageAccuracy": 74.18,
+  "trackedCards": 95,
+  "masteredCards": 24,
+  "dueCards": 31,
+  "modeBreakdown": [
+    {
+      "mode": "FillInBlank",
+      "sessionCount": 120,
+      "completedSessionCount": 88,
+      "submissionCount": 820,
+      "averageAccuracy": 58.17
+    },
+    {
+      "mode": "MultipleChoice",
+      "sessionCount": 402,
+      "completedSessionCount": 310,
+      "submissionCount": 2710,
+      "averageAccuracy": 81.25
+    }
+  ]
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `sessionCount` | `int` | Sessions created for the deck |
+| `completedSessionCount` | `int` | Sessions for the deck with `completedAt != null` |
+| `submissionCount` | `int` | Sum of `correctCount + incorrectCount` over deck sessions |
+| `averageAccuracy` | `double` | Accuracy percentage over deck sessions |
+| `trackedCards` | `int` | Distinct deck cards that already have at least one `user_card_progress` row |
+| `masteredCards` | `int` | Distinct deck cards with at least one mastered progress row |
+| `dueCards` | `int` | Distinct deck cards that are currently due for review |
+| `modeBreakdown` | `DeckLearningModeAnalyticsResponse[]` | Session metrics grouped by `StudyMode` |
+
+Frontend notes:
+
+- this is useful for deck analytics dashboards, not for real-time per-attempt monitoring
+- `trackedCards`, `masteredCards`, and `dueCards` are card-level counts, not user-level counts
+
+### 15.13 `GET /api/admin/learning/cards/{cardId}/analytics`
+
+Return progress and usage analytics for one card.
+
+This endpoint is intentionally limited to metrics that can be derived from current schema. It does not include per-answer history because backend does not store detailed submission logs yet.
+
+Path params:
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `cardId` | `string` | Yes | Target card id |
+
+Success response:
+
+```json
+{
+  "cardId": "card-id",
+  "cardType": "Grammar",
+  "title": "〜ている",
+  "summary": "is doing",
+  "includedSessionCount": 220,
+  "includedCompletedSessionCount": 170,
+  "trackedUsers": 84,
+  "masteredUsers": 19,
+  "dueUsers": 27,
+  "averageSrsLevel": 4.82,
+  "averageConsecutiveCorrect": 2.17,
+  "lastReviewedAt": "2026-04-19T03:42:11Z",
+  "srsDistribution": [
+    { "srsLevel": "level_1", "userCount": 12 },
+    { "srsLevel": "level_12", "userCount": 19 }
+  ],
+  "decks": [
+    { "deckId": "deck-1", "deckTitle": "N5 Week 1" }
+  ]
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `includedSessionCount` | `int` | Number of sessions whose `cardIds[]` contains this card |
+| `includedCompletedSessionCount` | `int` | Number of completed sessions whose `cardIds[]` contains this card |
+| `trackedUsers` | `int` | Distinct users with a progress row for this card |
+| `masteredUsers` | `int` | Users whose progress for the card is mastered |
+| `dueUsers` | `int` | Users whose progress for the card is currently due |
+| `averageSrsLevel` | `double` | Average SRS level number across all progress rows for the card |
+| `averageConsecutiveCorrect` | `double` | Average consecutive-correct streak across all progress rows for the card |
+| `lastReviewedAt` | `datetime?` | Most recent `lastReviewedAt` across all progress rows |
+| `srsDistribution` | `CardLearningSrsDistributionResponse[]` | User count grouped by SRS level |
+| `decks` | `CardLearningDeckUsageResponse[]` | Decks that currently contain this card |
+
+Frontend notes:
+
+- this endpoint is useful for content QA and operational visibility
+- because there is no per-submission log table yet, this endpoint does not expose wrong-answer breakdowns or sentence-level failure analytics
+
+### 15.14 `GET /api/admin/learning/cards/{cardId}/preview`
 
 Preview one generated exercise for the selected card and mode without creating a study session.
 
@@ -4448,14 +4612,12 @@ Frontend notes:
 - `warnings[]` is intended for admin UI hints, not blocking errors
 - preview never creates `study_sessions` or `user_card_progress`
 
-### 15.12 Next recommended admin phases
+### 15.15 Next recommended admin phases
 
 The following admin APIs are still recommended for later phases:
 
-- `GET /api/admin/learning/overview`
-- `GET /api/admin/learning/decks/{deckId}/analytics`
-- `GET /api/admin/learning/cards/{cardId}/analytics`
 - `GET /api/admin/learning/users/{userId}/progress`
+- attempt history / answer logs if you want wrong-answer analytics, sentence-level failure rates, or common distractor reports
 
 ---
 

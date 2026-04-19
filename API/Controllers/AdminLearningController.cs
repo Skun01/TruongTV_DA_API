@@ -109,6 +109,36 @@ public class AdminLearningController : BaseController
     }
 
     /// <summary>
+    /// Lấy dashboard analytics tổng quan của learning.
+    /// </summary>
+    [HttpGet("overview")]
+    public async Task<ApiResponse<LearningAdminOverviewResponse>> GetOverview()
+    {
+        var result = await _adminLearningService.GetOverviewAsync();
+        return ApiResponse<LearningAdminOverviewResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy analytics học tập của một deck.
+    /// </summary>
+    [HttpGet("decks/{deckId}/analytics")]
+    public async Task<ApiResponse<DeckLearningAnalyticsResponse>> GetDeckAnalytics([FromRoute] string deckId)
+    {
+        var result = await _adminLearningService.GetDeckAnalyticsAsync(deckId);
+        return ApiResponse<DeckLearningAnalyticsResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy analytics học tập của một card.
+    /// </summary>
+    [HttpGet("cards/{cardId}/analytics")]
+    public async Task<ApiResponse<CardLearningAnalyticsResponse>> GetCardAnalytics([FromRoute] string cardId)
+    {
+        var result = await _adminLearningService.GetCardAnalyticsAsync(cardId);
+        return ApiResponse<CardLearningAnalyticsResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
     /// Preview nội dung câu hỏi mà user frontend sẽ thấy cho một card.
     /// </summary>
     [HttpGet("cards/{cardId}/preview")]

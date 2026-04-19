@@ -40,4 +40,30 @@ public class UserCardProgressRepository : Repository<UserCardProgress>, IUserCar
                 && x.NextReviewAt <= reviewAt)
             .ToListAsync();
     }
+
+    public async Task<List<UserCardProgress>> GetAllDueAsync(DateTime reviewAt)
+    {
+        return await _context.UserCardProgresses
+            .AsNoTracking()
+            .Where(x => !x.IsMastered
+                && x.SrsLevel != SrsLevel.level_12
+                && x.NextReviewAt <= reviewAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<UserCardProgress>> GetByCardIdsAsync(List<string> cardIds)
+    {
+        return await _context.UserCardProgresses
+            .AsNoTracking()
+            .Where(x => cardIds.Contains(x.CardId))
+            .ToListAsync();
+    }
+
+    public async Task<List<UserCardProgress>> GetByCardIdAsync(string cardId)
+    {
+        return await _context.UserCardProgresses
+            .AsNoTracking()
+            .Where(x => x.CardId == cardId)
+            .ToListAsync();
+    }
 }

@@ -241,6 +241,16 @@ public class DeckRepository : Repository<Deck>, IDeckRepository
             .ToListAsync();
     }
 
+    public async Task<List<Deck>> GetAdminDecksContainingCardIdsAsync(List<string> cardIds)
+    {
+        return await _context.Decks
+            .AsNoTracking()
+            .Include(d => d.Folders)
+                .ThenInclude(f => f.FolderCards)
+            .Where(d => d.Folders.Any(f => f.FolderCards.Any(fc => cardIds.Contains(fc.CardId))))
+            .ToListAsync();
+    }
+
     private IQueryable<Deck> BuildDeckSummaryQuery(string? currentUserId)
     {
         return _context.Decks

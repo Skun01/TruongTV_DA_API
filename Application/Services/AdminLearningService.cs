@@ -267,6 +267,128 @@ public class AdminLearningService : IAdminLearningService
         };
     }
 
+    public async Task<LearningAdminOverviewResponse> GetOverviewAsync()
+    {
+        var now = DateTime.UtcNow;
+        var todayStartUtc = now.Date;
+        var sessionsToday = await _unitOfWork.StudySessions.GetCreatedSinceAsync(todayStartUtc);
+        var allDue = await _unitOfWork.UserCardProgresses.GetAllDueAsync(now);
+        var totalAttempts = sessionsToday.Sum(x => x.CorrectCount + x.IncorrectCount);
+        var totalCorrect = sessionsToday.Sum(x => x.CorrectCount);
+
+        return new LearningAdminOverviewResponse
+        {
+            ActiveUsersToday = sessionsToday.Select(x => x.UserId).Distinct(StringComparer.Ordinal).Count(),
+            SessionsToday = sessionsToday.Count,
+            CompletedSessionsToday = sessionsToday.Count(x => x.CompletedAt.HasValue),
+            SubmissionsToday = totalAttempts,
+            DueCardsNow = allDue.Count,
+            AverageAccuracy = totalAttempts == 0 ? 0 : Math.Round((double)totalCorrect / totalAttempts * 100, 2),
+        };
+    }
+
+    public async Task<DeckLearningAnalyticsResponse> GetDeckAnalyticsAsync(string deckId)
+    {
+        var deck = await _unitOfWork.Decks.GetAdminDetailByIdAsync(deckId)
+            ?? throw new AppException(MessageConstants.DeckMessage.NOT_FOUND, 404);
+
+        var cardIds = deck.Folders
+            .SelectMany(folder => folder.FolderCards)
+            .Select(folderCard => folderCard.CardId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var sessions = await _unitOfWork.StudySessions.GetByDeckIdAsync(deckId);
+        var progresses = cardIds.Count == 0
+            ? new List<UserCardProgress>()
+            : await _unitOfWork.UserCardProgresses.GetByCardIdsAsync(cardIds);
+
+        var submissionCount = sessions.Sum(x => x.CorrectCount + x.IncorrectCount);
+        var correctCount = sessions.Sum(x => x.CorrectCount);
+
+        return new DeckLearningAnalyticsResponse
+        {
+            DeckId = deck.Id,
+            DeckTitle = deck.Title,
+            SessionCount = sessions.Count,
+            CompletedSessionCount = sessions.Count(x => x.CompletedAt.HasValue),
+            SubmissionCount = submissionCount,
+            AverageAccuracy = submissionCount == 0 ? 0 : Math.Round((double)correctCount / submissionCount * 100, 2),
+            TrackedCards = progresses.Select(x => x.CardId).Distinct(StringComparer.Ordinal).Count(),
+            MasteredCards = progresses.Where(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12)
+                .Select(x => x.CardId)
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
+            DueCards = progresses.Where(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow)
+                .Select(x => x.CardId)
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
+            ModeBreakdown = sessions
+                .GroupBy(x => x.Mode)
+                .OrderBy(x => x.Key.ToString())
+                .Select(group =>
+                {
+                    var modeSubmissionCount = group.Sum(x => x.CorrectCount + x.IncorrectCount);
+                    var modeCorrectCount = group.Sum(x => x.CorrectCount);
+
+                    return new DeckLearningModeAnalyticsResponse
+                    {
+                        Mode = group.Key.ToString(),
+                        SessionCount = group.Count(),
+                        CompletedSessionCount = group.Count(x => x.CompletedAt.HasValue),
+                        SubmissionCount = modeSubmissionCount,
+                        AverageAccuracy = modeSubmissionCount == 0 ? 0 : Math.Round((double)modeCorrectCount / modeSubmissionCount * 100, 2),
+                    };
+                })
+                .ToList(),
+        };
+    }
+
+    public async Task<CardLearningAnalyticsResponse> GetCardAnalyticsAsync(string cardId)
+    {
+        var card = await GetLearningCardRequiredAsync(cardId);
+        var sessions = await _unitOfWork.StudySessions.GetByCardIdAsync(cardId);
+        var progresses = await _unitOfWork.UserCardProgresses.GetByCardIdAsync(cardId);
+        var decks = await _unitOfWork.Decks.GetAdminDecksContainingCardIdsAsync(new List<string> { cardId });
+
+        return new CardLearningAnalyticsResponse
+        {
+            CardId = card.Id,
+            CardType = card.CardType.ToString(),
+            Title = card.Title,
+            Summary = card.Summary,
+            IncludedSessionCount = sessions.Count,
+            IncludedCompletedSessionCount = sessions.Count(x => x.CompletedAt.HasValue),
+            TrackedUsers = progresses.Select(x => x.UserId).Distinct(StringComparer.Ordinal).Count(),
+            MasteredUsers = progresses.Count(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12),
+            DueUsers = progresses.Count(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow),
+            AverageSrsLevel = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => (int)x.SrsLevel) + 1, 2),
+            AverageConsecutiveCorrect = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => x.ConsecutiveCorrect), 2),
+            LastReviewedAt = progresses
+                .Where(x => x.LastReviewedAt.HasValue)
+                .OrderByDescending(x => x.LastReviewedAt)
+                .Select(x => x.LastReviewedAt)
+                .FirstOrDefault(),
+            SrsDistribution = progresses
+                .GroupBy(x => x.SrsLevel)
+                .OrderBy(x => x.Key)
+                .Select(group => new CardLearningSrsDistributionResponse
+                {
+                    SrsLevel = group.Key.ToString(),
+                    UserCount = group.Count(),
+                })
+                .ToList(),
+            Decks = decks
+                .OrderBy(x => x.Title)
+                .Select(x => new CardLearningDeckUsageResponse
+                {
+                    DeckId = x.Id,
+                    DeckTitle = x.Title,
+                })
+                .ToList(),
+        };
+    }
+
     public async Task<LearningPreviewResponse> PreviewCardAsync(string cardId, LearningPreviewQuery query)
     {
         var card = await GetLearningCardRequiredAsync(cardId);
