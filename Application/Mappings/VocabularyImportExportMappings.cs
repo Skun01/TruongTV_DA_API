@@ -59,7 +59,7 @@ public static class VocabularyImportExportMappings
             Summary = item.Summary,
             Level = item.Level,
             Tags = item.Tags?.ToList() ?? new List<string>(),
-            Status = item.Status,
+            Status = string.IsNullOrWhiteSpace(item.Status) ? "Published" : item.Status,
             Writing = item.Writing,
             Reading = item.Reading,
             PitchPattern = item.PitchPattern?.ToList(),
@@ -86,7 +86,7 @@ public static class VocabularyImportExportMappings
                     Level = sentence.Level,
                     BlankWord = sentence.BlankWord,
                     Hint = sentence.Hint,
-                    AnswerList = sentence.AnswerList.ToList(),
+                    AnswerList = sentence.AnswerList?.ToList() ?? new List<string>(),
                 })
                 .ToList(),
         };

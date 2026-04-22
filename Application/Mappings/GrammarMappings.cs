@@ -65,7 +65,7 @@ public static class GrammarMappings
             Summary = item.Summary,
             Level = item.Level,
             Tags = item.Tags,
-            Status = item.Status,
+            Status = string.IsNullOrWhiteSpace(item.Status) ? "Published" : item.Status,
             Structures = item.Structures,
             Explanation = item.Explanation,
             Caution = item.Caution,

@@ -16,10 +16,15 @@ public static class GrammarImportHelper
         guide.AllowedValues["relations[].relationType"] = ImportTemplateGuideHelper.EnumValues<GrammarRelationType>();
         guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
         guide.AllowedValues["sentences[].speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
+        guide.FieldNotes["status"] = "Nếu bỏ trống khi import, hệ thống mặc định Published.";
         guide.FieldNotes["structures"] = "Bắt buộc, ít nhất 1 phần tử.";
         guide.FieldNotes["relations[].relatedId"] = "Phải là cardId của grammar đã tồn tại.";
         guide.FieldNotes["relations[].relationType"] = "Bắt buộc khi có relation.";
         guide.FieldNotes["sentences[].id"] = "Không truyền khi import tạo mới từ template.";
+        guide.FieldNotes["sentences[].position"] = "Bắt buộc > 0 để xác định thứ tự câu trong card.";
+        guide.FieldNotes["sentences[].blankWord"] = "Từ/cụm từ bị ẩn trong bài tập điền từ (tuỳ chọn).";
+        guide.FieldNotes["sentences[].hint"] = "Gợi ý cho câu hỏi điền từ (tuỳ chọn).";
+        guide.FieldNotes["sentences[].answerList"] = "Danh sách đáp án chấp nhận (tuỳ chọn).";
 
         return new ImportGrammarRequest
         {
@@ -33,7 +38,7 @@ public static class GrammarImportHelper
                     Summary = "Vừa làm A vừa làm B.",
                     Level = "N4",
                     Tags = new List<string> { "grammar", "simultaneous" },
-                    Status = "Draft",
+                    Status = "Published",
                     Structures = new List<GrammarStructureRequest>
                     {
                         new()
@@ -65,8 +70,12 @@ public static class GrammarImportHelper
                         {
                             Text = "音楽を聞きながら勉強します。",
                             Meaning = "Tôi vừa nghe nhạc vừa học.",
+                            Position = 1,
                             SpeakerId = 3,
                             Level = "N4",
+                            BlankWord = "聞きながら",
+                            Hint = "Mẫu vừa làm A vừa làm B.",
+                            AnswerList = new List<string> { "聞きながら" },
                         },
                     },
                 },
@@ -206,16 +215,33 @@ public static class GrammarImportHelper
             if (!string.IsNullOrWhiteSpace(sentence.Id))
                 errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SENTENCE_ID_NOT_ALLOWED, $"{path}.id"));
 
+            if (sentence.Position <= 0)
+                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_FIELD_INVALID, $"{path}.position"));
+
             ValidateRequiredText(sentence.Text, $"{path}.text", 500, errors);
             ValidateRequiredText(sentence.Meaning, $"{path}.meaning", 500, errors);
             ValidateOptionalText(sentence.Level, $"{path}.level", 10, errors);
             ValidateOptionalEnum<JlptLevel>(sentence.Level, $"{path}.level", errors);
+            ValidateOptionalText(sentence.BlankWord, $"{path}.blankWord", 200, errors);
+            ValidateOptionalText(sentence.Hint, $"{path}.hint", 500, errors);
+            ValidateAnswerList(sentence.AnswerList, $"{path}.answerList", errors);
 
             if (sentence.SpeakerId.HasValue && sentence.SpeakerId.Value <= 0)
                 errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SPEAKER_ID_INVALID, $"{path}.speakerId"));
 
             if (sentence.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(sentence.SpeakerId.Value))
                 errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, $"{path}.speakerId"));
+        }
+    }
+
+    private static void ValidateAnswerList(List<string>? values, string fieldName, List<string> errors)
+    {
+        if (values == null)
+            return;
+
+        for (var index = 0; index < values.Count; index++)
+        {
+            ValidateRequiredText(values[index], $"{fieldName}[{index}]", 200, errors);
         }
     }
 

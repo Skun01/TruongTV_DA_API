@@ -865,6 +865,8 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 - Import hiện tại là **create-only** (chỉ tạo mới).
 - `sentences[*].id` **KHÔNG được gửi** (vì create-only).
 - `writing` không được trùng trong batch + không trùng DB.
+- Nếu bỏ trống `status`, import sẽ mặc định `Published`.
+- `sentences[*]` hỗ trợ thêm cấu hình bài tập: `position`, `blankWord`, `hint`, `answerList`.
 
 **Request body:**
 
@@ -877,7 +879,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
       "summary": "Động từ ăn",
       "level": "N5",
       "tags": ["verb"],
-      "status": "Draft",
+      "status": "Published",
       "writing": "食べる",
       "reading": "たべる",
       "pitchPattern": [0, 1, 0],
@@ -891,8 +893,12 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
         {
           "text": "毎朝パンを食べる。",
           "meaning": "Mỗi sáng ăn bánh mì.",
+          "position": 1,
           "speakerId": 3,
-          "level": "N5"
+          "level": "N5",
+          "blankWord": "食べる",
+          "hint": "Động từ chính trong câu.",
+          "answerList": ["食べる", "たべる"]
         }
       ]
     }
@@ -1307,6 +1313,8 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
 
 - Import hiện tại là **create-only**.
 - `sentences[*].id` **KHÔNG được gửi** (vì create-only).
+- Nếu bỏ trống `status`, import sẽ mặc định `Published`.
+- `sentences[*]` hỗ trợ thêm cấu hình bài tập: `position`, `blankWord`, `hint`, `answerList`.
 
 **Request body:**
 
@@ -1330,7 +1338,7 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
       "summary": "Vừa làm A vừa làm B.",
       "level": "N4",
       "tags": ["grammar"],
-      "status": "Draft",
+      "status": "Published",
       "structures": [
         {
           "pattern": "V1(1) + ながら + V2(2)",
@@ -1351,8 +1359,12 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
         {
           "text": "音楽を聞きながら勉強します。",
           "meaning": "Vừa nghe nhạc vừa học.",
+          "position": 1,
           "speakerId": 3,
-          "level": "N4"
+          "level": "N4",
+          "blankWord": "聞きながら",
+          "hint": "Mẫu vừa làm A vừa làm B.",
+          "answerList": ["聞きながら"]
         }
       ]
     }
@@ -1708,6 +1720,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 - `radicals` là bắt buộc.
 - Trong cùng một item import, `radicals[*].character` không được trùng nhau.
 - `radical` trong import chỉ cần gửi `character` + `meaningVi`.
+- Nếu bỏ trống `status`, import sẽ mặc định `Published`.
 
 **Request body:**
 
@@ -1720,7 +1733,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
       "summary": "Kanji diễn tả sự sáng.", // ⚠ bắt buộc, max 2000
       "level": "N5", // ❌ nullable — JlptLevel
       "tags": ["kanji", "co-ban"], // ❌ optional, tối đa 20 item
-      "status": "Draft", // ❌ nullable — PublishStatus
+      "status": "Published", // ❌ nullable — PublishStatus
       "kanji": "明", // ⚠ bắt buộc, duy nhất
       "strokeCount": 8, // ⚠ bắt buộc, int > 0
       "strokeOrderUrl": "https://example.com/mei.gif", // ❌ nullable

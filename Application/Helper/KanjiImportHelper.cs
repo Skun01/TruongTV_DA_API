@@ -12,6 +12,7 @@ public static class KanjiImportHelper
         var guide = ImportTemplateGuideHelper.CreateBaseGuide();
         guide.AllowedValues["level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
         guide.AllowedValues["status"] = ImportTemplateGuideHelper.EnumValues<PublishStatus>();
+        guide.FieldNotes["status"] = "Nếu bỏ trống khi import, hệ thống mặc định Published.";
         guide.FieldNotes["strokeCount"] = "Bắt buộc và phải > 0.";
         guide.FieldNotes["radicals"] = "Bắt buộc, ít nhất 1 phần tử.";
         guide.FieldNotes["radicals[].character"] = "Không trùng trong cùng 1 item.";
@@ -28,7 +29,7 @@ public static class KanjiImportHelper
                     Summary = "Kanji chỉ sự sáng, rõ ràng.",
                     Level = "N5",
                     Tags = new List<string> { "kanji", "co-ban" },
-                    Status = "Draft",
+                    Status = "Published",
                     Kanji = "明",
                     StrokeCount = 8,
                     StrokeOrderUrl = "https://example.com/kanji/mei-stroke-order.gif",

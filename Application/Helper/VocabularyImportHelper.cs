@@ -17,10 +17,15 @@ public static class VocabularyImportHelper
         guide.AllowedValues["speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
         guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
         guide.AllowedValues["sentences[].speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
+        guide.FieldNotes["status"] = "Nếu bỏ trống khi import, hệ thống mặc định Published.";
         guide.FieldNotes["meanings[].partOfSpeech"] = "Bắt buộc, phải là enum hợp lệ.";
         guide.FieldNotes["pitchPattern"] = "Mảng số nguyên, ví dụ [0,1,0]. Có thể để trống để hệ thống tự sinh.";
         guide.FieldNotes["speakerId"] = "Khuyến nghị dùng danh sách speakerId trong allowedValues.speakerId.";
         guide.FieldNotes["sentences[].id"] = "Không truyền khi import tạo mới từ template.";
+        guide.FieldNotes["sentences[].position"] = "Bắt buộc > 0 để xác định thứ tự câu trong card.";
+        guide.FieldNotes["sentences[].blankWord"] = "Từ/cụm từ bị ẩn trong bài tập điền từ (tuỳ chọn).";
+        guide.FieldNotes["sentences[].hint"] = "Gợi ý cho câu hỏi điền từ (tuỳ chọn).";
+        guide.FieldNotes["sentences[].answerList"] = "Danh sách đáp án chấp nhận (tuỳ chọn).";
 
         return new ImportVocabularyRequest
         {
@@ -34,7 +39,7 @@ public static class VocabularyImportHelper
                     Summary = "Động từ ăn",
                     Level = "N5",
                     Tags = new List<string> { "verb", "daily-life" },
-                    Status = "Draft",
+                    Status = "Published",
                     Writing = "食べる",
                     Reading = "たべる",
                     PitchPattern = new List<int> { 0, 1, 0 },
@@ -57,8 +62,12 @@ public static class VocabularyImportHelper
                         {
                             Text = "毎朝パンを食べる。",
                             Meaning = "Mỗi sáng tôi ăn bánh mì.",
+                            Position = 1,
                             SpeakerId = 3,
                             Level = "N5",
+                            BlankWord = "食べる",
+                            Hint = "Động từ chính trong câu.",
+                            AnswerList = new List<string> { "食べる", "たべる" },
                         },
                     },
                 },
@@ -186,16 +195,33 @@ public static class VocabularyImportHelper
             if (!string.IsNullOrWhiteSpace(sentence.Id))
                 errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SENTENCE_ID_NOT_ALLOWED, $"{path}.id"));
 
+            if (sentence.Position <= 0)
+                errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_FIELD_INVALID, $"{path}.position"));
+
             ValidateRequiredText(sentence.Text, $"{path}.text", 500, errors);
             ValidateRequiredText(sentence.Meaning, $"{path}.meaning", 500, errors);
             ValidateOptionalText(sentence.Level, $"{path}.level", 10, errors);
             ValidateOptionalEnum<JlptLevel>(sentence.Level, $"{path}.level", errors);
+            ValidateOptionalText(sentence.BlankWord, $"{path}.blankWord", 200, errors);
+            ValidateOptionalText(sentence.Hint, $"{path}.hint", 500, errors);
+            ValidateAnswerList(sentence.AnswerList, $"{path}.answerList", errors);
 
             if (sentence.SpeakerId.HasValue && sentence.SpeakerId.Value <= 0)
                 errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SPEAKER_ID_INVALID, $"{path}.speakerId"));
 
             if (sentence.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(sentence.SpeakerId.Value))
                 errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, $"{path}.speakerId"));
+        }
+    }
+
+    private static void ValidateAnswerList(List<string>? values, string fieldName, List<string> errors)
+    {
+        if (values == null)
+            return;
+
+        for (var index = 0; index < values.Count; index++)
+        {
+            ValidateRequiredText(values[index], $"{fieldName}[{index}]", 200, errors);
         }
     }
 

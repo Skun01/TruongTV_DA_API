@@ -38,7 +38,7 @@ public static class KanjiMappings
             Summary = item.Summary,
             Level = item.Level,
             Tags = item.Tags,
-            Status = item.Status,
+            Status = string.IsNullOrWhiteSpace(item.Status) ? "Published" : item.Status,
             Kanji = item.Kanji,
             StrokeCount = item.StrokeCount,
             StrokeOrderUrl = item.StrokeOrderUrl,
