@@ -28,6 +28,9 @@ public interface IUnitOfWork
     IUserLearningSettingsRepository UserLearningSettings { get; }
     IUserCardNoteRepository UserCardNotes { get; }
     INoteLikeRepository NoteLikes { get; }
+    IShadowingTopicRepository ShadowingTopics { get; }
+    IShadowingTopicSentenceRepository ShadowingTopicSentences { get; }
+    IShadowingAttemptRepository ShadowingAttempts { get; }
 
     Task<int> SaveChangesAsync();
 }

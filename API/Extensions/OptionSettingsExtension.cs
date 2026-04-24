@@ -31,6 +31,9 @@ public static class OptionSettingsExtension
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<AzureSpeechSettings>()
+            .Bind(configuration.GetSection(AzureSpeechSettings.SectionName));
+
         return services;
     }
 }

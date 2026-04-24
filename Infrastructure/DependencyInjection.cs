@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.AddScoped<ILearningService, LearningService>();
         services.AddScoped<IUserLearningSettingsService, UserLearningSettingsService>();
         services.AddScoped<ICardNoteService, CardNoteService>();
+        services.AddScoped<IShadowingService, ShadowingService>();
+        services.AddScoped<IAdminShadowingService, AdminShadowingService>();
         services.AddScoped<ISentenceService, SentenceService>();
         services.AddScoped<IResourceService, ResourceService>();
         services.AddScoped<ITokenService, TokenService>();
@@ -44,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IFileUploadService, FileUploadService>();
         services.AddHttpClient<IVoicevoxService, VoicevoxService>();
+        services.AddHttpClient<IPronunciationAssessmentService, AzureSpeechPronunciationService>();
         
         return services;
     }

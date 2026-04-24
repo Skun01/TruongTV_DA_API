@@ -130,6 +130,18 @@ public static class MessageConstants
         public const string NO_CARDS_AVAILABLE = "Learning_NoCardsAvailable_400";
     }
 
+    public static class ShadowingMessage
+    {
+        public const string TOPIC_NOT_FOUND = "Shadowing_TopicNotFound_404";
+        public const string SENTENCE_NOT_FOUND = "Shadowing_SentenceNotFound_404";
+        public const string SENTENCE_NOT_ATTACHED = "Shadowing_SentenceNotAttached_404";
+        public const string SENTENCE_ALREADY_ATTACHED = "Shadowing_SentenceAlreadyAttached_400";
+        public const string ASSESSMENT_FAILED = "Shadowing_AssessmentFailed_500";
+        public const string AZURE_NOT_CONFIGURED = "Shadowing_AzureNotConfigured_500";
+        public const string INVALID_AUDIO = "Shadowing_InvalidAudio_400";
+        public const string DUPLICATE_POSITION = "Shadowing_DuplicatePosition_400";
+    }
+
     public static class FileUploadMessage
     {
         public const string CLOUDINARY_UPLOAD_FAILED = "FileUpload_CloudinaryUploadFailed_500";

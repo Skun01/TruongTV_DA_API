@@ -21,6 +21,7 @@
 13. [Decks Module — Admin](#13-decks-module--admin)
 14. [Learning Module — User](#14-learning-module--user)
 15. [Learning Module — Admin (Proposed)](#15-learning-module--admin-proposed)
+16. [Shadowing Module](#16-shadowing-module)
 
 ---
 
@@ -4971,6 +4972,82 @@ The following admin APIs are still recommended for later phases:
 - attempt history / answer logs if you want wrong-answer analytics, sentence-level failure rates, or common distractor reports
 
 ---
+
+## 16. Shadowing Module
+
+> API phục vụ luyện shadowing theo topic cho cả user và admin.
+
+### Tổng quan endpoint
+
+| Method | Endpoint | Auth | Mô tả |
+| ------ | -------- | ---- | ----- |
+| GET | `/api/shadowing/topics` | 🔒 Auth | User lấy danh sách topic shadowing có thể truy cập |
+| GET | `/api/shadowing/topics/{topicId}` | 🔒 Auth | User lấy chi tiết topic + danh sách sentence |
+| POST | `/api/shadowing/attempts` | 🔒 Auth | User nộp audio shadowing và nhận điểm đánh giá phát âm |
+| GET | `/api/shadowing/attempts/history` | 🔒 Auth | User lấy lịch sử attempt shadowing |
+| GET | `/api/shadowing/sentences/{sentenceId}/progress` | 🔒 Auth | User lấy tiến độ shadowing theo sentence |
+| GET | `/api/admin/shadowing/topics` | 🔑 Editor/Admin | Admin tìm kiếm topic shadowing |
+| GET | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Admin lấy chi tiết topic |
+| POST | `/api/admin/shadowing/topics` | 🔑 Editor/Admin | Admin tạo topic chính thức |
+| PATCH | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Admin cập nhật topic |
+| DELETE | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Admin xóa topic |
+| POST | `/api/admin/shadowing/topics/{topicId}/sentences` | 🔑 Editor/Admin | Admin gắn sentence vào topic |
+| PUT | `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}` | 🔑 Editor/Admin | Admin cập nhật metadata sentence trong topic |
+| DELETE | `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}` | 🔑 Editor/Admin | Admin gỡ sentence khỏi topic |
+| POST | `/api/admin/shadowing/topics/{topicId}/sentences/reorder` | 🔑 Editor/Admin | Admin sắp xếp lại thứ tự sentence |
+| GET | `/api/admin/shadowing/topics/{topicId}/analytics` | 🔑 Editor/Admin | Admin xem thống kê usage và điểm trung bình của topic |
+
+### Quy tắc truy cập dữ liệu
+
+- Topic dành cho user chỉ hiện khi:
+  - `status = Published`
+  - và `visibility = Public` **hoặc** topic do chính user tạo.
+- Topic tạo qua admin API được đánh dấu `isOfficial = true`.
+- Attempt shadowing được lưu theo user và có liên kết đến `topic`, `sentence`, `audio asset`.
+
+### Submit attempt (user)
+
+- Content-Type: `multipart/form-data`
+- Form fields:
+  - `topicId` (required)
+  - `sentenceId` (required)
+  - `locale` (optional, default `ja-JP`)
+  - `audio` (required)
+
+Backend flow:
+1. Kiểm tra sentence thuộc topic và topic readable với user.
+2. Upload audio thành `MediaAsset`.
+3. Gọi Azure Speech Pronunciation Assessment.
+4. Lưu `shadowing_attempts` với score + raw assessment payload.
+
+Azure Speech config:
+- `AzureSpeechConfig.SubscriptionKey` là bắt buộc.
+- Chọn một trong hai:
+  - `AzureSpeechConfig.Endpoint`: endpoint đầy đủ (ví dụ `https://japaneast.stt.speech.microsoft.com`).
+  - `AzureSpeechConfig.Region`: tên region (ví dụ `japaneast`) để backend tự dựng endpoint.
+
+### Score trả về
+
+Response attempt hỗ trợ các chỉ số:
+- `pronScore`
+- `accuracyScore`
+- `fluencyScore`
+- `completenessScore`
+- `prosodyScore` (nếu có từ provider)
+- `errorTypes` (danh sách lỗi theo từ)
+
+### Shadowing error codes
+
+| Code | Ý nghĩa |
+| ---- | ------- |
+| `Shadowing_TopicNotFound_404` | Topic không tồn tại hoặc không nằm trong phạm vi truy cập |
+| `Shadowing_SentenceNotFound_404` | Sentence không tồn tại |
+| `Shadowing_SentenceNotAttached_404` | Sentence chưa được gắn vào topic |
+| `Shadowing_SentenceAlreadyAttached_400` | Sentence đã được gắn vào topic |
+| `Shadowing_InvalidAudio_400` | Audio payload không hợp lệ |
+| `Shadowing_AssessmentFailed_500` | Gọi pronunciation assessment thất bại |
+| `Shadowing_AzureNotConfigured_500` | Thiếu cấu hình Azure Speech |
+| `Shadowing_DuplicatePosition_400` | Payload reorder có position trùng |
 
 ## Phụ lục: Tổng hợp Error Codes
 

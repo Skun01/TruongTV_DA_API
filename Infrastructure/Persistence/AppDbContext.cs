@@ -32,6 +32,9 @@ public class AppDbContext : DbContext
     public DbSet<UserLearningSettings> UserLearningSettings { set; get; }
     public DbSet<UserCardNote> UserCardNotes { set; get; }
     public DbSet<NoteLike> NoteLikes { set; get; }
+    public DbSet<ShadowingTopic> ShadowingTopics { set; get; }
+    public DbSet<ShadowingTopicSentence> ShadowingTopicSentences { set; get; }
+    public DbSet<ShadowingAttempt> ShadowingAttempts { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

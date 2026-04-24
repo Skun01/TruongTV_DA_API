@@ -31,6 +31,9 @@ public class UnitOfWork : IUnitOfWork
     private IUserLearningSettingsRepository? _userLearningSettings;
     private IUserCardNoteRepository? _userCardNotes;
     private INoteLikeRepository? _noteLikes;
+    private IShadowingTopicRepository? _shadowingTopics;
+    private IShadowingTopicSentenceRepository? _shadowingTopicSentences;
+    private IShadowingAttemptRepository? _shadowingAttempts;
     
     public UnitOfWork(AppDbContext context)
     {
@@ -61,6 +64,9 @@ public class UnitOfWork : IUnitOfWork
     public IUserLearningSettingsRepository UserLearningSettings => _userLearningSettings ??= new UserLearningSettingsRepository(_context);
     public IUserCardNoteRepository UserCardNotes => _userCardNotes ??= new UserCardNoteRepository(_context);
     public INoteLikeRepository NoteLikes => _noteLikes ??= new NoteLikeRepository(_context);
+    public IShadowingTopicRepository ShadowingTopics => _shadowingTopics ??= new ShadowingTopicRepository(_context);
+    public IShadowingTopicSentenceRepository ShadowingTopicSentences => _shadowingTopicSentences ??= new ShadowingTopicSentenceRepository(_context);
+    public IShadowingAttemptRepository ShadowingAttempts => _shadowingAttempts ??= new ShadowingAttemptRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {
