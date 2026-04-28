@@ -34,15 +34,40 @@ public class ShadowingController : BaseController
         return ApiResponse<ShadowingTopicDetailResponse>.SuccessResponse(result);
     }
 
+    [HttpGet("topics/{topicId}/progress")]
+    public async Task<ApiResponse<ShadowingTopicProgressResponse>> GetTopicProgress([FromRoute] string topicId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _shadowingService.GetTopicProgressAsync(topicId, userId);
+        return ApiResponse<ShadowingTopicProgressResponse>.SuccessResponse(result);
+    }
+
+    [HttpGet("topics/{topicId}/sentences/progress")]
+    public async Task<ApiResponse<List<ShadowingTopicSentenceProgressItemResponse>>> GetTopicSentenceProgress([FromRoute] string topicId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _shadowingService.GetTopicSentenceProgressAsync(topicId, userId);
+        return ApiResponse<List<ShadowingTopicSentenceProgressItemResponse>>.SuccessResponse(result);
+    }
+
+    [HttpGet("topics/{topicId}/resume")]
+    public async Task<ApiResponse<ShadowingTopicResumeResponse>> GetTopicResume([FromRoute] string topicId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _shadowingService.GetTopicResumeAsync(topicId, userId);
+        return ApiResponse<ShadowingTopicResumeResponse>.SuccessResponse(result);
+    }
+
     [HttpPost("attempts")]
+    [RequestSizeLimit(20 * 1024 * 1024)]
     public async Task<ApiResponse<ShadowingAttemptResponse>> SubmitAttempt(
         [FromForm] SubmitShadowingAttemptFormRequest request,
         CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
-        await using var stream = request.Audio.OpenReadStream();
-        using var memory = new MemoryStream();
-        await stream.CopyToAsync(memory, cancellationToken);
+
+        await using var memoryStream = new MemoryStream();
+        await request.Audio.CopyToAsync(memoryStream, cancellationToken);
 
         var result = await _shadowingService.SubmitAttemptAsync(userId, new SubmitShadowingAttemptRequest
         {
@@ -52,9 +77,17 @@ public class ShadowingController : BaseController
             FileName = request.Audio.FileName,
             ContentType = request.Audio.ContentType,
             SizeInBytes = request.Audio.Length,
-            AudioBytes = memory.ToArray(),
+            AudioBytes = memoryStream.ToArray(),
         }, cancellationToken);
 
+        return ApiResponse<ShadowingAttemptResponse>.SuccessResponse(result);
+    }
+
+    [HttpGet("attempts/{attemptId}")]
+    public async Task<ApiResponse<ShadowingAttemptResponse>> GetAttemptDetail([FromRoute] string attemptId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _shadowingService.GetAttemptDetailAsync(attemptId, userId);
         return ApiResponse<ShadowingAttemptResponse>.SuccessResponse(result);
     }
 

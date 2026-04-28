@@ -130,6 +130,14 @@ public class ShadowingService : IShadowingService
         return attempt.ToAttemptResponse();
     }
 
+    public async Task<ShadowingAttemptResponse> GetAttemptDetailAsync(string attemptId, string userId)
+    {
+        var attempt = await _unitOfWork.ShadowingAttempts.GetByIdForUserAsync(attemptId, userId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.ATTEMPT_NOT_FOUND);
+
+        return attempt.ToAttemptResponse();
+    }
+
     public async Task<(List<ShadowingAttemptHistoryItemResponse> Items, MetaData Meta)> GetAttemptHistoryAsync(ShadowingAttemptHistoryQuery query, string userId)
     {
         var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
@@ -181,6 +189,122 @@ public class ShadowingService : IShadowingService
                 .DefaultIfEmpty()
                 .Max(),
             LastAttemptAt = ordered.First().CreatedAt,
+        };
+    }
+
+    public async Task<ShadowingTopicProgressResponse> GetTopicProgressAsync(string topicId, string userId)
+    {
+        var topic = await _unitOfWork.ShadowingTopics.GetReadableDetailByIdAsync(topicId, userId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.TOPIC_NOT_FOUND);
+
+        var attempts = await _unitOfWork.ShadowingAttempts.GetByUserAndTopicAsync(userId, topicId);
+        if (attempts.Count == 0)
+        {
+            return new ShadowingTopicProgressResponse
+            {
+                TopicId = topicId,
+                SentencesCount = topic.SentencesCount,
+            };
+        }
+
+        var ordered = attempts
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+        var attemptedSentenceCount = attempts
+            .Select(x => x.SentenceId)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        return new ShadowingTopicProgressResponse
+        {
+            TopicId = topicId,
+            SentencesCount = topic.SentencesCount,
+            AttemptedSentencesCount = attemptedSentenceCount,
+            CompletedSentencesCount = attemptedSentenceCount,
+            BestPronScore = attempts
+                .Where(x => x.PronScore.HasValue)
+                .Select(x => x.PronScore!.Value)
+                .DefaultIfEmpty()
+                .Max(),
+            LatestPronScore = ordered.First().PronScore,
+            LastAttemptAt = ordered.First().CreatedAt,
+        };
+    }
+
+    public async Task<List<ShadowingTopicSentenceProgressItemResponse>> GetTopicSentenceProgressAsync(string topicId, string userId)
+    {
+        var topic = await _unitOfWork.ShadowingTopics.GetReadableDetailByIdAsync(topicId, userId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.TOPIC_NOT_FOUND);
+
+        var attempts = await _unitOfWork.ShadowingAttempts.GetByUserAndTopicAsync(userId, topicId);
+        var attemptLookup = attempts
+            .GroupBy(x => x.SentenceId, StringComparer.Ordinal)
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderByDescending(item => item.CreatedAt).ToList(),
+                StringComparer.Ordinal);
+
+        return topic.TopicSentences
+            .Where(x => x.Sentence != null)
+            .OrderBy(x => x.Position)
+            .Select(x =>
+            {
+                attemptLookup.TryGetValue(x.SentenceId, out var sentenceAttempts);
+                var latestAttempt = sentenceAttempts?.FirstOrDefault();
+
+                return new ShadowingTopicSentenceProgressItemResponse
+                {
+                    SentenceId = x.SentenceId,
+                    Position = x.Position,
+                    Text = x.Sentence.Text,
+                    Meaning = x.Sentence.Meaning,
+                    AudioUrl = x.Sentence.AudioUrl,
+                    Level = x.Sentence.Level?.ToString(),
+                    AttemptsCount = sentenceAttempts?.Count ?? 0,
+                    BestPronScore = sentenceAttempts == null
+                        ? null
+                        : sentenceAttempts.Where(item => item.PronScore.HasValue)
+                            .Select(item => item.PronScore!.Value)
+                            .DefaultIfEmpty()
+                            .Max(),
+                    LatestPronScore = latestAttempt?.PronScore,
+                    LastAttemptAt = latestAttempt?.CreatedAt,
+                    HasAttempted = sentenceAttempts != null && sentenceAttempts.Count > 0,
+                };
+            })
+            .ToList();
+    }
+
+    public async Task<ShadowingTopicResumeResponse> GetTopicResumeAsync(string topicId, string userId)
+    {
+        var topic = await _unitOfWork.ShadowingTopics.GetReadableDetailByIdAsync(topicId, userId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.TOPIC_NOT_FOUND);
+
+        var orderedSentences = topic.TopicSentences
+            .Where(x => x.Sentence != null)
+            .OrderBy(x => x.Position)
+            .ToList();
+        var attempts = await _unitOfWork.ShadowingAttempts.GetByUserAndTopicAsync(userId, topicId);
+        var latestAttempt = attempts.FirstOrDefault();
+        var attemptedSentenceIds = attempts
+            .Select(x => x.SentenceId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var recommendedSentenceId = orderedSentences
+            .FirstOrDefault(x => !attemptedSentenceIds.Contains(x.SentenceId))
+            ?.SentenceId
+            ?? latestAttempt?.SentenceId
+            ?? orderedSentences.FirstOrDefault()?.SentenceId;
+
+        return new ShadowingTopicResumeResponse
+        {
+            TopicId = topicId,
+            RecommendedSentenceId = recommendedSentenceId,
+            LastAttemptSentenceId = latestAttempt?.SentenceId,
+            AttemptedSentencesCount = attemptedSentenceIds.Count,
+            RemainingSentencesCount = Math.Max(topic.SentencesCount - attemptedSentenceIds.Count, 0),
+            LatestPronScore = latestAttempt?.PronScore,
+            LastAttemptAt = latestAttempt?.CreatedAt,
         };
     }
 

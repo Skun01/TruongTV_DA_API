@@ -13,7 +13,9 @@ public static class FileUploadConstants
     [
         "audio/mpeg",
         "audio/wav",
-        "audio/mp4"
+        "audio/mp4",
+        "audio/webm",
+        "audio/webm;codecs=opus"
     ];
 
     public static readonly string[] AllowedImageMimeTypes =

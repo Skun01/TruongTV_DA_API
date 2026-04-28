@@ -40,11 +40,30 @@ public class ShadowingAttemptRepository : Repository<ShadowingAttempt>, IShadowi
         return (items, total);
     }
 
+    public async Task<ShadowingAttempt?> GetByIdForUserAsync(string attemptId, string userId)
+    {
+        return await _context.ShadowingAttempts
+            .AsNoTracking()
+            .Include(x => x.Topic)
+            .Include(x => x.Sentence)
+            .Include(x => x.AudioAsset)
+            .FirstOrDefaultAsync(x => x.Id == attemptId && x.UserId == userId);
+    }
+
     public async Task<List<ShadowingAttempt>> GetByUserAndSentenceAsync(string userId, string sentenceId)
     {
         return await _context.ShadowingAttempts
             .AsNoTracking()
             .Where(x => x.UserId == userId && x.SentenceId == sentenceId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<ShadowingAttempt>> GetByUserAndTopicAsync(string userId, string topicId)
+    {
+        return await _context.ShadowingAttempts
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.TopicId == topicId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
@@ -78,5 +97,27 @@ public class ShadowingAttemptRepository : Repository<ShadowingAttempt>, IShadowi
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => (DateTime?)x.CreatedAt)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<Dictionary<string, (int AttemptsCount, int DistinctUsersCount, double? AveragePronScore, DateTime? LatestAttemptAt)>> GetSentenceAnalyticsByTopicAsync(string topicId)
+    {
+        var items = await _context.ShadowingAttempts
+            .AsNoTracking()
+            .Where(x => x.TopicId == topicId)
+            .GroupBy(x => x.SentenceId)
+            .Select(group => new
+            {
+                SentenceId = group.Key,
+                AttemptsCount = group.Count(),
+                DistinctUsersCount = group.Select(x => x.UserId).Distinct().Count(),
+                AveragePronScore = group.Where(x => x.PronScore.HasValue).Select(x => x.PronScore).Average(),
+                LatestAttemptAt = group.Max(x => (DateTime?)x.CreatedAt),
+            })
+            .ToListAsync();
+
+        return items.ToDictionary(
+            x => x.SentenceId,
+            x => (x.AttemptsCount, x.DistinctUsersCount, x.AveragePronScore, x.LatestAttemptAt),
+            StringComparer.Ordinal);
     }
 }

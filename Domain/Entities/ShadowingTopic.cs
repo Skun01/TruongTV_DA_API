@@ -9,6 +9,7 @@ public class ShadowingTopic : BaseEntity
 
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? CoverImageUrl { get; set; }
     public JlptLevel? Level { get; set; }
     public DeckVisibility Visibility { get; set; } = DeckVisibility.Public;
     public PublishStatus Status { get; set; } = PublishStatus.Draft;

@@ -16,6 +16,10 @@ public class UpdateShadowingTopicRequestValidator : AbstractValidator<UpdateShad
             .MaximumLength(2000)
             .When(x => x.Description != null);
 
+        RuleFor(x => x.CoverImageUrl)
+            .MaximumLength(512)
+            .When(x => x.CoverImageUrl != null);
+
         RuleFor(x => x.Level)
             .Must(value => string.IsNullOrWhiteSpace(value) || Enum.TryParse<JlptLevel>(value.Trim(), true, out _))
             .WithMessage("Level is invalid.");

@@ -63,9 +63,10 @@ public class AdminShadowingService : IAdminShadowingService
             CreatedBy = currentUserId,
             Title = request.Title.Trim(),
             Description = request.Description.Trim(),
+            CoverImageUrl = StringHelper.NormalizeOptional(request.CoverImageUrl),
             Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
             Visibility = EnumParsingHelper.ParseNullable<DeckVisibility>(request.Visibility) ?? DeckVisibility.Public,
-            Status = EnumParsingHelper.ParseNullable<PublishStatus>(request.Status) ?? PublishStatus.Published,
+            Status = EnumParsingHelper.ParseNullable<PublishStatus>(request.Status) ?? PublishStatus.Draft,
             IsOfficial = true,
             SentencesCount = 0,
         };
@@ -87,6 +88,9 @@ public class AdminShadowingService : IAdminShadowingService
         if (request.Description != null)
             topic.Description = request.Description.Trim();
 
+        if (request.CoverImageUrl != null)
+            topic.CoverImageUrl = StringHelper.NormalizeOptional(request.CoverImageUrl);
+
         if (request.Level != null)
             topic.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
 
@@ -101,6 +105,39 @@ public class AdminShadowingService : IAdminShadowingService
         await _unitOfWork.SaveChangesAsync();
 
         return await GetTopicDetailAsync(topicId);
+    }
+
+    public async Task<(List<AdminShadowingAvailableSentenceResponse> Items, MetaData Meta)> SearchAvailableSentencesAsync(
+        string topicId,
+        AdminShadowingAvailableSentenceQuery query,
+        string currentUserId)
+    {
+        _ = currentUserId;
+
+        var topic = await _unitOfWork.ShadowingTopics.GetByIdAsync(topicId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.TOPIC_NOT_FOUND);
+
+        var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
+        var level = EnumParsingHelper.ParseNullable<JlptLevel>(query.Level);
+        var (sentences, total) = await _unitOfWork.Sentences.SearchAsync(
+            query.Q,
+            level,
+            null,
+            query.HasAudio,
+            page,
+            pageSize);
+
+        var attachedMap = (await _unitOfWork.ShadowingTopicSentences.GetByTopicIdAsync(topic.Id))
+            .ToDictionary(x => x.SentenceId, StringComparer.Ordinal);
+
+        return (
+            sentences.Select(x => x.ToAvailableSentenceResponse(attachedMap.GetValueOrDefault(x.Id))).ToList(),
+            new MetaData
+            {
+                Page = page,
+                PageSize = pageSize,
+                Total = total,
+            });
     }
 
     public async Task<bool> DeleteTopicAsync(string topicId)
@@ -146,6 +183,68 @@ public class AdminShadowingService : IAdminShadowingService
             Note = StringHelper.NormalizeOptional(request.Note),
             Sentence = sentence,
         }.ToTopicSentenceResponse();
+    }
+
+    public async Task<List<ShadowingTopicSentenceResponse>> BulkAttachSentencesAsync(string topicId, BulkAttachShadowingTopicSentencesRequest request)
+    {
+        var topic = await _unitOfWork.ShadowingTopics.GetByIdAsync(topicId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.TOPIC_NOT_FOUND);
+
+        var duplicatedPosition = request.Items
+            .GroupBy(x => x.Position)
+            .Any(group => group.Count() > 1);
+        if (duplicatedPosition)
+            throw new ApplicationException(MessageConstants.ShadowingMessage.DUPLICATE_POSITION);
+
+        var duplicatedSentence = request.Items
+            .GroupBy(x => x.SentenceId, StringComparer.Ordinal)
+            .Any(group => group.Count() > 1);
+        if (duplicatedSentence)
+            throw new ApplicationException(MessageConstants.ShadowingMessage.SENTENCE_ALREADY_ATTACHED);
+
+        var existingLinks = await _unitOfWork.ShadowingTopicSentences.GetByTopicIdAsync(topicId);
+        var existingSentenceIds = existingLinks
+            .Select(x => x.SentenceId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var responses = new List<ShadowingTopicSentenceResponse>();
+        foreach (var item in request.Items)
+        {
+            if (existingSentenceIds.Contains(item.SentenceId))
+                throw new ApplicationException(MessageConstants.ShadowingMessage.SENTENCE_ALREADY_ATTACHED);
+
+            var sentence = await _unitOfWork.Sentences.GetByIdAsync(item.SentenceId)
+                ?? throw new ApplicationException(MessageConstants.ShadowingMessage.SENTENCE_NOT_FOUND);
+
+            var link = new ShadowingTopicSentence
+            {
+                TopicId = topicId,
+                SentenceId = item.SentenceId,
+                Position = item.Position,
+                Note = StringHelper.NormalizeOptional(item.Note),
+            };
+
+            await _unitOfWork.ShadowingTopicSentences.AddAsync(link);
+            existingSentenceIds.Add(item.SentenceId);
+
+            responses.Add(new ShadowingTopicSentence
+            {
+                TopicId = topicId,
+                SentenceId = item.SentenceId,
+                Position = item.Position,
+                Note = link.Note,
+                Sentence = sentence,
+            }.ToTopicSentenceResponse());
+        }
+
+        topic.SentencesCount += request.Items.Count;
+        topic.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.ShadowingTopics.UpdateAsync(topic);
+        await _unitOfWork.SaveChangesAsync();
+
+        return responses
+            .OrderBy(x => x.Position)
+            .ToList();
     }
 
     public async Task<ShadowingTopicSentenceResponse> UpdateTopicSentenceAsync(string topicId, string sentenceId, UpdateShadowingTopicSentenceRequest request)
@@ -244,5 +343,27 @@ public class AdminShadowingService : IAdminShadowingService
             AveragePronScore = averagePronScore,
             LatestAttemptAt = latestAttemptAt,
         };
+    }
+
+    public async Task<List<ShadowingTopicSentenceAnalyticsResponse>> GetTopicSentenceAnalyticsAsync(string topicId)
+    {
+        var topic = await _unitOfWork.ShadowingTopics.GetAdminDetailByIdAsync(topicId)
+            ?? throw new ApplicationException(MessageConstants.ShadowingMessage.TOPIC_NOT_FOUND);
+
+        var analyticsMap = await _unitOfWork.ShadowingAttempts.GetSentenceAnalyticsByTopicAsync(topicId);
+
+        return topic.TopicSentences
+            .Where(x => x.Sentence != null)
+            .OrderBy(x => x.Position)
+            .Select(x =>
+            {
+                analyticsMap.TryGetValue(x.SentenceId, out var analytics);
+                return x.ToSentenceAnalyticsResponse(
+                    analytics.AttemptsCount,
+                    analytics.DistinctUsersCount,
+                    analytics.AveragePronScore,
+                    analytics.LatestAttemptAt);
+            })
+            .ToList();
     }
 }

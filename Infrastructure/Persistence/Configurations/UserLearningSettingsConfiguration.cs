@@ -19,12 +19,14 @@ public class UserLearningSettingsConfiguration : IEntityTypeConfiguration<UserLe
         builder.Property(x => x.FlashcardFront)
             .HasConversion<string>()
             .HasMaxLength(20)
-            .HasDefaultValue(FlashcardContentType.Title);
+            .HasDefaultValue(FlashcardContentType.Title)
+            .HasSentinel((FlashcardContentType)(-1));
 
         builder.Property(x => x.FlashcardBack)
             .HasConversion<string>()
             .HasMaxLength(20)
-            .HasDefaultValue(FlashcardContentType.Summary);
+            .HasDefaultValue(FlashcardContentType.Summary)
+            .HasSentinel((FlashcardContentType)(-1));
 
         builder.Property(x => x.MultipleChoiceQuestion)
             .HasConversion<string>()

@@ -25,6 +25,10 @@ public class ShadowingTopicConfiguration : IEntityTypeConfiguration<ShadowingTop
             .IsRequired()
             .HasMaxLength(2000);
 
+        builder.Property(x => x.CoverImageUrl)
+            .HasMaxLength(512)
+            .IsRequired(false);
+
         builder.Property(x => x.Level)
             .HasConversion<string>()
             .HasMaxLength(10)

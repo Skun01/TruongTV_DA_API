@@ -48,6 +48,15 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicDetailResponse>.SuccessResponse(result);
     }
 
+    [HttpGet("topics/{topicId}/available-sentences")]
+    public async Task<ApiResponse<List<AdminShadowingAvailableSentenceResponse>>> SearchAvailableSentences(
+        [FromRoute] string topicId,
+        [FromQuery] AdminShadowingAvailableSentenceQuery query)
+    {
+        var (items, meta) = await _adminShadowingService.SearchAvailableSentencesAsync(topicId, query, GetCurrentUserId());
+        return ApiResponse<List<AdminShadowingAvailableSentenceResponse>>.SuccessResponse(items, meta);
+    }
+
     [HttpDelete("topics/{topicId}")]
     public async Task<ApiResponse<bool>> DeleteTopic([FromRoute] string topicId)
     {
@@ -60,6 +69,15 @@ public class AdminShadowingController : BaseController
     {
         var result = await _adminShadowingService.AttachSentenceAsync(topicId, request);
         return ApiResponse<ShadowingTopicSentenceResponse>.SuccessResponse(result);
+    }
+
+    [HttpPost("topics/{topicId}/sentences/bulk")]
+    public async Task<ApiResponse<List<ShadowingTopicSentenceResponse>>> BulkAttachSentences(
+        [FromRoute] string topicId,
+        [FromBody] BulkAttachShadowingTopicSentencesRequest request)
+    {
+        var result = await _adminShadowingService.BulkAttachSentencesAsync(topicId, request);
+        return ApiResponse<List<ShadowingTopicSentenceResponse>>.SuccessResponse(result);
     }
 
     [HttpPut("topics/{topicId}/sentences/{sentenceId}")]
@@ -93,5 +111,12 @@ public class AdminShadowingController : BaseController
     {
         var result = await _adminShadowingService.GetTopicAnalyticsAsync(topicId);
         return ApiResponse<ShadowingTopicAnalyticsResponse>.SuccessResponse(result);
+    }
+
+    [HttpGet("topics/{topicId}/analytics/sentences")]
+    public async Task<ApiResponse<List<ShadowingTopicSentenceAnalyticsResponse>>> GetTopicSentenceAnalytics([FromRoute] string topicId)
+    {
+        var result = await _adminShadowingService.GetTopicSentenceAnalyticsAsync(topicId);
+        return ApiResponse<List<ShadowingTopicSentenceAnalyticsResponse>>.SuccessResponse(result);
     }
 }

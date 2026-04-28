@@ -18,6 +18,8 @@ public class SubmitShadowingAttemptFormRequestValidator : AbstractValidator<Subm
 
         RuleFor(x => x.Locale)
             .MaximumLength(20)
+            .Must(value => string.IsNullOrWhiteSpace(value) || string.Equals(value.Trim(), "ja-JP", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Locale is invalid. Supported value: ja-JP.")
             .When(x => x.Locale != null);
 
         RuleFor(x => x.Audio)

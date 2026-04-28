@@ -17,6 +17,15 @@ public class ShadowingAttemptResponse
     public double? CompletenessScore { get; set; }
     public double? ProsodyScore { get; set; }
     public List<string> ErrorTypes { get; set; } = new();
+    public List<ShadowingAttemptWordAssessmentResponse> WordAssessments { get; set; } = new();
     public int? DurationMs { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+public class ShadowingAttemptWordAssessmentResponse
+{
+    public string Word { get; set; } = string.Empty;
+    public string? DisplayWord { get; set; }
+    public double? AccuracyScore { get; set; }
+    public string? ErrorType { get; set; }
 }

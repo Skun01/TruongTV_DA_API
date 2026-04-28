@@ -4975,79 +4975,820 @@ The following admin APIs are still recommended for later phases:
 
 ## 16. Shadowing Module
 
-> API phục vụ luyện shadowing theo topic cho cả user và admin.
+> APIs for topic-based shadowing practice across both learning-app and learning-admin.
 
-### Tổng quan endpoint
+### 16.1 Scope and App Ownership
 
-| Method | Endpoint | Auth | Mô tả |
-| ------ | -------- | ---- | ----- |
-| GET | `/api/shadowing/topics` | 🔒 Auth | User lấy danh sách topic shadowing có thể truy cập |
-| GET | `/api/shadowing/topics/{topicId}` | 🔒 Auth | User lấy chi tiết topic + danh sách sentence |
-| POST | `/api/shadowing/attempts` | 🔒 Auth | User nộp audio shadowing và nhận điểm đánh giá phát âm |
-| GET | `/api/shadowing/attempts/history` | 🔒 Auth | User lấy lịch sử attempt shadowing |
-| GET | `/api/shadowing/sentences/{sentenceId}/progress` | 🔒 Auth | User lấy tiến độ shadowing theo sentence |
-| GET | `/api/admin/shadowing/topics` | 🔑 Editor/Admin | Admin tìm kiếm topic shadowing |
-| GET | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Admin lấy chi tiết topic |
-| POST | `/api/admin/shadowing/topics` | 🔑 Editor/Admin | Admin tạo topic chính thức |
-| PATCH | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Admin cập nhật topic |
-| DELETE | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Admin xóa topic |
-| POST | `/api/admin/shadowing/topics/{topicId}/sentences` | 🔑 Editor/Admin | Admin gắn sentence vào topic |
-| PUT | `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}` | 🔑 Editor/Admin | Admin cập nhật metadata sentence trong topic |
-| DELETE | `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}` | 🔑 Editor/Admin | Admin gỡ sentence khỏi topic |
-| POST | `/api/admin/shadowing/topics/{topicId}/sentences/reorder` | 🔑 Editor/Admin | Admin sắp xếp lại thứ tự sentence |
-| GET | `/api/admin/shadowing/topics/{topicId}/analytics` | 🔑 Editor/Admin | Admin xem thống kê usage và điểm trung bình của topic |
+#### `learning-app` Endpoints (User-facing)
 
-### Quy tắc truy cập dữ liệu
+| Method | Endpoint | Auth | Description |
+| ------ | -------- | ---- | ----------- |
+| GET | `/api/shadowing/topics` | 🔒 Auth | List readable shadowing topics for the current user |
+| GET | `/api/shadowing/topics/{topicId}` | 🔒 Auth | Get topic detail with ordered sentences |
+| GET | `/api/shadowing/topics/{topicId}/progress` | 🔒 Auth | Get aggregated progress for the current user on a topic |
+| GET | `/api/shadowing/topics/{topicId}/sentences/progress` | 🔒 Auth | Get per-sentence progress list inside a topic |
+| GET | `/api/shadowing/topics/{topicId}/resume` | 🔒 Auth | Get the recommended sentence to continue practicing |
+| POST | `/api/shadowing/attempts` | 🔒 Auth | Submit shadowing audio and receive pronunciation assessment |
+| GET | `/api/shadowing/attempts/{attemptId}` | 🔒 Auth | Get one attempt detail for the current user |
+| GET | `/api/shadowing/attempts/history` | 🔒 Auth | Get paginated attempt history |
+| GET | `/api/shadowing/sentences/{sentenceId}/progress` | 🔒 Auth | Get progress for one sentence |
 
-- Topic dành cho user chỉ hiện khi:
+#### `learning-admin` Endpoints (Admin-facing)
+
+| Method | Endpoint | Auth | Description |
+| ------ | -------- | ---- | ----------- |
+| GET | `/api/admin/shadowing/topics` | 🔑 Editor/Admin | Search shadowing topics in admin scope |
+| GET | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Get topic detail in admin scope |
+| POST | `/api/admin/shadowing/topics` | 🔑 Editor/Admin | Create a new official shadowing topic |
+| PATCH | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Update topic metadata |
+| GET | `/api/admin/shadowing/topics/{topicId}/available-sentences` | 🔑 Editor/Admin | Search sentences for the shadowing topic builder |
+| DELETE | `/api/admin/shadowing/topics/{topicId}` | 🔑 Editor/Admin | Delete a topic |
+| POST | `/api/admin/shadowing/topics/{topicId}/sentences` | 🔑 Editor/Admin | Attach one sentence to a topic |
+| POST | `/api/admin/shadowing/topics/{topicId}/sentences/bulk` | 🔑 Editor/Admin | Attach multiple sentences in one request |
+| PUT | `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}` | 🔑 Editor/Admin | Update topic-specific sentence metadata |
+| DELETE | `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}` | 🔑 Editor/Admin | Remove one sentence from a topic |
+| POST | `/api/admin/shadowing/topics/{topicId}/sentences/reorder` | 🔑 Editor/Admin | Reorder topic sentences |
+| GET | `/api/admin/shadowing/topics/{topicId}/analytics` | 🔑 Editor/Admin | Get topic-level analytics |
+| GET | `/api/admin/shadowing/topics/{topicId}/analytics/sentences` | 🔑 Editor/Admin | Get per-sentence analytics for a topic |
+
+#### Ownership Rules
+
+- `learning-app` implements `/api/shadowing/*` only
+- `learning-admin` implements `/api/admin/shadowing/*` only
+- Do not mix service modules between apps
+
+### 16.2 Enum and Value Reference
+
+All enum values are serialized as **strings** (case-sensitive).
+
+#### Level
+
+| Value | Description |
+| ----- | ----------- |
+| `N1` | Cao cấp |
+| `N2` | Trung cao cấp |
+| `N3` | Trung cấp |
+| `N4` | Sơ cấp trên |
+| `N5` | Sơ cấp |
+
+#### Visibility
+
+| Value | Description |
+| ----- | ----------- |
+| `Public` | Public topic |
+| `Private` | Private topic |
+
+#### Status
+
+| Value | Description |
+| ----- | ----------- |
+| `Draft` | Bản nháp, chưa public |
+| `Published` | Đã xuất bản, public |
+| `Archived` | Đã xóa mềm |
+
+#### Locale for Attempt Submission
+
+| Value | Description |
+| ----- | ----------- |
+| `ja-JP` | Japanese (default if omitted) |
+
+### 16.3 Common Metadata Contract for List Endpoints
+
+Paginated endpoints return `metaData`:
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `page` | `number` | No | Current page, normalized by backend |
+| `pageSize` | `number` | No | Current page size, normalized by backend |
+| `total` | `number` | No | Total record count |
+| `totalPage` | `number` | No | Total page count |
+
+Default paging: `page = 1`, `pageSize = 20`
+
+### 16.4 Shared Response Models
+
+#### `ShadowingTopicListItemResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `id` | `string` | No | Topic id |
+| `title` | `string` | No | Topic title |
+| `description` | `string` | No | Topic description |
+| `coverImageUrl` | `string` | Yes | Optional topic cover image URL |
+| `level` | `string` | Yes | JLPT level |
+| `visibility` | `string` | No | `Public` or `Private` |
+| `status` | `string` | No | `Draft`, `Published`, or `Archived` |
+| `isOfficial` | `boolean` | No | Indicates an official/admin-created topic |
+| `sentencesCount` | `number` | No | Number of attached sentences |
+| `isOwner` | `boolean` | No | Whether the current user owns the topic |
+| `creatorId` | `string` | No | Creator user id |
+| `creatorName` | `string` | No | Creator display name |
+| `createdAt` | `string` | No | ISO datetime |
+| `updatedAt` | `string` | Yes | ISO datetime |
+
+#### `ShadowingTopicSentenceResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `sentenceId` | `string` | No | Sentence id |
+| `position` | `number` | No | Display order within the topic |
+| `text` | `string` | No | Japanese sentence text |
+| `meaning` | `string` | No | Meaning or translation |
+| `audioUrl` | `string` | Yes | Sentence audio URL |
+| `level` | `string` | Yes | JLPT level of the sentence |
+| `note` | `string` | Yes | Admin note stored for this sentence inside the topic |
+
+#### `ShadowingTopicDetailResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `id` | `string` | No | Topic id |
+| `title` | `string` | No | Topic title |
+| `description` | `string` | No | Topic description |
+| `coverImageUrl` | `string` | Yes | Optional cover image URL |
+| `level` | `string` | Yes | JLPT level |
+| `visibility` | `string` | No | Topic visibility |
+| `status` | `string` | No | Topic status |
+| `isOfficial` | `boolean` | No | Whether the topic is official |
+| `sentencesCount` | `number` | No | Number of attached sentences |
+| `isOwner` | `boolean` | No | Whether the current user is the owner |
+| `creatorId` | `string` | No | Creator user id |
+| `creatorName` | `string` | No | Creator display name |
+| `sentences` | `ShadowingTopicSentenceResponse[]` | No | Ordered topic sentences |
+| `createdAt` | `string` | No | ISO datetime |
+| `updatedAt` | `string` | Yes | ISO datetime |
+
+#### `ShadowingAttemptResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `attemptId` | `string` | No | Attempt id |
+| `topicId` | `string` | No | Topic id |
+| `topicTitle` | `string` | No | Topic title at response time |
+| `sentenceId` | `string` | No | Sentence id |
+| `sentenceText` | `string` | No | Sentence text |
+| `audioAssetId` | `string` | No | Uploaded media asset id |
+| `audioUrl` | `string` | No | Uploaded audio URL |
+| `locale` | `string` | No | Attempt locale. Current supported value is `ja-JP` |
+| `recognizedText` | `string` | Yes | Speech recognition result |
+| `pronScore` | `number` | Yes | Overall pronunciation score |
+| `accuracyScore` | `number` | Yes | Accuracy sub-score |
+| `fluencyScore` | `number` | Yes | Fluency sub-score |
+| `completenessScore` | `number` | Yes | Completeness sub-score |
+| `prosodyScore` | `number` | Yes | Prosody sub-score when available from the provider |
+| `errorTypes` | `string[]` | No | Provider-reported pronunciation issue tags |
+| `durationMs` | `number` | Yes | Audio duration in milliseconds |
+| `createdAt` | `string` | No | ISO datetime |
+
+#### `ShadowingAttemptHistoryItemResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `attemptId` | `string` | No | Attempt id |
+| `topicId` | `string` | No | Topic id |
+| `topicTitle` | `string` | No | Topic title |
+| `sentenceId` | `string` | No | Sentence id |
+| `sentenceText` | `string` | No | Sentence text |
+| `locale` | `string` | No | Attempt locale |
+| `pronScore` | `number` | Yes | Pronunciation score |
+| `accuracyScore` | `number` | Yes | Accuracy score |
+| `fluencyScore` | `number` | Yes | Fluency score |
+| `completenessScore` | `number` | Yes | Completeness score |
+| `prosodyScore` | `number` | Yes | Prosody score |
+| `createdAt` | `string` | No | ISO datetime |
+
+#### `ShadowingSentenceProgressResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `sentenceId` | `string` | No | Sentence id |
+| `attemptsCount` | `number` | No | Number of attempts by the current user on this sentence |
+| `bestPronScore` | `number` | Yes | Best pronunciation score |
+| `latestPronScore` | `number` | Yes | Latest pronunciation score |
+| `lastAttemptAt` | `string` | Yes | ISO datetime of latest attempt |
+
+#### `ShadowingTopicProgressResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `topicId` | `string` | No | Topic id |
+| `sentencesCount` | `number` | No | Number of sentences attached to the topic |
+| `attemptedSentencesCount` | `number` | No | Number of distinct topic sentences attempted by the current user |
+| `completedSentencesCount` | `number` | No | Currently equal to attempted sentence count in backend behavior |
+| `bestPronScore` | `number` | Yes | Best pronunciation score among attempts in the topic |
+| `latestPronScore` | `number` | Yes | Latest pronunciation score in the topic |
+| `lastAttemptAt` | `string` | Yes | ISO datetime of the latest topic attempt |
+
+#### `ShadowingTopicSentenceProgressItemResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `sentenceId` | `string` | No | Sentence id |
+| `position` | `number` | No | Order in the topic |
+| `text` | `string` | No | Sentence text |
+| `meaning` | `string` | No | Sentence meaning |
+| `audioUrl` | `string` | Yes | Sentence audio URL |
+| `level` | `string` | Yes | Sentence JLPT level |
+| `attemptsCount` | `number` | No | Number of attempts for this sentence by the current user |
+| `bestPronScore` | `number` | Yes | Best pronunciation score for this sentence |
+| `latestPronScore` | `number` | Yes | Latest pronunciation score for this sentence |
+| `lastAttemptAt` | `string` | Yes | ISO datetime of latest attempt on this sentence |
+| `hasAttempted` | `boolean` | No | Whether the user has attempted this sentence at least once |
+
+#### `ShadowingTopicResumeResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `topicId` | `string` | No | Topic id |
+| `recommendedSentenceId` | `string` | Yes | Preferred sentence to continue. Usually the first unattempted sentence, otherwise fallback to latest or first sentence |
+| `lastAttemptSentenceId` | `string` | Yes | Sentence id from latest attempt |
+| `attemptedSentencesCount` | `number` | No | Number of distinct attempted sentences |
+| `remainingSentencesCount` | `number` | No | Remaining sentence count |
+| `latestPronScore` | `number` | Yes | Latest pronunciation score |
+| `lastAttemptAt` | `string` | Yes | ISO datetime of latest attempt |
+
+#### `AdminShadowingAvailableSentenceResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `sentenceId` | `string` | No | Sentence id |
+| `text` | `string` | No | Sentence text |
+| `meaning` | `string` | No | Sentence meaning |
+| `audioUrl` | `string` | Yes | Sentence audio URL |
+| `speakerId` | `number` | Yes | VoiceVox speaker id when available |
+| `level` | `string` | Yes | JLPT level |
+| `isAttached` | `boolean` | No | Whether the sentence is already attached to the topic |
+| `attachedPosition` | `number` | Yes | Existing position when attached |
+| `attachedNote` | `string` | Yes | Existing topic-specific note when attached |
+
+#### `ShadowingTopicAnalyticsResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `topicId` | `string` | No | Topic id |
+| `attemptsCount` | `number` | No | Number of attempts on the topic |
+| `distinctUsersCount` | `number` | No | Distinct users who attempted the topic |
+| `averagePronScore` | `number` | Yes | Average pronunciation score across attempts with scores |
+| `latestAttemptAt` | `string` | Yes | ISO datetime of latest attempt |
+
+#### `ShadowingTopicSentenceAnalyticsResponse`
+
+| Field | Type | Nullable | Description |
+| ----- | ---- | -------- | ----------- |
+| `sentenceId` | `string` | No | Sentence id |
+| `position` | `number` | No | Position inside the topic |
+| `text` | `string` | No | Sentence text |
+| `attemptsCount` | `number` | No | Number of attempts for this sentence within the topic |
+| `distinctUsersCount` | `number` | No | Distinct users who attempted this sentence in the topic |
+| `averagePronScore` | `number` | Yes | Average pronunciation score |
+| `latestAttemptAt` | `string` | Yes | ISO datetime of latest attempt |
+
+### 16.5 `learning-app` Integration Guide
+
+#### 16.5.1 GET `/api/shadowing/topics`
+
+**Purpose:** Load the topic list screen for the user app.
+
+**Query params:**
+
+| Field | Type | Required | Default | Notes |
+| ----- | ---- | -------- | ------- | ----- |
+| `q` | `string` | No | none | Keyword search |
+| `level` | `string` | No | none | `N1` to `N5` |
+| `visibility` | `string` | No | none | Usually omit this in user app unless an owner-only UI needs it |
+| `officialOnly` | `boolean` | No | none | Filter official topics only |
+| `page` | `number` | No | `1` | Paging |
+| `pageSize` | `number` | No | `20` | Paging |
+
+**Success response:**
+- `data`: `ShadowingTopicListItemResponse[]`
+- `metaData`: paging metadata
+
+**Frontend notes:**
+- This endpoint already applies user access rules
+- The app should not try to filter out `Draft` topics manually; backend already does that
+- `creatorName` and `coverImageUrl` are safe to display directly in list cards
+
+**Example:**
+```http
+GET /api/shadowing/topics?level=N5&officialOnly=true&page=1&pageSize=12
+```
+
+#### 16.5.2 GET `/api/shadowing/topics/{topicId}`
+
+**Purpose:** Load topic detail before entering practice.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicDetailResponse`
+
+**Frontend notes:**
+- `sentences` are already ordered by `position`
+- Use `sentencesCount` for summary display, not `sentences.length`, if you want to mirror backend state exactly
+
+#### 16.5.3 GET `/api/shadowing/topics/{topicId}/progress`
+
+**Purpose:** Load topic summary progress for dashboards or a continue-learning card.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicProgressResponse`
+
+**Frontend notes:**
+- `completedSentencesCount` is currently equal to `attemptedSentencesCount` in backend behavior
+- If product later defines a stricter completion rule, backend may change this field without changing the route
+
+#### 16.5.4 GET `/api/shadowing/topics/{topicId}/sentences/progress`
+
+**Purpose:** Render a sentence checklist or progress drawer in the user app.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicSentenceProgressItemResponse[]`
+
+**Frontend notes:**
+- Join this list with topic detail by `sentenceId` only if needed. In most cases this response already contains enough UI data
+- `hasAttempted = false` means all score/time fields may be `null`
+
+#### 16.5.5 GET `/api/shadowing/topics/{topicId}/resume`
+
+**Purpose:** Restore the best next sentence when the user taps a continue button.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicResumeResponse`
+
+**Frontend notes:**
+- `recommendedSentenceId` may be `null` if the topic has no sentences
+- If it exists, the frontend should navigate to that sentence first
+- `lastAttemptSentenceId` is useful for showing a "resume from latest" label
+
+#### 16.5.6 POST `/api/shadowing/attempts`
+
+**Purpose:** Submit one recorded audio file and receive assessment scores.
+
+**Content type:** `multipart/form-data`
+
+**Form-data fields:**
+
+| Field | Type | Required | Default | Notes |
+| ----- | ---- | -------- | ------- | ----- |
+| `topicId` | `string` | Yes | none | Max length 50 |
+| `sentenceId` | `string` | Yes | none | Max length 50 |
+| `locale` | `string` | No | `ja-JP` | If provided, only `ja-JP` is valid. Max length 20 |
+| `audio` | `file` | Yes | none | Required. Max size 20 MB. MIME must be in backend allowed audio MIME list |
+
+**Success response:**
+- `data`: `ShadowingAttemptResponse`
+
+**Frontend notes:**
+- The frontend should not send a locale picker yet unless product explicitly needs one
+- Safe default: omit `locale` entirely and let backend fill `ja-JP`
+- Use the response scores directly to update local progress UI
+- `audioUrl` is the uploaded attempt recording, not the original sentence audio
+
+**Minimal request example:**
+```http
+POST /api/shadowing/attempts
+Content-Type: multipart/form-data
+```
+Form fields:
+- `topicId = topic-123`
+- `sentenceId = sentence-456`
+- `audio = <recorded-file>`
+
+#### 16.5.7 GET `/api/shadowing/attempts/{attemptId}`
+
+**Purpose:** Reload a detail screen for a previous attempt.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `attemptId` | `string` | Yes | Attempt id |
+
+**Success response:**
+- `data`: `ShadowingAttemptResponse`
+
+**Frontend notes:**
+- This endpoint is owner-scoped. If the attempt belongs to another user, backend returns a not-found business error
+
+#### 16.5.8 GET `/api/shadowing/attempts/history`
+
+**Purpose:** Render attempt history screen, user profile activity, or a topic-specific history list.
+
+**Query params:**
+
+| Field | Type | Required | Default | Notes |
+| ----- | ---- | -------- | ------- | ----- |
+| `topicId` | `string` | No | none | Filter by topic |
+| `sentenceId` | `string` | No | none | Filter by sentence |
+| `page` | `number` | No | `1` | Paging |
+| `pageSize` | `number` | No | `20` | Paging |
+
+**Success response:**
+- `data`: `ShadowingAttemptHistoryItemResponse[]`
+- `metaData`: paging metadata
+
+#### 16.5.9 GET `/api/shadowing/sentences/{sentenceId}/progress`
+
+**Purpose:** Render progress badge/state for one sentence outside the topic progress list.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `sentenceId` | `string` | Yes | Sentence id |
+
+**Success response:**
+- `data`: `ShadowingSentenceProgressResponse`
+
+**Frontend notes:**
+- This is useful for shared sentence cards or mini progress widgets
+
+#### 16.5.10 Recommended Implementation Order for `learning-app`
+
+1. Topic list
+2. Topic detail
+3. Submit attempt
+4. Attempt result view
+5. Topic resume
+6. Topic sentence progress
+7. Attempt history
+8. Sentence progress widgets
+
+### 16.6 `learning-admin` Integration Guide
+
+#### 16.6.1 GET `/api/admin/shadowing/topics`
+
+**Purpose:** Render admin topic table and filters.
+
+**Query params:**
+
+| Field | Type | Required | Default | Notes |
+| ----- | ---- | -------- | ------- | ----- |
+| `q` | `string` | No | none | Keyword search |
+| `level` | `string` | No | none | `N1` to `N5` |
+| `visibility` | `string` | No | none | `Public` or `Private` |
+| `status` | `string` | No | none | `Draft`, `Published`, or `Archived` |
+| `isOfficial` | `boolean` | No | none | Filter by official flag |
+| `createdBy` | `string` | No | none | Filter by creator id |
+| `page` | `number` | No | `1` | Paging |
+| `pageSize` | `number` | No | `20` | Paging |
+
+**Success response:**
+- `data`: `ShadowingTopicListItemResponse[]`
+- `metaData`: paging metadata
+
+#### 16.6.2 GET `/api/admin/shadowing/topics/{topicId}`
+
+**Purpose:** Load topic detail for editor screens.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicDetailResponse`
+
+#### 16.6.3 POST `/api/admin/shadowing/topics`
+
+**Purpose:** Create a new topic.
+
+**JSON body fields:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `title` | `string` | Yes | Max length 200 |
+| `description` | `string` | Yes | Max length 2000 |
+| `coverImageUrl` | `string` | No | Max length 512 |
+| `level` | `string` | No | `N1` to `N5` |
+| `visibility` | `string` | No | `Public` or `Private` |
+| `status` | `string` | No | `Draft`, `Published`, or `Archived`. If omitted, backend defaults to `Draft` |
+
+**Success response:**
+- `data`: `ShadowingTopicDetailResponse`
+
+**Frontend notes:**
+- You can create a topic without sending `status`; backend will store `Draft`
+- `coverImageUrl` must already be a usable URL. This endpoint does not upload files
+
+**Minimal request example:**
+```json
+{
+  "title": "Shadowing N5 Greetings",
+  "description": "Basic Japanese greeting practice",
+  "coverImageUrl": "https://cdn.example.com/shadowing/greetings-cover.webp",
+  "level": "N5",
+  "visibility": "Public"
+}
+```
+
+#### 16.6.4 PATCH `/api/admin/shadowing/topics/{topicId}`
+
+**Purpose:** Update topic metadata.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**JSON body fields:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `title` | `string` | No | Max length 200 |
+| `description` | `string` | No | Max length 2000 |
+| `coverImageUrl` | `string` | No | Max length 512 |
+| `level` | `string` | No | `N1` to `N5` |
+| `visibility` | `string` | No | `Public` or `Private` |
+| `status` | `string` | No | `Draft`, `Published`, or `Archived` |
+
+**Success response:**
+- `data`: `ShadowingTopicDetailResponse`
+
+**Frontend notes:**
+- This is a partial update request. Only send fields you actually want to modify
+
+#### 16.6.5 GET `/api/admin/shadowing/topics/{topicId}/available-sentences`
+
+**Purpose:** Power the sentence picker inside the topic builder.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Query params:**
+
+| Field | Type | Required | Default | Notes |
+| ----- | ---- | -------- | ------- | ----- |
+| `q` | `string` | No | none | Max length 200. Keyword search |
+| `level` | `string` | No | none | `N1` to `N5` |
+| `hasAudio` | `boolean` | No | none | `true` only audio, `false` only no audio, omitted means no audio filter |
+| `page` | `number` | No | `1` | Paging |
+| `pageSize` | `number` | No | `20` | Paging |
+
+**Success response:**
+- `data`: `AdminShadowingAvailableSentenceResponse[]`
+- `metaData`: paging metadata
+
+**Frontend notes:**
+- This response already tells you whether a sentence is attached
+- Disable or convert the attach action when `isAttached = true`
+- `attachedPosition` and `attachedNote` are useful for edit chips or prefilled UI
+
+#### 16.6.6 DELETE `/api/admin/shadowing/topics/{topicId}`
+
+**Purpose:** Delete a topic.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `boolean`
+
+**Frontend notes:**
+- Treat `true` as success confirmation and remove the row from local state
+
+#### 16.6.7 POST `/api/admin/shadowing/topics/{topicId}/sentences`
+
+**Purpose:** Attach one sentence to a topic.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**JSON body fields:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `sentenceId` | `string` | Yes | Max length 50 |
+| `position` | `number` | Yes | Must be greater than 0 |
+| `note` | `string` | No | Max length 1000 |
+
+**Success response:**
+- `data`: `ShadowingTopicSentenceResponse`
+
+#### 16.6.8 POST `/api/admin/shadowing/topics/{topicId}/sentences/bulk`
+
+**Purpose:** Attach multiple sentences in a single request.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**JSON body fields:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `items` | `AttachShadowingTopicSentenceRequest[]` | Yes | Must not be empty |
+| `items[].sentenceId` | `string` | Yes | Max length 50 |
+| `items[].position` | `number` | Yes | Must be greater than 0 |
+| `items[].note` | `string` | No | Max length 1000 |
+
+**Success response:**
+- `data`: `ShadowingTopicSentenceResponse[]`
+
+**Frontend notes:**
+- Backend rejects duplicate positions in the payload
+- Backend also rejects sentences already attached to the topic
+- Before sending bulk attach, deduplicate selected rows on the frontend to keep UX clean
+
+**Example request:**
+```json
+{
+  "items": [
+    {
+      "sentenceId": "sentence-1",
+      "position": 1,
+      "note": "Intro"
+    },
+    {
+      "sentenceId": "sentence-2",
+      "position": 2,
+      "note": "Follow-up"
+    }
+  ]
+}
+```
+
+#### 16.6.9 PUT `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}`
+
+**Purpose:** Update position and note for one attached sentence.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+| `sentenceId` | `string` | Yes | Attached sentence id |
+
+**JSON body fields:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `position` | `number` | Yes | Must be greater than 0 |
+| `note` | `string` | No | Max length 1000 |
+
+**Success response:**
+- `data`: `ShadowingTopicSentenceResponse`
+
+#### 16.6.10 DELETE `/api/admin/shadowing/topics/{topicId}/sentences/{sentenceId}`
+
+**Purpose:** Remove one attached sentence.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+| `sentenceId` | `string` | Yes | Attached sentence id |
+
+**Success response:**
+- `data`: `boolean`
+
+#### 16.6.11 POST `/api/admin/shadowing/topics/{topicId}/sentences/reorder`
+
+**Purpose:** Persist drag-and-drop ordering for the topic builder.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**JSON body fields:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `items` | `ReorderShadowingTopicSentenceItemRequest[]` | Yes | Must not be empty |
+| `items[].sentenceId` | `string` | Yes | Sentence id |
+| `items[].position` | `number` | Yes | Intended final position |
+
+**Success response:**
+- `data`: `ShadowingTopicSentenceResponse[]`
+
+**Frontend notes:**
+- Backend rejects duplicated positions
+- Send the full intended order, not only one changed row
+
+#### 16.6.12 GET `/api/admin/shadowing/topics/{topicId}/analytics`
+
+**Purpose:** Show summary analytics on the topic detail page.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicAnalyticsResponse`
+
+#### 16.6.13 GET `/api/admin/shadowing/topics/{topicId}/analytics/sentences`
+
+**Purpose:** Show per-sentence analytics table or chart.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `topicId` | `string` | Yes | Topic id |
+
+**Success response:**
+- `data`: `ShadowingTopicSentenceAnalyticsResponse[]`
+
+#### 16.6.14 Recommended Implementation Order for `learning-admin`
+
+1. Admin topic list
+2. Create topic
+3. Edit topic metadata
+4. Available sentence search
+5. Attach one sentence
+6. Bulk attach
+7. Reorder sentence list
+8. Delete sentence
+9. Topic analytics
+10. Sentence analytics
+
+### 16.7 Access and Visibility Rules
+
+#### User APIs
+
+All `/api/shadowing/*` endpoints require authentication.
+
+Access behavior:
+- A user can only read topics where:
   - `status = Published`
-  - và `visibility = Public` **hoặc** topic do chính user tạo.
-- Topic tạo qua admin API được đánh dấu `isOfficial = true`.
-- Attempt shadowing được lưu theo user và có liên kết đến `topic`, `sentence`, `audio asset`.
+  - and `visibility = Public` or `creatorId = currentUserId`
+- A user can only access their own attempts
+- Progress endpoints are always scoped to the current authenticated user
 
-### Submit attempt (user)
+#### Admin APIs
 
-- Content-Type: `multipart/form-data`
-- Form fields:
-  - `topicId` (required)
-  - `sentenceId` (required)
-  - `locale` (optional, default `ja-JP`)
-  - `audio` (required)
+All `/api/admin/shadowing/*` endpoints require `Editor/Admin` policy.
 
-Backend flow:
-1. Kiểm tra sentence thuộc topic và topic readable với user.
-2. Upload audio thành `MediaAsset`.
-3. Gọi Azure Speech Pronunciation Assessment.
-4. Lưu `shadowing_attempts` với score + raw assessment payload.
+Access behavior:
+- Admin endpoints are intended for topic management and analytics
+- Topic creation through admin automatically stores `isOfficial = true`
+- Topic creation defaults `status` to `Draft` if omitted
 
-Azure Speech config:
-- `AzureSpeechConfig.SubscriptionKey` là bắt buộc.
-- Chọn một trong hai:
-  - `AzureSpeechConfig.Endpoint`: endpoint đầy đủ (ví dụ `https://japaneast.stt.speech.microsoft.com`).
-  - `AzureSpeechConfig.Region`: tên region (ví dụ `japaneast`) để backend tự dựng endpoint.
+### 16.8 Shadowing Error Codes
 
-### Score trả về
+| Message | Meaning for Frontend |
+| ------- | -------------------- |
+| `Validation_400` | DTO or query validation failed. `data` contains field-level errors |
+| `Common_401` | User is not authenticated or does not have required access |
+| `Common_404` | Generic not found fallback |
+| `Common_500` | Internal server error |
+| `Shadowing_TopicNotFound_404` | Topic does not exist or caller has no access to it |
+| `Shadowing_AttemptNotFound_404` | Attempt does not exist or does not belong to the current user |
+| `Shadowing_SentenceNotFound_404` | Sentence does not exist |
+| `Shadowing_SentenceNotAttached_404` | Topic does not contain the requested sentence |
+| `Shadowing_SentenceAlreadyAttached_400` | Admin tried to attach a sentence that is already attached |
+| `Shadowing_InvalidAudio_400` | Uploaded audio is empty or otherwise invalid |
+| `Shadowing_AssessmentFailed_500` | External pronunciation assessment failed |
+| `Shadowing_AzureNotConfigured_500` | Speech provider is not configured on backend |
+| `Shadowing_DuplicatePosition_400` | Reorder or bulk attach payload contains duplicate positions |
 
-Response attempt hỗ trợ các chỉ số:
-- `pronScore`
-- `accuracyScore`
-- `fluencyScore`
-- `completenessScore`
-- `prosodyScore` (nếu có từ provider)
-- `errorTypes` (danh sách lỗi theo từ)
-
-### Shadowing error codes
-
-| Code | Ý nghĩa |
-| ---- | ------- |
-| `Shadowing_TopicNotFound_404` | Topic không tồn tại hoặc không nằm trong phạm vi truy cập |
-| `Shadowing_SentenceNotFound_404` | Sentence không tồn tại |
-| `Shadowing_SentenceNotAttached_404` | Sentence chưa được gắn vào topic |
-| `Shadowing_SentenceAlreadyAttached_400` | Sentence đã được gắn vào topic |
-| `Shadowing_InvalidAudio_400` | Audio payload không hợp lệ |
-| `Shadowing_AssessmentFailed_500` | Gọi pronunciation assessment thất bại |
-| `Shadowing_AzureNotConfigured_500` | Thiếu cấu hình Azure Speech |
-| `Shadowing_DuplicatePosition_400` | Payload reorder có position trùng |
+Error handling guidance:
+- Show friendly UI text based on `message`
+- Preserve the backend code in logs and analytics
+- For `Shadowing_TopicNotFound_404`, redirect away from the detail page or show a no-access state
+- For `Shadowing_AttemptNotFound_404`, remove stale cached attempt detail state
+- For `Shadowing_DuplicatePosition_400`, keep the user on the builder screen and ask for a refresh or list correction
 
 ## Phụ lục: Tổng hợp Error Codes
 
