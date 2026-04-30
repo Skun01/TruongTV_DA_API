@@ -32,5 +32,16 @@ public interface IUnitOfWork
     IShadowingTopicSentenceRepository ShadowingTopicSentences { get; }
     IShadowingAttemptRepository ShadowingAttempts { get; }
 
+    // JLPT Exam module
+    IExamRepository Exams { get; }
+    IExamSectionRepository ExamSections { get; }
+    IQuestionGroupRepository QuestionGroups { get; }
+    IQuestionRepository Questions { get; }
+    IRepository<QuestionOption> QuestionOptions { get; }
+    IExamSessionRepository ExamSessions { get; }
+    IRepository<SessionAnswer> SessionAnswers { get; }
+    IRepository<SessionSectionScore> SessionSectionScores { get; }
+    IAiGeneratedQuestionRepository AiGeneratedQuestions { get; }
+
     Task<int> SaveChangesAsync();
 }

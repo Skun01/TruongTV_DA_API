@@ -143,6 +143,41 @@ public static class MessageConstants
         public const string DUPLICATE_POSITION = "Shadowing_DuplicatePosition_400";
     }
 
+    public static class ExamMessage
+    {
+        public const string NOT_FOUND = "Exam_NotFound_404";
+        public const string SECTION_NOT_FOUND = "Exam_SectionNotFound_404";
+        public const string GROUP_NOT_FOUND = "Exam_GroupNotFound_404";
+        public const string QUESTION_NOT_FOUND = "Exam_QuestionNotFound_404";
+        public const string OPTION_NOT_FOUND = "Exam_OptionNotFound_404";
+        public const string CANNOT_DELETE_PUBLISHED = "Exam_CannotDeletePublished_400";
+        public const string CANNOT_MODIFY_PUBLISHED = "Exam_CannotModifyPublished_400";
+        public const string ALREADY_PUBLISHED = "Exam_AlreadyPublished_400";
+        public const string NO_SECTIONS = "Exam_NoSections_400";
+        public const string NO_QUESTIONS = "Exam_NoQuestions_400";
+        public const string INVALID_REORDER_PAYLOAD = "Exam_InvalidReorderPayload_400";
+    }
+
+    public static class ExamSessionMessage
+    {
+        public const string NOT_FOUND = "ExamSession_NotFound_404";
+        public const string EXAM_NOT_PUBLISHED = "ExamSession_ExamNotPublished_400";
+        public const string ALREADY_SUBMITTED = "ExamSession_AlreadySubmitted_400";
+        public const string SESSION_EXPIRED = "ExamSession_Expired_400";
+        public const string NOT_SUBMITTED = "ExamSession_NotSubmitted_400";
+        public const string QUESTION_NOT_IN_EXAM = "ExamSession_QuestionNotInExam_400";
+        public const string FORBIDDEN = "ExamSession_Forbidden_403";
+    }
+
+    public static class AiQuestionMessage
+    {
+        public const string NOT_FOUND = "AiQuestion_NotFound_404";
+        public const string ALREADY_REVIEWED = "AiQuestion_AlreadyReviewed_400";
+        public const string GENERATION_FAILED = "AiQuestion_GenerationFailed_500";
+        public const string TTS_FAILED = "AiQuestion_TtsFailed_500";
+        public const string NO_AUDIO_SCRIPT = "AiQuestion_NoAudioScript_400";
+    }
+
     public static class FileUploadMessage
     {
         public const string CLOUDINARY_UPLOAD_FAILED = "FileUpload_CloudinaryUploadFailed_500";

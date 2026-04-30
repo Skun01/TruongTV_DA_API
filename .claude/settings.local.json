@@ -1,0 +1,12 @@
+{
+  "enabledMcpjsonServers": [
+    "contextplus",
+    "shadcn",
+    "context7"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(python *)"
+    ]
+  }
+}

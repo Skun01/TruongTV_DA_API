@@ -21,7 +21,11 @@
 13. [Decks Module — Admin](#13-decks-module--admin)
 14. [Learning Module — User](#14-learning-module--user)
 15. [Learning Module — Admin (Proposed)](#15-learning-module--admin-proposed)
-16. [Shadowing Module](#16-shadowing-module)
+16. [JLPT Exams Module — Admin](#16-jlpt-exams-module--admin)
+17. [JLPT Questions Module — Admin](#17-jlpt-questions-module--admin)
+18. [JLPT AI Questions Module — Admin](#18-jlpt-ai-questions-module--admin)
+19. [JLPT Exam Sessions Module — User](#19-jlpt-exam-sessions-module--user)
+20. [Shadowing Module](#20-shadowing-module)
 
 ---
 
@@ -232,6 +236,59 @@ Tất cả enum gửi/nhận dưới dạng **string** (case-sensitive).
 | `level_10` | Review again after `4 months` |
 | `level_11` | Review again after `8 months` |
 | `level_12` | Mastered, no more review |
+
+### SectionType (JLPT)
+
+| Value    | Mô tả                         |
+| -------- | ----------------------------- |
+| `Moji`   | Chữ / từ vựng                 |
+| `Bunpou` | Ngữ pháp                      |
+| `Dokkai` | Đọc hiểu                      |
+| `Choukai`| Nghe hiểu                     |
+
+### OptionLabel (JLPT)
+
+| Value | Mô tả       |
+| ----- | ----------- |
+| `A`   | Đáp án A    |
+| `B`   | Đáp án B    |
+| `C`   | Đáp án C    |
+| `D`   | Đáp án D    |
+
+### OptionType (JLPT)
+
+| Value          | Mô tả                  |
+| -------------- | ---------------------- |
+| `Text`         | Chỉ có text            |
+| `Image`        | Chỉ có hình ảnh        |
+| `TextAndImage` | Có cả text và hình ảnh |
+
+### ExamSessionStatus (JLPT)
+
+| Value        | Mô tả                    |
+| ------------ | ------------------------ |
+| `InProgress` | Đang làm bài             |
+| `Submitted`  | Đã nộp bài               |
+| `TimedOut`   | Hết giờ, bị đóng tự động |
+
+### AiQuestionStatus (JLPT)
+
+| Value      | Mô tả                             |
+| ---------- | --------------------------------- |
+| `Pending`  | Mới sinh bởi AI, chưa review      |
+| `Edited`   | Đã được biên tập viên chỉnh sửa   |
+| `Approved` | Đã duyệt, đã chuyển vào question bank |
+| `Rejected` | Đã từ chối                        |
+
+### ChoukaiMondaiType (JLPT)
+
+| Value      | Mô tả |
+| ---------- | ----- |
+| `Mondai1`  | Dạng bài nghe 1 |
+| `Mondai2`  | Dạng bài nghe 2 |
+| `Mondai3`  | Dạng bài nghe 3 |
+| `Mondai4`  | Dạng bài nghe 4 |
+| `Mondai5`  | Dạng bài nghe 5 |
 
 ---
 
@@ -4973,11 +5030,990 @@ The following admin APIs are still recommended for later phases:
 
 ---
 
-## 16. Shadowing Module
+## 16. JLPT Exams Module — Admin
+
+> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Dùng để quản lý đề thi JLPT, section, question group và audio nghe hiểu cho frontend admin.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+| ------ | -------- | ---- | ----- |
+| POST | `/api/exams` | 🔑 Editor/Admin | Tạo đề thi mới |
+| GET | `/api/exams` | 🔑 Editor/Admin | Tìm kiếm danh sách đề thi |
+| GET | `/api/exams/{id}` | 🔑 Editor/Admin | Lấy chi tiết đề thi |
+| PUT | `/api/exams/{id}` | 🔑 Editor/Admin | Cập nhật đề thi |
+| PATCH | `/api/exams/{id}/publish` | 🔑 Editor/Admin | Publish đề thi |
+| DELETE | `/api/exams/{id}` | 🔑 Editor/Admin | Xóa đề thi draft |
+| POST | `/api/exams/{examId}/sections` | 🔑 Editor/Admin | Tạo section cho đề |
+| PUT | `/api/exams/{examId}/sections/{sectionId}` | 🔑 Editor/Admin | Cập nhật section |
+| DELETE | `/api/exams/{examId}/sections/{sectionId}` | 🔑 Editor/Admin | Xóa section |
+| POST | `/api/exams/sections/{sectionId}/groups` | 🔑 Editor/Admin | Tạo question group |
+| PUT | `/api/exams/sections/{sectionId}/groups/{groupId}` | 🔑 Editor/Admin | Cập nhật question group |
+| DELETE | `/api/exams/sections/{sectionId}/groups/{groupId}` | 🔑 Editor/Admin | Xóa question group |
+| POST | `/api/exams/groups/{groupId}/generate-audio` | 🔑 Editor/Admin | Sinh audio TTS cho Choukai group |
+
+---
+
+### GET `/api/exams` 🔑
+
+Tìm kiếm danh sách đề thi JLPT.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+| ----- | ---- | -------- | ---- | ----- |
+| `keyword` | `string` | ❌ | — | Tìm theo tiêu đề đề thi |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo level |
+| `status` | `string` | ❌ | `PublishStatus` | Lọc theo trạng thái |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item:**
+
+```json
+{
+  "id": "string",
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120,
+  "status": "Draft",
+  "sectionsCount": 4,
+  "createdBy": "user-id",
+  "creatorName": "Nguyen Van A",
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null"
+}
+```
+
+---
+
+### POST `/api/exams` 🔑
+
+Tạo đề thi JLPT mới.
+
+**Request body:**
+
+```json
+{
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120
+}
+```
+
+**Rules quan trọng:**
+
+- `title`: bắt buộc, tối đa `500` ký tự
+- `level`: bắt buộc, enum `JlptLevel`
+- `totalDurationMinutes`: `> 0` và `<= 300`
+
+**Response data:** `ExamDetailResponse`
+
+---
+
+### GET `/api/exams/{id}` 🔑
+
+Lấy chi tiết đầy đủ của đề thi, bao gồm sections và question groups.
+
+**Response data:**
+
+```json
+{
+  "id": "string",
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120,
+  "status": "Draft",
+  "createdBy": "user-id",
+  "creatorName": "Nguyen Van A",
+  "sections": [
+    {
+      "id": "section-id",
+      "sectionType": "Moji",
+      "orderIndex": 0,
+      "durationMinutes": 25,
+      "maxScore": 60,
+      "passScore": 19,
+      "questionGroupsCount": 2,
+      "questionsCount": 10,
+      "questionGroups": [
+        {
+          "id": "group-id",
+          "passageText": null,
+          "audioUrl": null,
+          "audioScript": null,
+          "instruction": "Chọn đáp án đúng nhất.",
+          "orderIndex": 0,
+          "mondaiType": null,
+          "questions": [],
+          "createdAt": "datetime",
+          "updatedAt": null
+        }
+      ],
+      "createdAt": "datetime",
+      "updatedAt": null
+    }
+  ],
+  "createdAt": "datetime",
+  "updatedAt": null
+}
+```
+
+---
+
+### PUT `/api/exams/{id}` 🔑
+
+Cập nhật đề thi.
+
+**Request body:** giống `POST /api/exams`.
+
+**Response data:** `ExamDetailResponse`
+
+---
+
+### PATCH `/api/exams/{id}/publish` 🔑
+
+Publish đề thi để frontend user có thể bắt đầu làm bài.
+
+**Response data:**
+
+```json
+"Published"
+```
+
+**Điều kiện publish:**
+
+- Đề phải có ít nhất 1 section
+- Mỗi section phải có ít nhất 1 question group và có câu hỏi
+- Không được publish lại đề đã `Published`
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `Exam_NotFound_404` | Không tìm thấy đề |
+| `Exam_AlreadyPublished_400` | Đề đã publish trước đó |
+| `Exam_NoSections_400` | Đề chưa có section |
+| `Exam_NoQuestions_400` | Có section chưa có câu hỏi |
+
+---
+
+### DELETE `/api/exams/{id}` 🔑
+
+Xóa đề thi.
+
+- Chỉ xóa được đề chưa publish.
+
+**Response data:**
+
+```json
+"Deleted"
+```
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `Exam_NotFound_404` | Không tìm thấy đề |
+| `Exam_CannotDeletePublished_400` | Không được xóa đề đã publish |
+
+---
+
+### POST `/api/exams/{examId}/sections` 🔑
+
+Tạo section cho đề thi.
+
+**Request body:**
+
+```json
+{
+  "sectionType": "Moji",
+  "orderIndex": 0,
+  "durationMinutes": 25,
+  "maxScore": 60,
+  "passScore": 19
+}
+```
+
+**Rules quan trọng:**
+
+- `sectionType`: bắt buộc, enum `SectionType`
+- `orderIndex`: `>= 0`
+- `durationMinutes`: `> 0`
+- `maxScore`: `> 0`
+- `passScore`: `>= 0` và `<= maxScore`
+
+**Response data:** `ExamSectionResponse`
+
+---
+
+### PUT `/api/exams/{examId}/sections/{sectionId}` 🔑
+
+Cập nhật section.
+
+**Request body:** giống `POST /api/exams/{examId}/sections`.
+
+**Response data:** `ExamSectionResponse`
+
+---
+
+### DELETE `/api/exams/{examId}/sections/{sectionId}` 🔑
+
+Xóa section khỏi đề thi.
+
+**Response data:**
+
+```json
+"Deleted"
+```
+
+---
+
+### POST `/api/exams/sections/{sectionId}/groups` 🔑
+
+Tạo question group trong một section.
+
+**Request body:**
+
+```json
+{
+  "passageText": "Đoạn văn đọc hiểu...",
+  "audioUrl": null,
+  "audioScript": null,
+  "instruction": "Đọc đoạn văn rồi trả lời câu hỏi.",
+  "orderIndex": 0,
+  "mondaiType": null
+}
+```
+
+**Field details:**
+
+| Field | Type | Enum | Mô tả |
+| ----- | ---- | ---- | ----- |
+| `passageText` | `string?` | — | Dùng cho `Dokkai` |
+| `audioUrl` | `string?` | — | URL file audio, thường dùng cho `Choukai` |
+| `audioScript` | `string?` | — | Script để generate audio TTS |
+| `instruction` | `string` | — | Bắt buộc, tối đa `2000` ký tự |
+| `orderIndex` | `int` | — | `>= 0` |
+| `mondaiType` | `string?` | `ChoukaiMondaiType` | Dùng cho nhóm câu hỏi nghe hiểu |
+
+**Response data:** `QuestionGroupResponse`
+
+---
+
+### PUT `/api/exams/sections/{sectionId}/groups/{groupId}` 🔑
+
+Cập nhật question group.
+
+**Request body:** giống `POST /api/exams/sections/{sectionId}/groups`.
+
+**Response data:** `QuestionGroupResponse`
+
+---
+
+### DELETE `/api/exams/sections/{sectionId}/groups/{groupId}` 🔑
+
+Xóa question group.
+
+**Response data:**
+
+```json
+"Deleted"
+```
+
+---
+
+### POST `/api/exams/groups/{groupId}/generate-audio` 🔑
+
+Sinh audio TTS cho `Choukai` group từ `audioScript`.
+
+**Quy trình backend:**
+
+1. Đọc `audioScript` của group
+2. Gọi Azure Cognitive Services Text-to-Speech
+3. Upload file MP3 lên Cloudinary
+4. Cập nhật `audioUrl` của group
+
+**Response data:** `QuestionGroupResponse`
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `Exam_GroupNotFound_404` | Không tìm thấy group |
+| `AiQuestion_NoAudioScript_400` | Group chưa có `audioScript` |
+| `Exam_CannotModifyPublished_400` | Không sửa được đề đã publish |
+
+---
+
+## 17. JLPT Questions Module — Admin
+
+> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Dùng để quản lý câu hỏi và đáp án trong question bank / exam groups.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+| ------ | -------- | ---- | ----- |
+| POST | `/api/questions` | 🔑 Editor/Admin | Tạo một câu hỏi |
+| GET | `/api/questions` | 🔑 Editor/Admin | Tìm kiếm câu hỏi |
+| GET | `/api/questions/{id}` | 🔑 Editor/Admin | Lấy chi tiết câu hỏi |
+| PUT | `/api/questions/{id}` | 🔑 Editor/Admin | Cập nhật câu hỏi |
+| DELETE | `/api/questions/{id}` | 🔑 Editor/Admin | Xóa câu hỏi |
+| POST | `/api/questions/groups/{groupId}/bulk` | 🔑 Editor/Admin | Tạo nhiều câu hỏi cùng lúc |
+| PUT | `/api/questions/groups/{groupId}/reorder` | 🔑 Editor/Admin | Cập nhật thứ tự câu hỏi |
+
+---
+
+### GET `/api/questions` 🔑
+
+Tìm kiếm câu hỏi theo keyword, level và loại section.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+| ----- | ---- | -------- | ---- | ----- |
+| `keyword` | `string` | ❌ | — | Tìm theo nội dung câu hỏi |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo level đề |
+| `sectionType` | `string` | ❌ | `SectionType` | Lọc theo section |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item:**
+
+```json
+{
+  "id": "question-id",
+  "groupId": "group-id",
+  "questionText": "Từ nào đọc là たべる?",
+  "imageUrl": null,
+  "imageCaption": null,
+  "explanation": "食べる là động từ nhóm 2.",
+  "score": 1,
+  "orderIndex": 0,
+  "options": [
+    {
+      "id": "option-id",
+      "label": "A",
+      "text": "食べる",
+      "imageUrl": null,
+      "optionType": "Text",
+      "isCorrect": true
+    }
+  ],
+  "createdAt": "datetime",
+  "updatedAt": null
+}
+```
+
+---
+
+### POST `/api/questions` 🔑
+
+Tạo một câu hỏi cho question group.
+
+**Request body:**
+
+```json
+{
+  "groupId": "group-id",
+  "questionText": "Từ nào đọc là たべる?",
+  "imageUrl": null,
+  "imageCaption": null,
+  "explanation": "食べる là động từ nhóm 2.",
+  "score": 1,
+  "orderIndex": 0,
+  "options": [
+    {
+      "label": "A",
+      "text": "食べる",
+      "imageUrl": null,
+      "optionType": "Text",
+      "isCorrect": true
+    },
+    {
+      "label": "B",
+      "text": "飲む",
+      "imageUrl": null,
+      "optionType": "Text",
+      "isCorrect": false
+    }
+  ]
+}
+```
+
+**Rules quan trọng:**
+
+- `questionText`: bắt buộc, tối đa `5000` ký tự
+- `score`: `> 0`
+- `orderIndex`: `>= 0`
+- `options`: bắt buộc có từ `2` đến `4` item
+- Phải có **chính xác 1 option đúng**
+- `label`: enum `OptionLabel` (`A`, `B`, `C`, `D`)
+- `optionType`: enum `OptionType`
+
+**Response data:** `QuestionResponse`
+
+---
+
+### GET `/api/questions/{id}` 🔑
+
+Lấy chi tiết một câu hỏi.
+
+**Response data:** `QuestionResponse`
+
+---
+
+### PUT `/api/questions/{id}` 🔑
+
+Cập nhật câu hỏi.
+
+**Request body:**
+
+```json
+{
+  "questionText": "Từ nào đọc là たべる?",
+  "imageUrl": null,
+  "imageCaption": null,
+  "explanation": "Giải thích...",
+  "score": 1,
+  "orderIndex": 0,
+  "options": [
+    {
+      "id": "existing-option-id",
+      "label": "A",
+      "text": "食べる",
+      "imageUrl": null,
+      "optionType": "Text",
+      "isCorrect": true
+    }
+  ]
+}
+```
+
+**Lưu ý:**
+
+- Với update, `options[].id` là optional
+- Danh sách option gửi lên được hiểu là trạng thái cuối cùng của câu hỏi
+
+**Response data:** `QuestionResponse`
+
+---
+
+### DELETE `/api/questions/{id}` 🔑
+
+Xóa câu hỏi.
+
+**Response data:**
+
+```json
+"Deleted"
+```
+
+---
+
+### POST `/api/questions/groups/{groupId}/bulk` 🔑
+
+Tạo nhiều câu hỏi cùng lúc cho một group.
+
+**Request body:**
+
+```json
+{
+  "questions": [
+    {
+      "groupId": "group-id",
+      "questionText": "Câu 1...",
+      "score": 1,
+      "orderIndex": 0,
+      "options": [
+        { "label": "A", "text": "A", "optionType": "Text", "isCorrect": true },
+        { "label": "B", "text": "B", "optionType": "Text", "isCorrect": false }
+      ]
+    }
+  ]
+}
+```
+
+**Lưu ý:**
+
+- Backend nhận `groupId` trên route
+- Để an toàn frontend nên set `questions[].groupId` trùng với route param
+
+**Response data:** `QuestionResponse[]`
+
+---
+
+### PUT `/api/questions/groups/{groupId}/reorder` 🔑
+
+Cập nhật lại thứ tự câu hỏi trong group.
+
+**Request body:**
+
+```json
+{
+  "items": [
+    {
+      "id": "question-id-1",
+      "orderIndex": 0
+    },
+    {
+      "id": "question-id-2",
+      "orderIndex": 1
+    }
+  ]
+}
+```
+
+**Response data:**
+
+```json
+"Reordered"
+```
+
+---
+
+## 18. JLPT AI Questions Module — Admin
+
+> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
+> Dùng để sinh câu hỏi bằng AI, biên tập, duyệt hoặc từ chối trước khi đưa vào question bank.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+| ------ | -------- | ---- | ----- |
+| POST | `/api/ai/questions/generate` | 🔑 Editor/Admin | Sinh câu hỏi bằng AI |
+| GET | `/api/ai/questions` | 🔑 Editor/Admin | Tìm kiếm câu hỏi AI đã sinh |
+| GET | `/api/ai/questions/{id}` | 🔑 Editor/Admin | Lấy chi tiết câu hỏi AI |
+| PUT | `/api/ai/questions/{id}` | 🔑 Editor/Admin | Chỉnh sửa JSON câu hỏi AI |
+| POST | `/api/ai/questions/{id}/approve` | 🔑 Editor/Admin | Duyệt câu hỏi AI |
+| POST | `/api/ai/questions/{id}/reject` | 🔑 Editor/Admin | Từ chối câu hỏi AI |
+
+---
+
+### POST `/api/ai/questions/generate` 🔑
+
+Sinh danh sách câu hỏi JLPT bằng Anthropic.
+
+**Request body:**
+
+```json
+{
+  "level": "N5",
+  "sectionType": "Moji",
+  "topic": "Từ vựng gia đình",
+  "count": 5,
+  "questionGroupId": null
+}
+```
+
+**Rules quan trọng:**
+
+- `level`: bắt buộc, enum `JlptLevel`
+- `sectionType`: bắt buộc, enum `SectionType`
+- `topic`: bắt buộc, tối đa `500` ký tự
+- `count`: từ `1` đến `20`
+- `questionGroupId`: hiện có trong DTO nhưng backend hiện chưa dùng trong flow generate
+
+**Response data item:**
+
+```json
+{
+  "id": "ai-question-id",
+  "level": "N5",
+  "sectionType": "Moji",
+  "topic": "Từ vựng gia đình",
+  "generatedData": "{...json string...}",
+  "status": "Pending",
+  "reviewedBy": null,
+  "reviewerName": null,
+  "reviewedAt": null,
+  "questionId": null,
+  "createdBy": "user-id",
+  "creatorName": "Nguyen Van A",
+  "createdAt": "datetime",
+  "updatedAt": null
+}
+```
+
+**Ghi chú về `generatedData`:**
+
+- Đây là **JSON string**, frontend cần `JSON.parse()` nếu muốn render editor trực tiếp
+- Shape cơ bản:
+
+```json
+{
+  "passage": "string | null",
+  "script": "string | null",
+  "questions": [
+    {
+      "questionText": "string",
+      "explanation": "string | null",
+      "options": [
+        {
+          "label": "A",
+          "text": "string",
+          "isCorrect": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/ai/questions` 🔑
+
+Tìm kiếm danh sách câu hỏi AI đã sinh.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+| ----- | ---- | -------- | ---- | ----- |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo level |
+| `sectionType` | `string` | ❌ | `SectionType` | Lọc theo section |
+| `status` | `string` | ❌ | `AiQuestionStatus` | Lọc theo trạng thái review |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data:** `AiGeneratedQuestionResponse[]`
+
+---
+
+### GET `/api/ai/questions/{id}` 🔑
+
+Lấy chi tiết một bản ghi câu hỏi AI.
+
+**Response data:** `AiGeneratedQuestionResponse`
+
+---
+
+### PUT `/api/ai/questions/{id}` 🔑
+
+Chỉnh sửa payload câu hỏi AI trước khi duyệt.
+
+**Request body:**
+
+```json
+{
+  "generatedData": "{\"passage\":null,\"script\":null,\"questions\":[...]}"
+}
+```
+
+**Lưu ý:**
+
+- `generatedData` là **string**, không phải object JSON raw
+- Sau khi edit, backend chuyển `status` sang `Edited`
+
+**Response data:** `AiGeneratedQuestionResponse`
+
+---
+
+### POST `/api/ai/questions/{id}/approve` 🔑
+
+Duyệt câu hỏi AI và chuyển thành `Question` thực trong database.
+
+**Response data:** `AiGeneratedQuestionResponse`
+
+**Sau khi approve:**
+
+- `status` → `Approved`
+- `reviewedBy`, `reviewerName`, `reviewedAt` có giá trị
+- `questionId` có thể được gán nếu backend tạo thành công record `Question`
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `AiQuestion_NotFound_404` | Không tìm thấy bản ghi AI |
+| `AiQuestion_AlreadyReviewed_400` | Bản ghi đã approve hoặc reject trước đó |
+
+---
+
+### POST `/api/ai/questions/{id}/reject` 🔑
+
+Từ chối câu hỏi AI.
+
+**Response data:** `AiGeneratedQuestionResponse`
+
+---
+
+## 19. JLPT Exam Sessions Module — User
+
+> 🔒 **Tất cả endpoint trong module này yêu cầu đăng nhập.**  
+> Dùng cho frontend user để bắt đầu làm bài, autosave, resume, nộp bài và xem kết quả.
+
+### Tổng quan
+
+| Method | Endpoint | Auth | Mô tả |
+| ------ | -------- | ---- | ----- |
+| POST | `/api/exam-sessions` | 🔒 Auth | Bắt đầu làm bài |
+| GET | `/api/exam-sessions/{id}` | 🔒 Auth | Resume bài đang làm |
+| POST | `/api/exam-sessions/{id}/answers` | 🔒 Auth | Auto-save một câu trả lời |
+| POST | `/api/exam-sessions/{id}/submit` | 🔒 Auth | Nộp bài và chấm điểm |
+| GET | `/api/exam-sessions/{id}/result` | 🔒 Auth | Xem kết quả chi tiết |
+| GET | `/api/exam-sessions` | 🔒 Auth | Xem lịch sử làm bài |
+
+---
+
+### POST `/api/exam-sessions` 🔒
+
+Bắt đầu một phiên làm bài mới.
+
+**Request body:**
+
+```json
+{
+  "examId": "exam-id"
+}
+```
+
+**Response data:**
+
+```json
+{
+  "sessionId": "session-id",
+  "examId": "exam-id",
+  "examTitle": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "startedAt": "datetime",
+  "expiresAt": "datetime",
+  "sections": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "orderIndex": 0,
+      "durationMinutes": 25,
+      "questionGroups": [
+        {
+          "groupId": "group-id",
+          "passageText": null,
+          "audioUrl": null,
+          "instruction": "Chọn đáp án đúng nhất.",
+          "orderIndex": 0,
+          "mondaiType": null,
+          "questions": [
+            {
+              "questionId": "question-id",
+              "questionText": "Câu hỏi...",
+              "imageUrl": null,
+              "imageCaption": null,
+              "orderIndex": 0,
+              "options": [
+                {
+                  "optionId": "option-id",
+                  "label": "A",
+                  "text": "Đáp án A",
+                  "imageUrl": null,
+                  "optionType": "Text"
+                }
+              ],
+              "selectedOptionId": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Lưu ý rất quan trọng cho frontend user:**
+
+- Response **không chứa đáp án đúng** khi đang làm bài
+- `selectedOptionId` dùng để hydrate lại state khi resume
+- `expiresAt` là mốc dùng cho countdown timer phía frontend
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `Exam_NotFound_404` | Đề không tồn tại |
+| `ExamSession_ExamNotPublished_400` | Đề chưa publish |
+
+---
+
+### GET `/api/exam-sessions/{id}` 🔒
+
+Lấy lại trạng thái bài làm để resume sau khi reload / mất kết nối.
+
+**Response data:** cùng shape với `POST /api/exam-sessions`.
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `ExamSession_NotFound_404` | Session không tồn tại |
+| `ExamSession_Forbidden_403` | Session không thuộc về user hiện tại |
+
+---
+
+### POST `/api/exam-sessions/{id}/answers` 🔒
+
+Auto-save một câu trả lời.
+
+**Request body:**
+
+```json
+{
+  "questionId": "question-id",
+  "selectedOptionId": "option-id"
+}
+```
+
+**Lưu ý:**
+
+- `questionId` là bắt buộc
+- `selectedOptionId` có thể `null` nếu frontend muốn clear đáp án đã chọn
+- Nên gọi endpoint này theo từng thao tác chọn đáp án
+
+**Response data:**
+
+```json
+"Saved"
+```
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `ExamSession_NotFound_404` | Session không tồn tại |
+| `ExamSession_AlreadySubmitted_400` | Session đã nộp bài hoặc hết giờ |
+| `ExamSession_Expired_400` | Session đã hết hạn |
+| `ExamSession_QuestionNotInExam_400` | `questionId` không thuộc đề này |
+| `ExamSession_Forbidden_403` | Không phải session của user hiện tại |
+
+---
+
+### POST `/api/exam-sessions/{id}/submit` 🔒
+
+Nộp bài và chấm điểm toàn bộ.
+
+**Response data:**
+
+```json
+{
+  "sessionId": "session-id",
+  "totalScore": 92,
+  "correctCount": 32,
+  "wrongCount": 5,
+  "unansweredCount": 3,
+  "isPassed": true,
+  "sectionScores": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "score": 28,
+      "maxScore": 35,
+      "passScore": 19,
+      "isPassed": true
+    }
+  ]
+}
+```
+
+**Quy tắc pass/fail:**
+
+- `isPassed = true` khi **tổng điểm đạt** và **không trượt section nào**
+- Nếu trượt 1 section thì toàn bài vẫn fail
+
+---
+
+### GET `/api/exam-sessions/{id}/result` 🔒
+
+Xem kết quả chi tiết sau khi đã submit.
+
+**Response data:**
+
+```json
+{
+  "sessionId": "session-id",
+  "examId": "exam-id",
+  "examTitle": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalScore": 92,
+  "isPassed": true,
+  "startedAt": "datetime",
+  "submittedAt": "datetime | null",
+  "sectionScores": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "score": 28,
+      "maxScore": 35,
+      "passScore": 19,
+      "isPassed": true
+    }
+  ],
+  "questions": [
+    {
+      "questionId": "question-id",
+      "questionText": "Câu hỏi...",
+      "imageUrl": null,
+      "explanation": "Giải thích đáp án đúng...",
+      "sectionType": "Moji",
+      "selectedOptionId": "option-id-a",
+      "correctOptionId": "option-id-b",
+      "isCorrect": false,
+      "options": [
+        {
+          "optionId": "option-id-a",
+          "label": "A",
+          "text": "A",
+          "imageUrl": null,
+          "optionType": "Text"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Lưu ý:**
+
+- Chỉ response này mới có `correctOptionId`
+- Dùng cho màn review sau khi nộp bài
+
+---
+
+### GET `/api/exam-sessions` 🔒
+
+Lấy lịch sử làm bài của user hiện tại.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+| ----- | ---- | -------- | ---- | ----- |
+| `examId` | `string` | ❌ | — | Lọc theo đề |
+| `status` | `string` | ❌ | `ExamSessionStatus` | Lọc theo trạng thái |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item:**
+
+```json
+{
+  "sessionId": "session-id",
+  "examId": "exam-id",
+  "examTitle": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "status": "Submitted",
+  "totalScore": 92,
+  "isPassed": true,
+  "startedAt": "datetime",
+  "submittedAt": "datetime | null"
+}
+```
+
+---
+
+## 20. Shadowing Module
 
 > APIs for topic-based shadowing practice across both learning-app and learning-admin.
 
-### 16.1 Scope and App Ownership
+### 20.1 Scope and App Ownership
 
 #### `learning-app` Endpoints (User-facing)
 
@@ -5017,7 +6053,7 @@ The following admin APIs are still recommended for later phases:
 - `learning-admin` implements `/api/admin/shadowing/*` only
 - Do not mix service modules between apps
 
-### 16.2 Enum and Value Reference
+### 20.2 Enum and Value Reference
 
 All enum values are serialized as **strings** (case-sensitive).
 
@@ -5052,7 +6088,7 @@ All enum values are serialized as **strings** (case-sensitive).
 | ----- | ----------- |
 | `ja-JP` | Japanese (default if omitted) |
 
-### 16.3 Common Metadata Contract for List Endpoints
+### 20.3 Common Metadata Contract for List Endpoints
 
 Paginated endpoints return `metaData`:
 
@@ -5065,7 +6101,7 @@ Paginated endpoints return `metaData`:
 
 Default paging: `page = 1`, `pageSize = 20`
 
-### 16.4 Shared Response Models
+### 20.4 Shared Response Models
 
 #### `ShadowingTopicListItemResponse`
 
@@ -5243,9 +6279,9 @@ Default paging: `page = 1`, `pageSize = 20`
 | `averagePronScore` | `number` | Yes | Average pronunciation score |
 | `latestAttemptAt` | `string` | Yes | ISO datetime of latest attempt |
 
-### 16.5 `learning-app` Integration Guide
+### 20.5 `learning-app` Integration Guide
 
-#### 16.5.1 GET `/api/shadowing/topics`
+#### 20.5.1 GET `/api/shadowing/topics`
 
 **Purpose:** Load the topic list screen for the user app.
 
@@ -5274,7 +6310,7 @@ Default paging: `page = 1`, `pageSize = 20`
 GET /api/shadowing/topics?level=N5&officialOnly=true&page=1&pageSize=12
 ```
 
-#### 16.5.2 GET `/api/shadowing/topics/{topicId}`
+#### 20.5.2 GET `/api/shadowing/topics/{topicId}`
 
 **Purpose:** Load topic detail before entering practice.
 
@@ -5291,7 +6327,7 @@ GET /api/shadowing/topics?level=N5&officialOnly=true&page=1&pageSize=12
 - `sentences` are already ordered by `position`
 - Use `sentencesCount` for summary display, not `sentences.length`, if you want to mirror backend state exactly
 
-#### 16.5.3 GET `/api/shadowing/topics/{topicId}/progress`
+#### 20.5.3 GET `/api/shadowing/topics/{topicId}/progress`
 
 **Purpose:** Load topic summary progress for dashboards or a continue-learning card.
 
@@ -5308,7 +6344,7 @@ GET /api/shadowing/topics?level=N5&officialOnly=true&page=1&pageSize=12
 - `completedSentencesCount` is currently equal to `attemptedSentencesCount` in backend behavior
 - If product later defines a stricter completion rule, backend may change this field without changing the route
 
-#### 16.5.4 GET `/api/shadowing/topics/{topicId}/sentences/progress`
+#### 20.5.4 GET `/api/shadowing/topics/{topicId}/sentences/progress`
 
 **Purpose:** Render a sentence checklist or progress drawer in the user app.
 
@@ -5325,7 +6361,7 @@ GET /api/shadowing/topics?level=N5&officialOnly=true&page=1&pageSize=12
 - Join this list with topic detail by `sentenceId` only if needed. In most cases this response already contains enough UI data
 - `hasAttempted = false` means all score/time fields may be `null`
 
-#### 16.5.5 GET `/api/shadowing/topics/{topicId}/resume`
+#### 20.5.5 GET `/api/shadowing/topics/{topicId}/resume`
 
 **Purpose:** Restore the best next sentence when the user taps a continue button.
 
@@ -5343,7 +6379,7 @@ GET /api/shadowing/topics?level=N5&officialOnly=true&page=1&pageSize=12
 - If it exists, the frontend should navigate to that sentence first
 - `lastAttemptSentenceId` is useful for showing a "resume from latest" label
 
-#### 16.5.6 POST `/api/shadowing/attempts`
+#### 20.5.6 POST `/api/shadowing/attempts`
 
 **Purpose:** Submit one recorded audio file and receive assessment scores.
 
@@ -5377,7 +6413,7 @@ Form fields:
 - `sentenceId = sentence-456`
 - `audio = <recorded-file>`
 
-#### 16.5.7 GET `/api/shadowing/attempts/{attemptId}`
+#### 20.5.7 GET `/api/shadowing/attempts/{attemptId}`
 
 **Purpose:** Reload a detail screen for a previous attempt.
 
@@ -5393,7 +6429,7 @@ Form fields:
 **Frontend notes:**
 - This endpoint is owner-scoped. If the attempt belongs to another user, backend returns a not-found business error
 
-#### 16.5.8 GET `/api/shadowing/attempts/history`
+#### 20.5.8 GET `/api/shadowing/attempts/history`
 
 **Purpose:** Render attempt history screen, user profile activity, or a topic-specific history list.
 
@@ -5410,7 +6446,7 @@ Form fields:
 - `data`: `ShadowingAttemptHistoryItemResponse[]`
 - `metaData`: paging metadata
 
-#### 16.5.9 GET `/api/shadowing/sentences/{sentenceId}/progress`
+#### 20.5.9 GET `/api/shadowing/sentences/{sentenceId}/progress`
 
 **Purpose:** Render progress badge/state for one sentence outside the topic progress list.
 
@@ -5426,7 +6462,7 @@ Form fields:
 **Frontend notes:**
 - This is useful for shared sentence cards or mini progress widgets
 
-#### 16.5.10 Recommended Implementation Order for `learning-app`
+#### 20.5.10 Recommended Implementation Order for `learning-app`
 
 1. Topic list
 2. Topic detail

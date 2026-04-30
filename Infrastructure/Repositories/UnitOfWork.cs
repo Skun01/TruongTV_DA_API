@@ -34,6 +34,17 @@ public class UnitOfWork : IUnitOfWork
     private IShadowingTopicRepository? _shadowingTopics;
     private IShadowingTopicSentenceRepository? _shadowingTopicSentences;
     private IShadowingAttemptRepository? _shadowingAttempts;
+
+    // JLPT Exam module
+    private IExamRepository? _exams;
+    private IExamSectionRepository? _examSections;
+    private IQuestionGroupRepository? _questionGroups;
+    private IQuestionRepository? _questions;
+    private IRepository<QuestionOption>? _questionOptions;
+    private IExamSessionRepository? _examSessions;
+    private IRepository<SessionAnswer>? _sessionAnswers;
+    private IRepository<SessionSectionScore>? _sessionSectionScores;
+    private IAiGeneratedQuestionRepository? _aiGeneratedQuestions;
     
     public UnitOfWork(AppDbContext context)
     {
@@ -67,6 +78,17 @@ public class UnitOfWork : IUnitOfWork
     public IShadowingTopicRepository ShadowingTopics => _shadowingTopics ??= new ShadowingTopicRepository(_context);
     public IShadowingTopicSentenceRepository ShadowingTopicSentences => _shadowingTopicSentences ??= new ShadowingTopicSentenceRepository(_context);
     public IShadowingAttemptRepository ShadowingAttempts => _shadowingAttempts ??= new ShadowingAttemptRepository(_context);
+
+    // JLPT Exam module
+    public IExamRepository Exams => _exams ??= new ExamRepository(_context);
+    public IExamSectionRepository ExamSections => _examSections ??= new ExamSectionRepository(_context);
+    public IQuestionGroupRepository QuestionGroups => _questionGroups ??= new QuestionGroupRepository(_context);
+    public IQuestionRepository Questions => _questions ??= new QuestionRepository(_context);
+    public IRepository<QuestionOption> QuestionOptions => _questionOptions ??= new Repository<QuestionOption>(_context);
+    public IExamSessionRepository ExamSessions => _examSessions ??= new ExamSessionRepository(_context);
+    public IRepository<SessionAnswer> SessionAnswers => _sessionAnswers ??= new Repository<SessionAnswer>(_context);
+    public IRepository<SessionSectionScore> SessionSectionScores => _sessionSectionScores ??= new Repository<SessionSectionScore>(_context);
+    public IAiGeneratedQuestionRepository AiGeneratedQuestions => _aiGeneratedQuestions ??= new AiGeneratedQuestionRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {

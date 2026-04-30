@@ -34,6 +34,9 @@ public static class OptionSettingsExtension
         services.AddOptions<AzureSpeechSettings>()
             .Bind(configuration.GetSection(AzureSpeechSettings.SectionName));
 
+        services.AddOptions<AiGenerationSettings>()
+            .Bind(configuration.GetSection(AiGenerationSettings.SectionName));
+
         return services;
     }
 }

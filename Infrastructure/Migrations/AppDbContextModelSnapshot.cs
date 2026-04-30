@@ -23,6 +23,75 @@ namespace Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.AiGeneratedQuestion", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("GeneratedData")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("QuestionId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SectionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("Level", "SectionType", "Status")
+                        .HasDatabaseName("idx_ai_questions_level_section_status");
+
+                    b.ToTable("ai_generated_questions", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Card", b =>
                 {
                     b.Property<string>("Id")
@@ -272,6 +341,156 @@ namespace Infrastructure.Migrations
                     b.ToTable("deck_types", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Exam", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Draft");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("TotalDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy")
+                        .HasDatabaseName("idx_exams_created_by");
+
+                    b.HasIndex("Level", "Status")
+                        .HasDatabaseName("idx_exams_level_status");
+
+                    b.ToTable("exams", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.ExamSection", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExamId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("MaxScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PassScore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SectionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId", "OrderIndex")
+                        .HasDatabaseName("idx_exam_sections_exam_order");
+
+                    b.ToTable("exam_sections", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.ExamSession", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ExamId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("IsPassed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("InProgress");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("TotalScore")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.HasIndex("Status", "ExpiresAt")
+                        .HasDatabaseName("idx_exam_sessions_status_expires");
+
+                    b.HasIndex("UserId", "ExamId")
+                        .HasDatabaseName("idx_exam_sessions_user_exam");
+
+                    b.ToTable("exam_sessions", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.FolderCard", b =>
                 {
                     b.Property<string>("FolderId")
@@ -518,6 +737,157 @@ namespace Infrastructure.Migrations
                     b.ToTable("note_likes", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Question", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ImageCaption")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<int>("Score")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "OrderIndex")
+                        .HasDatabaseName("idx_questions_group_order");
+
+                    b.ToTable("questions", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionGroup", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AudioScript")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AudioUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Instruction")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("MondaiType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PassageText")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SectionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SectionId", "OrderIndex")
+                        .HasDatabaseName("idx_question_groups_section_order");
+
+                    b.ToTable("question_groups", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionOption", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<bool>("IsCorrect")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("OptionType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Text");
+
+                    b.Property<string>("QuestionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Text")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId", "Label")
+                        .IsUnique()
+                        .HasDatabaseName("idx_question_options_question_label");
+
+                    b.ToTable("question_options", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.RadicalDetail", b =>
                 {
                     b.Property<string>("Id")
@@ -631,6 +1001,95 @@ namespace Infrastructure.Migrations
                     b.HasIndex("CreatedBy");
 
                     b.ToTable("sentences", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.SessionAnswer", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AnsweredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("QuestionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SelectedOptionId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("SelectedOptionId");
+
+                    b.HasIndex("SessionId", "QuestionId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_session_answers_session_question");
+
+                    b.ToTable("session_answers", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.SessionSectionScore", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("IsPassed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PassScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SectionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SectionId");
+
+                    b.HasIndex("SessionId", "SectionId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_session_section_scores_session_section");
+
+                    b.ToTable("session_section_scores", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.ShadowingAttempt", b =>
@@ -1148,6 +1607,31 @@ namespace Infrastructure.Migrations
                     b.ToTable("vocabulary_details", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.AiGeneratedQuestion", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Domain.Entities.User", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Question");
+
+                    b.Navigation("Reviewer");
+                });
+
             modelBuilder.Entity("Domain.Entities.Card", b =>
                 {
                     b.HasOne("Domain.Entities.User", "Creator")
@@ -1231,6 +1715,47 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Deck");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Exam", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ExamSection", b =>
+                {
+                    b.HasOne("Domain.Entities.Exam", "Exam")
+                        .WithMany("Sections")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ExamSession", b =>
+                {
+                    b.HasOne("Domain.Entities.Exam", "Exam")
+                        .WithMany("ExamSessions")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany("ExamSessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.FolderCard", b =>
@@ -1362,6 +1887,39 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Question", b =>
+                {
+                    b.HasOne("Domain.Entities.QuestionGroup", "Group")
+                        .WithMany("Questions")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionGroup", b =>
+                {
+                    b.HasOne("Domain.Entities.ExamSection", "Section")
+                        .WithMany("QuestionGroups")
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Section");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionOption", b =>
+                {
+                    b.HasOne("Domain.Entities.Question", "Question")
+                        .WithMany("Options")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
             modelBuilder.Entity("Domain.Entities.RadicalDetail", b =>
                 {
                     b.HasOne("Domain.Entities.Card", "KanjiCard")
@@ -1381,6 +1939,51 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SessionAnswer", b =>
+                {
+                    b.HasOne("Domain.Entities.Question", "Question")
+                        .WithMany("SessionAnswers")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.QuestionOption", "SelectedOption")
+                        .WithMany()
+                        .HasForeignKey("SelectedOptionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Domain.Entities.ExamSession", "Session")
+                        .WithMany("Answers")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+
+                    b.Navigation("SelectedOption");
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SessionSectionScore", b =>
+                {
+                    b.HasOne("Domain.Entities.ExamSection", "Section")
+                        .WithMany("SessionSectionScores")
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.ExamSession", "Session")
+                        .WithMany("SectionScores")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Section");
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("Domain.Entities.ShadowingAttempt", b =>
@@ -1603,6 +2206,39 @@ namespace Infrastructure.Migrations
                     b.Navigation("Decks");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Exam", b =>
+                {
+                    b.Navigation("ExamSessions");
+
+                    b.Navigation("Sections");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ExamSection", b =>
+                {
+                    b.Navigation("QuestionGroups");
+
+                    b.Navigation("SessionSectionScores");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ExamSession", b =>
+                {
+                    b.Navigation("Answers");
+
+                    b.Navigation("SectionScores");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Question", b =>
+                {
+                    b.Navigation("Options");
+
+                    b.Navigation("SessionAnswers");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionGroup", b =>
+                {
+                    b.Navigation("Questions");
+                });
+
             modelBuilder.Entity("Domain.Entities.RadicalDetail", b =>
                 {
                     b.Navigation("KanjiRadicals");
@@ -1627,6 +2263,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("CreatedDecks");
 
                     b.Navigation("DeckBookmarks");
+
+                    b.Navigation("ExamSessions");
 
                     b.Navigation("LearningSettings");
 

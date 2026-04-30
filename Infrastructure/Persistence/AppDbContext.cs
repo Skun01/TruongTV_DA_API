@@ -35,6 +35,18 @@ public class AppDbContext : DbContext
     public DbSet<ShadowingTopic> ShadowingTopics { set; get; }
     public DbSet<ShadowingTopicSentence> ShadowingTopicSentences { set; get; }
     public DbSet<ShadowingAttempt> ShadowingAttempts { set; get; }
+
+    // JLPT Exam module
+    public DbSet<Exam> Exams { set; get; }
+    public DbSet<ExamSection> ExamSections { set; get; }
+    public DbSet<QuestionGroup> QuestionGroups { set; get; }
+    public DbSet<Question> Questions { set; get; }
+    public DbSet<QuestionOption> QuestionOptions { set; get; }
+    public DbSet<ExamSession> ExamSessions { set; get; }
+    public DbSet<SessionAnswer> SessionAnswers { set; get; }
+    public DbSet<SessionSectionScore> SessionSectionScores { set; get; }
+    public DbSet<AiGeneratedQuestion> AiGeneratedQuestions { set; get; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

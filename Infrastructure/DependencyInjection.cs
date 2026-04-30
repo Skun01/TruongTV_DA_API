@@ -2,6 +2,7 @@ using Application.IRepositories;
 using Application.IServices;
 using Application.IServices.IInternal;
 using Application.Services;
+using Infrastructure.BackgroundJobs;
 using Infrastructure.InternalServices;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
@@ -47,7 +48,22 @@ public static class DependencyInjection
         services.AddScoped<IFileUploadService, FileUploadService>();
         services.AddHttpClient<IVoicevoxService, VoicevoxService>();
         services.AddHttpClient<IPronunciationAssessmentService, AzureSpeechPronunciationService>();
-        
+
+        // JLPT Exam services
+        services.AddScoped<IExamService, ExamService>();
+        services.AddScoped<IQuestionService, QuestionService>();
+        services.AddScoped<IExamSessionService, ExamSessionService>();
+        services.AddScoped<IAiQuestionService, AiQuestionService>();
+
+        // AI Generation
+        services.AddScoped<IAiGenerationService, AnthropicGenerationService>();
+
+        // TTS — Azure Cognitive Services Text-to-Speech
+        services.AddHttpClient<ITextToSpeechService, AzureTextToSpeechService>();
+
+        // Background Job — Session Timeout
+        services.AddHostedService<ExamSessionTimeoutService>();
+
         return services;
     }
 }
