@@ -6,19 +6,18 @@ using Domain.Constants;
 using Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Anthropic.SDK;
-using Anthropic.SDK.Messaging;
+using OpenAI.Chat;
 
 namespace Infrastructure.InternalServices;
 
-public class AnthropicGenerationService : IAiGenerationService
+public class OpenAiGenerationService : IAiGenerationService
 {
     private readonly AiGenerationSettings _settings;
-    private readonly ILogger<AnthropicGenerationService> _logger;
+    private readonly ILogger<OpenAiGenerationService> _logger;
 
-    public AnthropicGenerationService(
+    public OpenAiGenerationService(
         IOptions<AiGenerationSettings> options,
-        ILogger<AnthropicGenerationService> logger)
+        ILogger<OpenAiGenerationService> logger)
     {
         _settings = options.Value;
         _logger = logger;
@@ -31,33 +30,30 @@ public class AnthropicGenerationService : IAiGenerationService
         int count,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Anthropic.ApiKey) || string.IsNullOrWhiteSpace(_settings.Anthropic.Model))
+        if (string.IsNullOrWhiteSpace(_settings.OpenAI.ApiKey) || string.IsNullOrWhiteSpace(_settings.OpenAI.Model))
             throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
 
         try
         {
-            var client = new AnthropicClient(_settings.Anthropic.ApiKey);
+            var client = new ChatClient(_settings.OpenAI.Model, _settings.OpenAI.ApiKey);
 
             var userPrompt = AiPromptHelper.BuildPrompt(level, sectionType, topic, count);
             var systemPrompt = AiPromptHelper.GetSystemPrompt();
 
-            var parameters = new MessageParameters
+            var messages = new List<ChatMessage>
             {
-                Model = _settings.Anthropic.Model,
-                MaxTokens = _settings.MaxTokens,
-                System = new List<SystemMessage> { new SystemMessage(systemPrompt) },
-                Messages = new List<Message>
-                {
-                    new Message(RoleType.User, userPrompt)
-                }
+                new SystemChatMessage(systemPrompt),
+                new UserChatMessage(userPrompt)
             };
 
-            var response = await client.Messages.GetClaudeMessageAsync(parameters, cancellationToken);
+            var options = new ChatCompletionOptions
+            {
+                MaxOutputTokenCount = _settings.MaxTokens
+            };
 
-            var content = response.Content
-                .OfType<TextContent>()
-                .Select(c => c.Text)
-                .FirstOrDefault();
+            var response = await client.CompleteChatAsync(messages, options, cancellationToken);
+
+            var content = string.Concat(response.Value.Content.Select(c => c.Text));
 
             if (string.IsNullOrWhiteSpace(content))
                 throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
@@ -77,8 +73,9 @@ public class AnthropicGenerationService : IAiGenerationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi gọi Anthropic API sinh câu hỏi JLPT {Level}/{Section}", level, sectionType);
+            _logger.LogError(ex, "Lỗi gọi OpenAI API sinh câu hỏi JLPT {Level}/{Section}", level, sectionType);
             throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
         }
     }
+
 }

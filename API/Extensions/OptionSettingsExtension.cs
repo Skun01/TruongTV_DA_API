@@ -35,7 +35,34 @@ public static class OptionSettingsExtension
             .Bind(configuration.GetSection(AzureSpeechSettings.SectionName));
 
         services.AddOptions<AiGenerationSettings>()
-            .Bind(configuration.GetSection(AiGenerationSettings.SectionName));
+            .Bind(configuration.GetSection(AiGenerationSettings.SectionName))
+            .Validate(settings =>
+            {
+                if (string.IsNullOrWhiteSpace(settings.Provider))
+                    return false;
+
+                var provider = settings.Provider.Trim();
+
+                if (provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
+                    return !string.IsNullOrWhiteSpace(settings.OpenAI.ApiKey)
+                        && !string.IsNullOrWhiteSpace(settings.OpenAI.Model);
+
+                if (provider.Equals("Anthropic", StringComparison.OrdinalIgnoreCase))
+                    return !string.IsNullOrWhiteSpace(settings.Anthropic.ApiKey)
+                        && !string.IsNullOrWhiteSpace(settings.Anthropic.Model);
+
+                if (provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase))
+                    return !string.IsNullOrWhiteSpace(settings.Gemini.ApiKey)
+                        && !string.IsNullOrWhiteSpace(settings.Gemini.Model);
+
+                if (provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase))
+                    return !string.IsNullOrWhiteSpace(settings.OpenRouter.ApiKey)
+                        && !string.IsNullOrWhiteSpace(settings.OpenRouter.Model)
+                        && !string.IsNullOrWhiteSpace(settings.OpenRouter.BaseUrl);
+
+                return false;
+            }, "AiGeneration configuration is invalid.")
+            .ValidateOnStart();
 
         return services;
     }

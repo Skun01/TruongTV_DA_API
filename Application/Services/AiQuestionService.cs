@@ -28,7 +28,7 @@ public class AiQuestionService : IAiQuestionService
         var level = EnumParsingHelper.ParseRequired<JlptLevel>(request.Level);
         var sectionType = EnumParsingHelper.ParseRequired<SectionType>(request.SectionType);
 
-        // Gọi Anthropic API sinh câu hỏi
+        // Gọi AI API sinh câu hỏi
         var generatedJson = await _aiGenerationService.GenerateQuestionsJsonAsync(
             level, sectionType, request.Topic.Trim(), request.Count);
 

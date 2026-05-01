@@ -4,21 +4,21 @@ using Application.IServices.IInternal;
 using Application.Settings;
 using Domain.Constants;
 using Domain.Enums;
+using Google.GenAI;
+using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Anthropic.SDK;
-using Anthropic.SDK.Messaging;
 
 namespace Infrastructure.InternalServices;
 
-public class AnthropicGenerationService : IAiGenerationService
+public class GeminiGenerationService : IAiGenerationService
 {
     private readonly AiGenerationSettings _settings;
-    private readonly ILogger<AnthropicGenerationService> _logger;
+    private readonly ILogger<GeminiGenerationService> _logger;
 
-    public AnthropicGenerationService(
+    public GeminiGenerationService(
         IOptions<AiGenerationSettings> options,
-        ILogger<AnthropicGenerationService> logger)
+        ILogger<GeminiGenerationService> logger)
     {
         _settings = options.Value;
         _logger = logger;
@@ -31,33 +31,39 @@ public class AnthropicGenerationService : IAiGenerationService
         int count,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Anthropic.ApiKey) || string.IsNullOrWhiteSpace(_settings.Anthropic.Model))
+        if (string.IsNullOrWhiteSpace(_settings.Gemini.ApiKey) || string.IsNullOrWhiteSpace(_settings.Gemini.Model))
             throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
 
         try
         {
-            var client = new AnthropicClient(_settings.Anthropic.ApiKey);
+            var client = new Client(apiKey: _settings.Gemini.ApiKey);
 
             var userPrompt = AiPromptHelper.BuildPrompt(level, sectionType, topic, count);
             var systemPrompt = AiPromptHelper.GetSystemPrompt();
 
-            var parameters = new MessageParameters
-            {
-                Model = _settings.Anthropic.Model,
-                MaxTokens = _settings.MaxTokens,
-                System = new List<SystemMessage> { new SystemMessage(systemPrompt) },
-                Messages = new List<Message>
+            var response = await client.Models.GenerateContentAsync(
+                model: _settings.Gemini.Model,
+                contents: userPrompt,
+                config: new GenerateContentConfig
                 {
-                    new Message(RoleType.User, userPrompt)
-                }
-            };
+                    SystemInstruction = new Content
+                    {
+                        Parts = new List<Part>
+                        {
+                            new() { Text = systemPrompt }
+                        }
+                    },
+                    MaxOutputTokens = _settings.MaxTokens,
+                    ResponseMimeType = "application/json"
+                },
+                cancellationToken: cancellationToken);
 
-            var response = await client.Messages.GetClaudeMessageAsync(parameters, cancellationToken);
-
-            var content = response.Content
-                .OfType<TextContent>()
-                .Select(c => c.Text)
-                .FirstOrDefault();
+            var content = string.Concat(
+                response.Candidates?
+                    .SelectMany(candidate => candidate.Content?.Parts ?? Enumerable.Empty<Part>())
+                    .Select(part => part.Text)
+                    .Where(text => !string.IsNullOrWhiteSpace(text))
+                ?? Enumerable.Empty<string>());
 
             if (string.IsNullOrWhiteSpace(content))
                 throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
@@ -77,7 +83,7 @@ public class AnthropicGenerationService : IAiGenerationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi gọi Anthropic API sinh câu hỏi JLPT {Level}/{Section}", level, sectionType);
+            _logger.LogError(ex, "Lỗi gọi Gemini API sinh câu hỏi JLPT {Level}/{Section}", level, sectionType);
             throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
         }
     }
