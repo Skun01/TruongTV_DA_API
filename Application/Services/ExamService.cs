@@ -76,12 +76,41 @@ public class ExamService : IExamService
             });
     }
 
+    public async Task<(List<PublishedExamListItemResponse> Items, MetaData Meta)> SearchPublishedExamsAsync(PublishedExamQuery query)
+    {
+        var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
+        var level = EnumParsingHelper.ParseNullable<JlptLevel>(query.Level);
+
+        var (items, total) = await _unitOfWork.Exams.SearchPublishedAsync(
+            query.Keyword,
+            level,
+            page,
+            pageSize);
+
+        return (
+            items.Select(x => x.ToPublishedListItemResponse()).ToList(),
+            new MetaData
+            {
+                Page = page,
+                PageSize = pageSize,
+                Total = total,
+            });
+    }
+
     public async Task<ExamDetailResponse> GetExamDetailAsync(string id)
     {
         var exam = await _unitOfWork.Exams.GetDetailByIdAsync(id)
             ?? throw new ApplicationException(MessageConstants.ExamMessage.NOT_FOUND);
 
         return exam.ToDetailResponse();
+    }
+
+    public async Task<PublishedExamDetailResponse> GetPublishedExamDetailAsync(string id)
+    {
+        var exam = await _unitOfWork.Exams.GetPublishedDetailByIdAsync(id)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.NOT_FOUND);
+
+        return exam.ToPublishedDetailResponse();
     }
 
     public async Task<ExamDetailResponse> UpdateExamAsync(string id, UpdateExamRequest request)

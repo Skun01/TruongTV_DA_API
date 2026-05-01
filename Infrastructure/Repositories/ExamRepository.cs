@@ -46,6 +46,39 @@ public class ExamRepository : Repository<Exam>, IExamRepository
         return (items, total);
     }
 
+    public async Task<(List<Exam> Items, int Total)> SearchPublishedAsync(
+        string? keyword,
+        JlptLevel? level,
+        int page,
+        int pageSize)
+    {
+        var query = _context.Exams
+            .AsNoTracking()
+            .Where(x => x.Status == PublishStatus.Published)
+            .Include(x => x.Sections)
+                .ThenInclude(s => s.QuestionGroups)
+                    .ThenInclude(g => g.Questions)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var pattern = $"%{keyword.Trim()}%";
+            query = query.Where(x => EF.Functions.ILike(x.Title, pattern));
+        }
+
+        if (level.HasValue)
+            query = query.Where(x => x.Level == level.Value);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
     public async Task<Exam?> GetDetailByIdAsync(string id)
     {
         return await _context.Exams
@@ -55,6 +88,17 @@ public class ExamRepository : Repository<Exam>, IExamRepository
                 .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))
                     .ThenInclude(g => g.Questions.OrderBy(q => q.OrderIndex))
                         .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public async Task<Exam?> GetPublishedDetailByIdAsync(string id)
+    {
+        return await _context.Exams
+            .AsNoTracking()
+            .Where(x => x.Status == PublishStatus.Published)
+            .Include(x => x.Sections.OrderBy(s => s.OrderIndex))
+                .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))
+                    .ThenInclude(g => g.Questions.OrderBy(q => q.OrderIndex))
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 

@@ -27,6 +27,15 @@ public class ExamSessionService : IExamSessionService
         if (exam.Status != PublishStatus.Published)
             throw new AppException(MessageConstants.ExamSessionMessage.EXAM_NOT_PUBLISHED, 400);
 
+        var existingSession = await _unitOfWork.ExamSessions.GetActiveSessionByExamAsync(userId, request.ExamId);
+        if (existingSession != null)
+        {
+            var savedAnswers = existingSession.Answers
+                .ToDictionary(a => a.QuestionId, a => a.SelectedOptionId);
+
+            return existingSession.ToStartResponse(savedAnswers);
+        }
+
         var now = DateTime.UtcNow;
 
         var session = new ExamSession
@@ -42,7 +51,6 @@ public class ExamSessionService : IExamSessionService
         await _unitOfWork.ExamSessions.AddAsync(session);
         await _unitOfWork.SaveChangesAsync();
 
-        // Gán exam reference để mapping
         session.Exam = exam;
 
         return session.ToStartResponse();
@@ -67,7 +75,17 @@ public class ExamSessionService : IExamSessionService
         return session.ToStartResponse(savedAnswers);
     }
 
-    public async Task SaveAnswerAsync(string sessionId, SaveAnswerRequest request, string userId)
+    public async Task<ActiveSessionLookupResponse> GetActiveSessionAsync(ActiveSessionQuery query, string userId)
+    {
+        var session = await _unitOfWork.ExamSessions.GetActiveSessionByExamAsync(userId, query.ExamId);
+        return new ActiveSessionLookupResponse
+        {
+            HasActiveSession = session != null,
+            SessionId = session?.Id,
+        };
+    }
+
+    public async Task<SaveAnswerResponse> SaveAnswerAsync(string sessionId, SaveAnswerRequest request, string userId)
     {
         var session = await _unitOfWork.ExamSessions.GetWithAnswersAsync(sessionId)
             ?? throw new ApplicationException(MessageConstants.ExamSessionMessage.NOT_FOUND);
@@ -78,28 +96,29 @@ public class ExamSessionService : IExamSessionService
         if (session.Status != ExamSessionStatus.InProgress)
             throw new AppException(MessageConstants.ExamSessionMessage.ALREADY_SUBMITTED, 400);
 
-        // Kiểm tra hết giờ
-        if (DateTime.UtcNow > session.ExpiresAt)
+        var savedAt = DateTime.UtcNow;
+
+        if (savedAt > session.ExpiresAt)
             throw new AppException(MessageConstants.ExamSessionMessage.SESSION_EXPIRED, 400);
 
-        // Kiểm tra câu hỏi có thuộc đề thi không
         var question = await _unitOfWork.Questions.GetDetailByIdAsync(request.QuestionId);
         if (question == null)
             throw new AppException(MessageConstants.ExamSessionMessage.QUESTION_NOT_IN_EXAM, 400);
 
-        // Kiểm tra section thuộc exam
         var sectionBelongsToExam = session.Exam.Sections.Any(s => s.Id == question.Group.SectionId);
         if (!sectionBelongsToExam)
             throw new AppException(MessageConstants.ExamSessionMessage.QUESTION_NOT_IN_EXAM, 400);
 
-        // Upsert answer
+        if (request.SelectedOptionId != null && question.Options.All(o => o.Id != request.SelectedOptionId))
+            throw new AppException(MessageConstants.ExamSessionMessage.QUESTION_NOT_IN_EXAM, 400);
+
         var existingAnswer = session.Answers.FirstOrDefault(a => a.QuestionId == request.QuestionId);
 
         if (existingAnswer != null)
         {
             existingAnswer.SelectedOptionId = request.SelectedOptionId;
-            existingAnswer.AnsweredAt = DateTime.UtcNow;
-            existingAnswer.UpdatedAt = DateTime.UtcNow;
+            existingAnswer.AnsweredAt = savedAt;
+            existingAnswer.UpdatedAt = savedAt;
             _unitOfWork.SessionAnswers.UpdateAsync(existingAnswer);
         }
         else
@@ -110,12 +129,19 @@ public class ExamSessionService : IExamSessionService
                 SessionId = sessionId,
                 QuestionId = request.QuestionId,
                 SelectedOptionId = request.SelectedOptionId,
-                AnsweredAt = DateTime.UtcNow,
+                AnsweredAt = savedAt,
             };
             await _unitOfWork.SessionAnswers.AddAsync(answer);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
+        return new SaveAnswerResponse
+        {
+            QuestionId = request.QuestionId,
+            SelectedOptionId = request.SelectedOptionId,
+            SavedAt = savedAt,
+        };
     }
 
     public async Task<SubmitSessionResponse> SubmitSessionAsync(string sessionId, string userId)

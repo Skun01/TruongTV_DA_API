@@ -43,6 +43,53 @@ public static class ExamMappings
         };
     }
 
+    public static PublishedExamListItemResponse ToPublishedListItemResponse(this Exam exam)
+    {
+        return new PublishedExamListItemResponse
+        {
+            Id = exam.Id,
+            Title = exam.Title,
+            Level = exam.Level.ToString(),
+            TotalDurationMinutes = exam.TotalDurationMinutes,
+            SectionsCount = exam.Sections.Count,
+            QuestionsCount = exam.Sections.Sum(s => s.QuestionGroups.Sum(g => g.Questions.Count)),
+            CreatedAt = exam.CreatedAt,
+            UpdatedAt = exam.UpdatedAt,
+        };
+    }
+
+    public static PublishedExamDetailResponse ToPublishedDetailResponse(this Exam exam)
+    {
+        return new PublishedExamDetailResponse
+        {
+            Id = exam.Id,
+            Title = exam.Title,
+            Level = exam.Level.ToString(),
+            TotalDurationMinutes = exam.TotalDurationMinutes,
+            SectionsCount = exam.Sections.Count,
+            QuestionsCount = exam.Sections.Sum(s => s.QuestionGroups.Sum(g => g.Questions.Count)),
+            Sections = exam.Sections
+                .OrderBy(s => s.OrderIndex)
+                .Select(s => s.ToPublishedSectionSummaryResponse())
+                .ToList(),
+            CreatedAt = exam.CreatedAt,
+            UpdatedAt = exam.UpdatedAt,
+        };
+    }
+
+    public static PublishedExamSectionSummaryResponse ToPublishedSectionSummaryResponse(this ExamSection section)
+    {
+        return new PublishedExamSectionSummaryResponse
+        {
+            SectionId = section.Id,
+            SectionType = section.SectionType.ToString(),
+            OrderIndex = section.OrderIndex,
+            DurationMinutes = section.DurationMinutes,
+            QuestionGroupsCount = section.QuestionGroups.Count,
+            QuestionsCount = section.QuestionGroups.Sum(g => g.Questions.Count),
+        };
+    }
+
     public static ExamSectionResponse ToSectionResponse(this ExamSection section)
     {
         return new ExamSectionResponse

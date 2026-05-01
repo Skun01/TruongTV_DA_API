@@ -16,8 +16,11 @@ public static class ExamSessionMappings
             ExamId = session.ExamId,
             ExamTitle = session.Exam.Title,
             Level = session.Exam.Level.ToString(),
+            Status = session.Status.ToString(),
             StartedAt = session.StartedAt,
+            SubmittedAt = session.SubmittedAt,
             ExpiresAt = session.ExpiresAt,
+            ServerNow = DateTime.UtcNow,
             Sections = session.Exam.Sections
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.ToSessionSectionResponse(savedAnswers))

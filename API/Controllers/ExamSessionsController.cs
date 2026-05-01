@@ -40,17 +40,25 @@ public class ExamSessionsController : BaseController
         return ApiResponse<SessionStartResponse>.SuccessResponse(result);
     }
 
+    [HttpGet("active")]
+    public async Task<ApiResponse<ActiveSessionLookupResponse>> GetActiveSession([FromQuery] ActiveSessionQuery query)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _examSessionService.GetActiveSessionAsync(query, userId);
+        return ApiResponse<ActiveSessionLookupResponse>.SuccessResponse(result);
+    }
+
     /// <summary>
     /// Auto-save từng câu trả lời
     /// </summary>
     [HttpPost("{id}/answers")]
-    public async Task<ApiResponse<string>> SaveAnswer(
+    public async Task<ApiResponse<SaveAnswerResponse>> SaveAnswer(
         [FromRoute] string id,
         [FromBody] SaveAnswerRequest request)
     {
         var userId = GetCurrentUserId();
-        await _examSessionService.SaveAnswerAsync(id, request, userId);
-        return ApiResponse<string>.SuccessResponse("Saved");
+        var result = await _examSessionService.SaveAnswerAsync(id, request, userId);
+        return ApiResponse<SaveAnswerResponse>.SuccessResponse(result);
     }
 
     /// <summary>

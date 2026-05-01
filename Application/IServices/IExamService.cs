@@ -13,6 +13,10 @@ public interface IExamService
     Task PublishExamAsync(string id);
     Task DeleteExamAsync(string id);
 
+    // User-facing published exams
+    Task<(List<PublishedExamListItemResponse> Items, MetaData Meta)> SearchPublishedExamsAsync(PublishedExamQuery query);
+    Task<PublishedExamDetailResponse> GetPublishedExamDetailAsync(string id);
+
     // Section
     Task<ExamSectionResponse> CreateSectionAsync(string examId, CreateSectionRequest request);
     Task<ExamSectionResponse> UpdateSectionAsync(string examId, string sectionId, UpdateSectionRequest request);

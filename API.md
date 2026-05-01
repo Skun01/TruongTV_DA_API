@@ -5742,19 +5742,383 @@ Từ chối câu hỏi AI.
 
 ## 19. JLPT Exam Sessions Module — User
 
-> 🔒 **Tất cả endpoint trong module này yêu cầu đăng nhập.**  
-> Dùng cho frontend user để bắt đầu làm bài, autosave, resume, nộp bài và xem kết quả.
+> `learning-app` dùng module này để hiển thị danh sách đề public, xem metadata đề, bắt đầu/resume bài thi, autosave, nộp bài và xem kết quả.
+
+### 19.1 Public Exam Discovery
+
+| Method | Endpoint | Auth | Mô tả |
+| ------ | -------- | ---- | ----- |
+| GET | `/api/jlpt-exams` | 🌐 Public | Lấy danh sách đề JLPT đã publish cho user |
+| GET | `/api/jlpt-exams/{id}` | 🌐 Public | Lấy metadata chi tiết của một đề đã publish trước khi bắt đầu làm bài |
+
+---
+
+### GET `/api/jlpt-exams`
+
+Lấy danh sách đề JLPT đã `Published` để hiển thị cho user.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+| ----- | ---- | -------- | ---- | ----- |
+| `keyword` | `string` | ❌ | — | Tìm theo tiêu đề đề thi |
+| `level` | `string` | ❌ | `JlptLevel` | Lọc theo level |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item:**
+
+```json
+{
+  "id": "exam-id",
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120,
+  "sectionsCount": 4,
+  "questionsCount": 40,
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null"
+}
+```
+
+---
+
+### GET `/api/jlpt-exams/{id}`
+
+Lấy metadata chi tiết của một đề JLPT đã `Published` trước khi user bắt đầu làm bài.
+
+**Response data:**
+
+```json
+{
+  "id": "exam-id",
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120,
+  "sectionsCount": 4,
+  "questionsCount": 40,
+  "sections": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "orderIndex": 0,
+      "durationMinutes": 25,
+      "questionGroupsCount": 2,
+      "questionsCount": 10
+    }
+  ],
+  "createdAt": "datetime",
+  "updatedAt": "datetime | null"
+}
+```
+
+> ℹ Endpoint này **không trả câu hỏi/options**; frontend chỉ dùng để render màn pre-start.
+
+---
+
+### 19.2 Exam Session Runtime
+
+> 🔒 **Tất cả endpoint trong phần runtime này yêu cầu đăng nhập.**
 
 ### Tổng quan
 
 | Method | Endpoint | Auth | Mô tả |
 | ------ | -------- | ---- | ----- |
-| POST | `/api/exam-sessions` | 🔒 Auth | Bắt đầu làm bài |
-| GET | `/api/exam-sessions/{id}` | 🔒 Auth | Resume bài đang làm |
+| POST | `/api/exam-sessions` | 🔒 Auth | Bắt đầu làm bài hoặc resume lại session đang `InProgress` của cùng exam |
+| GET | `/api/exam-sessions/active` | 🔒 Auth | Kiểm tra user hiện có session `InProgress` cho exam hay không |
+| GET | `/api/exam-sessions/{id}` | 🔒 Auth | Resume bài đang làm theo `sessionId` |
 | POST | `/api/exam-sessions/{id}/answers` | 🔒 Auth | Auto-save một câu trả lời |
 | POST | `/api/exam-sessions/{id}/submit` | 🔒 Auth | Nộp bài và chấm điểm |
 | GET | `/api/exam-sessions/{id}/result` | 🔒 Auth | Xem kết quả chi tiết |
 | GET | `/api/exam-sessions` | 🔒 Auth | Xem lịch sử làm bài |
+
+---
+
+### GET `/api/exam-sessions/active` 🔒
+
+Kiểm tra xem user hiện tại có session `InProgress` cho một đề cụ thể hay không.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Mô tả |
+| ----- | ---- | -------- | ----- |
+| `examId` | `string` | ⚠ | ID đề thi |
+
+**Response data:**
+
+```json
+{
+  "hasActiveSession": true,
+  "sessionId": "session-id"
+}
+```
+
+> ℹ Nếu không có session đang làm, backend trả `hasActiveSession = false` và `sessionId = null`.
+
+---
+
+### POST `/api/exam-sessions` 🔒
+
+Bắt đầu một phiên làm bài mới.
+
+**Request body:**
+
+```json
+{
+  "examId": "exam-id"
+}
+```
+
+**Quy tắc session:**
+
+- Mỗi user chỉ có **1 session `InProgress`** cho mỗi exam.
+- Nếu user đã có session đang làm của exam này, backend **không tạo mới** mà trả lại chính session đó để frontend resume.
+
+**Response data:**
+
+```json
+{
+  "sessionId": "session-id",
+  "examId": "exam-id",
+  "examTitle": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "status": "InProgress",
+  "startedAt": "datetime",
+  "submittedAt": null,
+  "expiresAt": "datetime",
+  "serverNow": "datetime",
+  "sections": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "orderIndex": 0,
+      "durationMinutes": 25,
+      "questionGroups": [
+        {
+          "groupId": "group-id",
+          "passageText": null,
+          "audioUrl": null,
+          "instruction": "Chọn đáp án đúng nhất.",
+          "orderIndex": 0,
+          "mondaiType": null,
+          "questions": [
+            {
+              "questionId": "question-id",
+              "questionText": "Câu hỏi...",
+              "imageUrl": null,
+              "imageCaption": null,
+              "orderIndex": 0,
+              "options": [
+                {
+                  "optionId": "option-id",
+                  "label": "A",
+                  "text": "Đáp án A",
+                  "imageUrl": null,
+                  "optionType": "Text"
+                }
+              ],
+              "selectedOptionId": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Lưu ý rất quan trọng cho frontend user:**
+
+- Response **không chứa đáp án đúng** khi đang làm bài
+- `selectedOptionId` dùng để hydrate lại state khi resume
+- `expiresAt` là mốc dùng cho countdown timer phía frontend
+- `serverNow` giúp frontend hạn chế lệch giờ máy client khi tính countdown
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `Exam_NotFound_404` | Đề không tồn tại |
+| `ExamSession_ExamNotPublished_400` | Đề chưa publish |
+
+---
+
+### GET `/api/exam-sessions/{id}` 🔒
+
+Lấy lại trạng thái bài làm để resume sau khi reload / mất kết nối.
+
+**Response data:** cùng shape với `POST /api/exam-sessions`.
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `ExamSession_NotFound_404` | Session không tồn tại |
+| `ExamSession_Forbidden_403` | Session không thuộc về user hiện tại |
+
+---
+
+### POST `/api/exam-sessions/{id}/answers` 🔒
+
+Auto-save một câu trả lời.
+
+**Request body:**
+
+```json
+{
+  "questionId": "question-id",
+  "selectedOptionId": "option-id"
+}
+```
+
+**Lưu ý:**
+
+- `questionId` là bắt buộc
+- `selectedOptionId` có thể `null` nếu frontend muốn clear đáp án đã chọn
+- `selectedOptionId` nếu có thì phải thuộc đúng `questionId` tương ứng
+- Nên gọi endpoint này theo từng thao tác chọn đáp án
+
+**Response data:**
+
+```json
+{
+  "questionId": "question-id",
+  "selectedOptionId": "option-id",
+  "savedAt": "datetime"
+}
+```
+
+**Error codes:**
+
+| Code | Khi nào |
+| ---- | ------- |
+| `ExamSession_NotFound_404` | Session không tồn tại |
+| `ExamSession_AlreadySubmitted_400` | Session đã nộp bài hoặc hết giờ |
+| `ExamSession_Expired_400` | Session đã hết hạn |
+| `ExamSession_QuestionNotInExam_400` | `questionId` hoặc `selectedOptionId` không thuộc đề này |
+| `ExamSession_Forbidden_403` | Không phải session của user hiện tại |
+
+---
+
+### POST `/api/exam-sessions/{id}/submit` 🔒
+
+Nộp bài và chấm điểm toàn bộ.
+
+**Response data:**
+
+```json
+{
+  "sessionId": "session-id",
+  "totalScore": 92,
+  "correctCount": 32,
+  "wrongCount": 5,
+  "unansweredCount": 3,
+  "isPassed": true,
+  "sectionScores": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "score": 28,
+      "maxScore": 35,
+      "passScore": 19,
+      "isPassed": true
+    }
+  ]
+}
+```
+
+**Quy tắc pass/fail:**
+
+- `isPassed = true` khi **tổng điểm đạt** và **không trượt section nào**
+- Nếu trượt 1 section thì toàn bài vẫn fail
+
+---
+
+### GET `/api/exam-sessions/{id}/result` 🔒
+
+Xem kết quả chi tiết sau khi đã submit.
+
+**Response data:**
+
+```json
+{
+  "sessionId": "session-id",
+  "examId": "exam-id",
+  "examTitle": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalScore": 92,
+  "isPassed": true,
+  "startedAt": "datetime",
+  "submittedAt": "datetime | null",
+  "sectionScores": [
+    {
+      "sectionId": "section-id",
+      "sectionType": "Moji",
+      "score": 28,
+      "maxScore": 35,
+      "passScore": 19,
+      "isPassed": true
+    }
+  ],
+  "questions": [
+    {
+      "questionId": "question-id",
+      "questionText": "Câu hỏi...",
+      "imageUrl": null,
+      "explanation": "Giải thích đáp án đúng...",
+      "sectionType": "Moji",
+      "selectedOptionId": "option-id-a",
+      "correctOptionId": "option-id-b",
+      "isCorrect": false,
+      "options": [
+        {
+          "optionId": "option-id-a",
+          "label": "A",
+          "text": "A",
+          "imageUrl": null,
+          "optionType": "Text"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Lưu ý:**
+
+- Chỉ response này mới có `correctOptionId`
+- Dùng cho màn review sau khi nộp bài
+
+---
+
+### GET `/api/exam-sessions` 🔒
+
+Lấy lịch sử làm bài của user hiện tại.
+
+**Query params:**
+
+| Param | Type | Bắt buộc | Enum | Mô tả |
+| ----- | ---- | -------- | ---- | ----- |
+| `examId` | `string` | ❌ | — | Lọc theo đề |
+| `status` | `string` | ❌ | `ExamSessionStatus` | Lọc theo trạng thái |
+| `page` | `int` | ❌ | — | Mặc định `1` |
+| `pageSize` | `int` | ❌ | — | Mặc định `20` |
+
+**Response data item:**
+
+```json
+{
+  "sessionId": "session-id",
+  "examId": "exam-id",
+  "examTitle": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "status": "Submitted",
+  "totalScore": 92,
+  "isPassed": true,
+  "startedAt": "datetime",
+  "submittedAt": "datetime | null"
+}
+```
 
 ---
 

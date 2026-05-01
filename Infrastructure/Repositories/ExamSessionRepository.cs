@@ -33,7 +33,25 @@ public class ExamSessionRepository : Repository<ExamSession>, IExamSessionReposi
             .Include(x => x.Answers)
                 .ThenInclude(a => a.SelectedOption)
             .Include(x => x.SectionScores)
+                .ThenInclude(ss => ss.Section)
             .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public async Task<ExamSession?> GetActiveSessionByExamAsync(string userId, string examId)
+    {
+        return await _context.ExamSessions
+            .AsNoTracking()
+            .Include(x => x.Exam)
+                .ThenInclude(e => e.Sections.OrderBy(s => s.OrderIndex))
+                    .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))
+                        .ThenInclude(g => g.Questions.OrderBy(q => q.OrderIndex))
+                            .ThenInclude(q => q.Options)
+            .Include(x => x.Answers)
+            .Where(x => x.UserId == userId)
+            .Where(x => x.ExamId == examId)
+            .Where(x => x.Status == ExamSessionStatus.InProgress)
+            .OrderByDescending(x => x.StartedAt)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<List<ExamSession>> GetExpiredSessionsAsync()
