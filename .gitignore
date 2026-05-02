@@ -7,6 +7,10 @@
 .claude
 CLAUDE.md
 
+# codex
+.codex
+AGENTS.md
+
 # local data 
 API/wwwroot
 # contextplus
@@ -14,7 +18,7 @@ API/wwwroot
 
 # dotenv files
 .env
-
+x``
 # User-specific files
 *.rsuser
 *.suo

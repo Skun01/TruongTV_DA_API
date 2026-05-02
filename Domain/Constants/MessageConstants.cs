@@ -156,6 +156,19 @@ public static class MessageConstants
         public const string NO_SECTIONS = "Exam_NoSections_400";
         public const string NO_QUESTIONS = "Exam_NoQuestions_400";
         public const string INVALID_REORDER_PAYLOAD = "Exam_InvalidReorderPayload_400";
+        public const string IMPORT_INVALID_PAYLOAD = "Exam_ImportInvalidPayload_400";
+        public const string IMPORT_BATCH_HAS_ERRORS = "Exam_ImportBatchHasErrors_400";
+        public const string IMPORT_FIELD_REQUIRED = "Exam_ImportFieldRequired_400";
+        public const string IMPORT_FIELD_TOO_LONG = "Exam_ImportFieldTooLong_400";
+        public const string IMPORT_FIELD_INVALID = "Exam_ImportFieldInvalid_400";
+        public const string IMPORT_SECTIONS_REQUIRED = "Exam_ImportSectionsRequired_400";
+        public const string IMPORT_GROUPS_REQUIRED = "Exam_ImportGroupsRequired_400";
+        public const string IMPORT_QUESTIONS_REQUIRED = "Exam_ImportQuestionsRequired_400";
+        public const string IMPORT_OPTIONS_INVALID_COUNT = "Exam_ImportOptionsInvalidCount_400";
+        public const string IMPORT_CORRECT_OPTION_INVALID = "Exam_ImportCorrectOptionInvalid_400";
+        public const string IMPORT_DUPLICATE_OPTION_LABEL = "Exam_ImportDuplicateOptionLabel_400";
+        public const string IMPORT_DUPLICATE_ORDER_INDEX = "Exam_ImportDuplicateOrderIndex_400";
+        public const string IMPORT_PASS_SCORE_INVALID = "Exam_ImportPassScoreInvalid_400";
     }
 
     public static class ExamSessionMessage

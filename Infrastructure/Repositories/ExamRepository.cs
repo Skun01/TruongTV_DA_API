@@ -79,16 +79,15 @@ public class ExamRepository : Repository<Exam>, IExamRepository
         return (items, total);
     }
 
+    public async Task<Exam?> GetExportByIdAsync(string id)
+    {
+        return await BuildDetailQuery()
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
     public async Task<Exam?> GetDetailByIdAsync(string id)
     {
-        return await _context.Exams
-            .AsNoTracking()
-            .AsSplitQuery()
-            .Include(x => x.Creator)
-            .Include(x => x.Sections.OrderBy(s => s.OrderIndex))
-                .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))
-                    .ThenInclude(g => g.Questions.OrderBy(q => q.OrderIndex))
-                        .ThenInclude(q => q.Options)
+        return await BuildDetailQuery()
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
@@ -109,5 +108,17 @@ public class ExamRepository : Repository<Exam>, IExamRepository
         return await _context.Exams
             .Include(x => x.Sections.OrderBy(s => s.OrderIndex))
             .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    private IQueryable<Exam> BuildDetailQuery()
+    {
+        return _context.Exams
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.Creator)
+            .Include(x => x.Sections.OrderBy(s => s.OrderIndex))
+                .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))
+                    .ThenInclude(g => g.Questions.OrderBy(q => q.OrderIndex))
+                        .ThenInclude(q => q.Options);
     }
 }

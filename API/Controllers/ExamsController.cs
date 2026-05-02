@@ -4,6 +4,9 @@ using Application.IServices;
 using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace API.Controllers;
 
@@ -25,6 +28,43 @@ public class ExamsController : BaseController
         var userId = GetCurrentUserId();
         var result = await _examService.CreateExamAsync(request, userId);
         return ApiResponse<ExamDetailResponse>.SuccessResponse(result);
+    }
+
+    [HttpGet("import-template")]
+    public async Task<IActionResult> DownloadImportTemplate()
+    {
+        var result = await _examService.GetImportTemplateAsync();
+        return CreateJsonFileResult(result, "jlpt-exam-import-template.json");
+    }
+
+    [HttpGet("import-guide")]
+    public async Task<ApiResponse<ExamImportTemplateGuide>> GetImportGuide()
+    {
+        var result = await _examService.GetImportGuideAsync();
+        return ApiResponse<ExamImportTemplateGuide>.SuccessResponse(result);
+    }
+
+    [HttpGet("{id}/export")]
+    public async Task<IActionResult> Export([FromRoute] string id)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _examService.ExportAsync(id, userId);
+        return CreateJsonFileResult(result, $"jlpt-exam-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+    }
+
+    [HttpPost("preview-import")]
+    public async Task<ApiResponse<ExamImportPreviewResponse>> PreviewImport([FromBody] ImportExamRequest request)
+    {
+        var result = await _examService.PreviewImportAsync(request);
+        return ApiResponse<ExamImportPreviewResponse>.SuccessResponse(result);
+    }
+
+    [HttpPost("commit-import")]
+    public async Task<ApiResponse<ExamImportCommitResponse>> CommitImport([FromBody] ImportExamRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _examService.CommitImportAsync(request, userId);
+        return ApiResponse<ExamImportCommitResponse>.SuccessResponse(result);
     }
 
     [HttpGet]
@@ -129,5 +169,21 @@ public class ExamsController : BaseController
         var userId = GetCurrentUserId();
         var result = await _examService.GenerateGroupAudioAsync(groupId, userId);
         return ApiResponse<QuestionGroupResponse>.SuccessResponse(result);
+    }
+
+    private static FileContentResult CreateJsonFileResult<T>(T data, string fileName)
+    {
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+        });
+
+        return new FileContentResult(Encoding.UTF8.GetBytes(json), "application/json")
+        {
+            FileDownloadName = fileName,
+        };
     }
 }

@@ -53,6 +53,65 @@ public class ExamService : IExamService
         return created.ToDetailResponse();
     }
 
+    public Task<ImportExamRequest> GetImportTemplateAsync()
+    {
+        return Task.FromResult(ExamImportHelper.CreateTemplate());
+    }
+
+    public Task<ExamImportTemplateGuide> GetImportGuideAsync()
+    {
+        return Task.FromResult(ExamImportHelper.CreateGuide());
+    }
+
+    public async Task<ImportExamRequest> ExportAsync(string examId, string currentUserId)
+    {
+        var exam = await _unitOfWork.Exams.GetExportByIdAsync(examId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.NOT_FOUND);
+
+        return exam.ToImportRequest();
+    }
+
+    public Task<ExamImportPreviewResponse> PreviewImportAsync(ImportExamRequest request)
+    {
+        if (request == null)
+            throw new AppException(MessageConstants.ExamMessage.IMPORT_INVALID_PAYLOAD, 400);
+
+        var previewItem = ExamImportHelper.ValidateImport(request);
+
+        return Task.FromResult(new ExamImportPreviewResponse
+        {
+            IsValid = previewItem.IsValid,
+            ErrorCount = previewItem.Errors.Count,
+            WarningCount = previewItem.Warnings.Count,
+            Item = previewItem,
+        });
+    }
+
+    public async Task<ExamImportCommitResponse> CommitImportAsync(ImportExamRequest request, string currentUserId)
+    {
+        var preview = await PreviewImportAsync(request);
+        if (!preview.IsValid)
+            return ExamImportHelper.BuildBlockedCommitResponse(preview);
+
+        var exam = request.ToEntity(currentUserId);
+
+        await _unitOfWork.Exams.AddAsync(exam);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new ExamImportCommitResponse
+        {
+            IsSuccess = true,
+            HasValidationErrors = false,
+            Action = "created",
+            Title = exam.Title,
+            ExamId = exam.Id,
+            SectionsCount = preview.Item.SectionsCount,
+            QuestionGroupsCount = preview.Item.QuestionGroupsCount,
+            QuestionsCount = preview.Item.QuestionsCount,
+            OptionsCount = preview.Item.OptionsCount,
+        };
+    }
+
     public async Task<(List<ExamListItemResponse> Items, MetaData Meta)> SearchExamsAsync(ExamSearchQuery query)
     {
         var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);

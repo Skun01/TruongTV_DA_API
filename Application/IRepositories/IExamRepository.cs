@@ -18,6 +18,7 @@ public interface IExamRepository : IRepository<Exam>
         int page,
         int pageSize);
 
+    Task<Exam?> GetExportByIdAsync(string id);
     Task<Exam?> GetDetailByIdAsync(string id);
     Task<Exam?> GetPublishedDetailByIdAsync(string id);
     Task<Exam?> GetWithSectionsAsync(string id);

@@ -7,6 +7,11 @@ public interface IExamService
 {
     // Exam CRUD
     Task<ExamDetailResponse> CreateExamAsync(CreateExamRequest request, string userId);
+    Task<ImportExamRequest> GetImportTemplateAsync();
+    Task<ExamImportTemplateGuide> GetImportGuideAsync();
+    Task<ImportExamRequest> ExportAsync(string examId, string currentUserId);
+    Task<ExamImportPreviewResponse> PreviewImportAsync(ImportExamRequest request);
+    Task<ExamImportCommitResponse> CommitImportAsync(ImportExamRequest request, string currentUserId);
     Task<(List<ExamListItemResponse> Items, MetaData Meta)> SearchExamsAsync(ExamSearchQuery query);
     Task<ExamDetailResponse> GetExamDetailAsync(string id);
     Task<ExamDetailResponse> UpdateExamAsync(string id, UpdateExamRequest request);

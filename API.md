@@ -5032,48 +5032,50 @@ The following admin APIs are still recommended for later phases:
 
 ## 16. JLPT Exams Module — Admin
 
-> 🔑 **Tất cả endpoint trong module này yêu cầu quyền `Editor` hoặc `Admin`.**  
-> Dùng để quản lý đề thi JLPT, section, question group và audio nghe hiểu cho frontend admin.
+> 🔑 **All endpoints in this module require `Editor` or `Admin`.**  
+> This module manages JLPT exams, sections, question groups, Choukai audio generation, and JSON import/export for a full exam tree.
 
-### Tổng quan
+### Overview
 
-| Method | Endpoint | Auth | Mô tả |
-| ------ | -------- | ---- | ----- |
-| POST | `/api/exams` | 🔑 Editor/Admin | Tạo đề thi mới |
-| GET | `/api/exams` | 🔑 Editor/Admin | Tìm kiếm danh sách đề thi |
-| GET | `/api/exams/{id}` | 🔑 Editor/Admin | Lấy chi tiết đề thi |
-| PUT | `/api/exams/{id}` | 🔑 Editor/Admin | Cập nhật đề thi |
-| PATCH | `/api/exams/{id}/publish` | 🔑 Editor/Admin | Publish đề thi |
-| DELETE | `/api/exams/{id}` | 🔑 Editor/Admin | Xóa đề thi draft |
-| POST | `/api/exams/{examId}/sections` | 🔑 Editor/Admin | Tạo section cho đề |
-| PUT | `/api/exams/{examId}/sections/{sectionId}` | 🔑 Editor/Admin | Cập nhật section |
-| DELETE | `/api/exams/{examId}/sections/{sectionId}` | 🔑 Editor/Admin | Xóa section |
-| POST | `/api/exams/sections/{sectionId}/groups` | 🔑 Editor/Admin | Tạo question group |
-| PUT | `/api/exams/sections/{sectionId}/groups/{groupId}` | 🔑 Editor/Admin | Cập nhật question group |
-| DELETE | `/api/exams/sections/{sectionId}/groups/{groupId}` | 🔑 Editor/Admin | Xóa question group |
-| POST | `/api/exams/groups/{groupId}/generate-audio` | 🔑 Editor/Admin | Sinh audio TTS cho Choukai group |
+| Method | Endpoint | Auth | Description |
+| ------ | -------- | ---- | ----------- |
+| POST | `/api/exams` | 🔑 Editor/Admin | Create a new exam |
+| GET | `/api/exams` | 🔑 Editor/Admin | Search exams |
+| GET | `/api/exams/import-template` | 🔑 Editor/Admin | Download the JSON import template |
+| GET | `/api/exams/import-guide` | 🔑 Editor/Admin | Get import rules and allowed values |
+| GET | `/api/exams/{id}` | 🔑 Editor/Admin | Get full exam detail |
+| GET | `/api/exams/{id}/export` | 🔑 Editor/Admin | Export one exam as JSON |
+| PUT | `/api/exams/{id}` | 🔑 Editor/Admin | Update exam metadata |
+| PATCH | `/api/exams/{id}/publish` | 🔑 Editor/Admin | Publish an exam |
+| DELETE | `/api/exams/{id}` | 🔑 Editor/Admin | Delete a draft exam |
+| POST | `/api/exams/preview-import` | 🔑 Editor/Admin | Validate an import payload without writing data |
+| POST | `/api/exams/commit-import` | 🔑 Editor/Admin | Create a new draft exam from a validated payload |
+| POST | `/api/exams/{examId}/sections` | 🔑 Editor/Admin | Create a section |
+| PUT | `/api/exams/{examId}/sections/{sectionId}` | 🔑 Editor/Admin | Update a section |
+| DELETE | `/api/exams/{examId}/sections/{sectionId}` | 🔑 Editor/Admin | Delete a section |
+| POST | `/api/exams/sections/{sectionId}/groups` | 🔑 Editor/Admin | Create a question group |
+| PUT | `/api/exams/sections/{sectionId}/groups/{groupId}` | 🔑 Editor/Admin | Update a question group |
+| DELETE | `/api/exams/sections/{sectionId}/groups/{groupId}` | 🔑 Editor/Admin | Delete a question group |
+| POST | `/api/exams/groups/{groupId}/generate-audio` | 🔑 Editor/Admin | Generate TTS audio from `audioScript` |
 
----
+### Enum Values
 
-### GET `/api/exams` 🔑
+| Enum | Values |
+| ---- | ------ |
+| `JlptLevel` | `N5`, `N4`, `N3`, `N2`, `N1` |
+| `SectionType` | `Moji`, `Bunpou`, `Dokkai`, `Choukai` |
+| `ChoukaiMondaiType` | `Mondai1`, `Mondai2`, `Mondai3`, `Mondai4`, `Mondai5` |
+| `OptionLabel` | `A`, `B`, `C`, `D` |
+| `OptionType` | `Text`, `Image`, `TextAndImage` |
+| `PublishStatus` | `Draft`, `Published`, `Archived` |
 
-Tìm kiếm danh sách đề thi JLPT.
+### Shared Response Shapes
 
-**Query params:**
-
-| Param | Type | Bắt buộc | Enum | Mô tả |
-| ----- | ---- | -------- | ---- | ----- |
-| `keyword` | `string` | ❌ | — | Tìm theo tiêu đề đề thi |
-| `level` | `string` | ❌ | `JlptLevel` | Lọc theo level |
-| `status` | `string` | ❌ | `PublishStatus` | Lọc theo trạng thái |
-| `page` | `int` | ❌ | — | Mặc định `1` |
-| `pageSize` | `int` | ❌ | — | Mặc định `20` |
-
-**Response data item:**
+**Exam list item**
 
 ```json
 {
-  "id": "string",
+  "id": "exam-id",
   "title": "JLPT N5 Mock Test 01",
   "level": "N5",
   "totalDurationMinutes": 120,
@@ -5086,41 +5088,11 @@ Tìm kiếm danh sách đề thi JLPT.
 }
 ```
 
----
-
-### POST `/api/exams` 🔑
-
-Tạo đề thi JLPT mới.
-
-**Request body:**
+**Exam detail**
 
 ```json
 {
-  "title": "JLPT N5 Mock Test 01",
-  "level": "N5",
-  "totalDurationMinutes": 120
-}
-```
-
-**Rules quan trọng:**
-
-- `title`: bắt buộc, tối đa `500` ký tự
-- `level`: bắt buộc, enum `JlptLevel`
-- `totalDurationMinutes`: `> 0` và `<= 300`
-
-**Response data:** `ExamDetailResponse`
-
----
-
-### GET `/api/exams/{id}` 🔑
-
-Lấy chi tiết đầy đủ của đề thi, bao gồm sections và question groups.
-
-**Response data:**
-
-```json
-{
-  "id": "string",
+  "id": "exam-id",
   "title": "JLPT N5 Mock Test 01",
   "level": "N5",
   "totalDurationMinutes": 120,
@@ -5135,18 +5107,41 @@ Lấy chi tiết đầy đủ của đề thi, bao gồm sections và question g
       "durationMinutes": 25,
       "maxScore": 60,
       "passScore": 19,
-      "questionGroupsCount": 2,
-      "questionsCount": 10,
+      "questionGroupsCount": 1,
+      "questionsCount": 1,
       "questionGroups": [
         {
           "id": "group-id",
           "passageText": null,
           "audioUrl": null,
           "audioScript": null,
-          "instruction": "Chọn đáp án đúng nhất.",
+          "instruction": "Choose the correct answer.",
           "orderIndex": 0,
           "mondaiType": null,
-          "questions": [],
+          "questions": [
+            {
+              "id": "question-id",
+              "groupId": "group-id",
+              "questionText": "What is the correct reading of 食べる?",
+              "imageUrl": null,
+              "imageCaption": null,
+              "explanation": null,
+              "score": 1,
+              "orderIndex": 0,
+              "options": [
+                {
+                  "id": "option-id",
+                  "label": "A",
+                  "text": "たべる",
+                  "imageUrl": null,
+                  "optionType": "Text",
+                  "isCorrect": true
+                }
+              ],
+              "createdAt": "datetime",
+              "updatedAt": null
+            }
+          ],
           "createdAt": "datetime",
           "updatedAt": null
         }
@@ -5160,71 +5155,381 @@ Lấy chi tiết đầy đủ của đề thi, bao gồm sections và question g
 }
 ```
 
----
+### GET `/api/exams` 🔑
 
-### PUT `/api/exams/{id}` 🔑
+Search exams for the admin UI.
 
-Cập nhật đề thi.
+**Query params**
 
-**Request body:** giống `POST /api/exams`.
+| Param | Type | Required | Enum | Notes |
+| ----- | ---- | -------- | ---- | ----- |
+| `keyword` | `string` | No | — | Title keyword |
+| `level` | `string` | No | `JlptLevel` | Level filter |
+| `status` | `string` | No | `PublishStatus` | Status filter |
+| `page` | `int` | No | — | Default `1` |
+| `pageSize` | `int` | No | — | Default `20` |
+
+### POST `/api/exams` 🔑
+
+Create a new exam shell.
+
+**Request body**
+
+```json
+{
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120
+}
+```
+
+**Rules**
+
+- `title` is required and must be at most `500` characters.
+- `level` is required and must be a valid `JlptLevel`.
+- `totalDurationMinutes` must be `> 0` and `<= 300`.
 
 **Response data:** `ExamDetailResponse`
 
----
+### GET `/api/exams/{id}` 🔑
+
+Return the full exam tree for one exam.
+
+**Response data:** `ExamDetailResponse`
+
+### PUT `/api/exams/{id}` 🔑
+
+Update exam metadata.
+
+**Request body:** same shape and rules as `POST /api/exams`.
+
+**Response data:** `ExamDetailResponse`
 
 ### PATCH `/api/exams/{id}/publish` 🔑
 
-Publish đề thi để frontend user có thể bắt đầu làm bài.
+Publish an exam so it becomes available to the user-facing module.
 
-**Response data:**
+**Response data**
 
 ```json
 "Published"
 ```
 
-**Điều kiện publish:**
+**Publish rules**
 
-- Đề phải có ít nhất 1 section
-- Mỗi section phải có ít nhất 1 question group và có câu hỏi
-- Không được publish lại đề đã `Published`
+- The exam must have at least one section.
+- Every section must have at least one question group and at least one question.
+- A published exam cannot be published again.
 
-**Error codes:**
+**Error codes**
 
-| Code | Khi nào |
+| Code | Trigger |
 | ---- | ------- |
-| `Exam_NotFound_404` | Không tìm thấy đề |
-| `Exam_AlreadyPublished_400` | Đề đã publish trước đó |
-| `Exam_NoSections_400` | Đề chưa có section |
-| `Exam_NoQuestions_400` | Có section chưa có câu hỏi |
-
----
+| `Exam_NotFound_404` | Exam does not exist |
+| `Exam_AlreadyPublished_400` | Exam is already published |
+| `Exam_NoSections_400` | Exam has no sections |
+| `Exam_NoQuestions_400` | At least one section has no usable questions |
 
 ### DELETE `/api/exams/{id}` 🔑
 
-Xóa đề thi.
+Delete a draft exam.
 
-- Chỉ xóa được đề chưa publish.
-
-**Response data:**
+**Response data**
 
 ```json
 "Deleted"
 ```
 
-**Error codes:**
+**Error codes**
 
-| Code | Khi nào |
+| Code | Trigger |
 | ---- | ------- |
-| `Exam_NotFound_404` | Không tìm thấy đề |
-| `Exam_CannotDeletePublished_400` | Không được xóa đề đã publish |
+| `Exam_NotFound_404` | Exam does not exist |
+| `Exam_CannotDeletePublished_400` | Published exams cannot be deleted here |
 
----
+### GET `/api/exams/import-template` 🔑
+
+Download the starter JSON file for exam import.
+
+**Response content type:** `application/json`
+
+**Response body**
+
+```json
+{
+  "title": "JLPT N5 Mock Test 01",
+  "level": "N5",
+  "totalDurationMinutes": 120,
+  "sections": [
+    {
+      "sectionType": "Moji",
+      "orderIndex": 0,
+      "durationMinutes": 25,
+      "maxScore": 60,
+      "passScore": 19,
+      "questionGroups": [
+        {
+          "passageText": null,
+          "audioUrl": null,
+          "audioScript": null,
+          "instruction": "Choose the correct answer.",
+          "orderIndex": 0,
+          "mondaiType": null,
+          "questions": [
+            {
+              "questionText": "What is the correct reading of 食べる?",
+              "imageUrl": null,
+              "imageCaption": null,
+              "explanation": null,
+              "score": 1,
+              "orderIndex": 0,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "たべる",
+                  "imageUrl": null,
+                  "optionType": "Text",
+                  "isCorrect": true
+                },
+                {
+                  "label": "B",
+                  "text": "のめる",
+                  "imageUrl": null,
+                  "optionType": "Text",
+                  "isCorrect": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Template notes**
+
+- The downloaded template is intentionally minimal and does not include a `guide` object.
+- Use `GET /api/exams/import-guide` or this API document as the source of truth for allowed values and validation rules.
+- Import still accepts an optional `guide` field in the payload, but the backend ignores it.
+
+### GET `/api/exams/import-guide` 🔑
+
+Return the import guide separately from the template file.
+
+**Response body**
+
+```json
+{
+  "jsonNamingConvention": "camelCase",
+  "overview": [
+    "Import creates a brand-new exam only. Existing exams are never updated.",
+    "Imported exams always start with status Draft.",
+    "The payload should contain the full tree: exam -> sections -> questionGroups -> questions -> options.",
+    "audioUrl, imageUrl, and audioScript are kept as reference values only. No media copy or TTS generation runs during import."
+  ],
+  "allowedValues": {
+    "level": ["N5", "N4", "N3", "N2", "N1"],
+    "sectionType": ["Moji", "Bunpou", "Dokkai", "Choukai"],
+    "mondaiType": ["Mondai1", "Mondai2", "Mondai3", "Mondai4", "Mondai5"],
+    "optionLabel": ["A", "B", "C", "D"],
+    "optionType": ["Text", "Image", "TextAndImage"]
+  },
+  "rulesByNode": {
+    "exam": [
+      "title is required and must be at most 500 characters.",
+      "level is required and must be a valid JlptLevel value.",
+      "totalDurationMinutes is required and must be > 0 and <= 300.",
+      "sections is required and must contain at least one section."
+    ],
+    "section": [
+      "sectionType is required and must be a valid SectionType value.",
+      "orderIndex must be >= 0 and unique among sibling sections.",
+      "durationMinutes must be > 0.",
+      "maxScore must be > 0.",
+      "passScore must be >= 0 and <= maxScore.",
+      "questionGroups is required and must contain at least one group."
+    ],
+    "questionGroup": [
+      "instruction is required and must be at most 2000 characters.",
+      "orderIndex must be >= 0 and unique among sibling groups.",
+      "passageText is optional and must be at most 10000 characters.",
+      "audioUrl is optional and must be at most 512 characters.",
+      "audioScript is optional and must be at most 10000 characters.",
+      "mondaiType is optional and mainly used for Choukai groups.",
+      "questions is required and must contain at least one question."
+    ],
+    "question": [
+      "questionText is required and must be at most 5000 characters.",
+      "orderIndex must be >= 0 and unique among sibling questions.",
+      "score is required and must be > 0.",
+      "imageUrl is optional and must be at most 512 characters.",
+      "imageCaption is optional and must be at most 1000 characters.",
+      "explanation is optional and must be at most 5000 characters.",
+      "options is required and must contain from 2 to 4 items."
+    ],
+    "option": [
+      "label is required, must be one of A/B/C/D, and must be unique within the question.",
+      "optionType is required and must be one of Text/Image/TextAndImage.",
+      "Exactly one option in each question must have isCorrect = true.",
+      "text is optional and must be at most 2000 characters.",
+      "imageUrl is optional and must be at most 512 characters."
+    ]
+  }
+}
+```
+
+### GET `/api/exams/{id}/export` 🔑
+
+Export one existing exam as a JSON package that can be re-imported later.
+
+**Response content type:** `application/json`
+
+**Response body**
+
+- Same tree shape as `ImportExamRequest`.
+- `guide` is omitted in export output.
+- `audioUrl`, `imageUrl`, and `audioScript` are preserved as-is.
+
+### POST `/api/exams/preview-import` 🔑
+
+Validate one import payload without writing any records.
+
+**Request body:** same shape as `ImportExamRequest`
+
+**Request field table**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `title` | `string` | Yes | Max `500` |
+| `level` | `string` | Yes | `JlptLevel` |
+| `totalDurationMinutes` | `int` | Yes | `> 0`, `<= 300` |
+| `sections` | `array` | Yes | At least one section |
+| `sections[].sectionType` | `string` | Yes | `SectionType` |
+| `sections[].orderIndex` | `int` | Yes | `>= 0`, unique within `sections` |
+| `sections[].durationMinutes` | `int` | Yes | `> 0` |
+| `sections[].maxScore` | `int` | Yes | `> 0` |
+| `sections[].passScore` | `int` | Yes | `>= 0`, `<= maxScore` |
+| `sections[].questionGroups` | `array` | Yes | At least one group per section |
+| `sections[].questionGroups[].passageText` | `string?` | No | Max `10000` |
+| `sections[].questionGroups[].audioUrl` | `string?` | No | Max `512` |
+| `sections[].questionGroups[].audioScript` | `string?` | No | Max `10000` |
+| `sections[].questionGroups[].instruction` | `string` | Yes | Max `2000` |
+| `sections[].questionGroups[].orderIndex` | `int` | Yes | `>= 0`, unique within group list |
+| `sections[].questionGroups[].mondaiType` | `string?` | No | `ChoukaiMondaiType` |
+| `sections[].questionGroups[].questions` | `array` | Yes | At least one question per group |
+| `sections[].questionGroups[].questions[].questionText` | `string` | Yes | Max `5000` |
+| `sections[].questionGroups[].questions[].imageUrl` | `string?` | No | Max `512` |
+| `sections[].questionGroups[].questions[].imageCaption` | `string?` | No | Max `1000` |
+| `sections[].questionGroups[].questions[].explanation` | `string?` | No | Max `5000` |
+| `sections[].questionGroups[].questions[].score` | `int` | Yes | `> 0` |
+| `sections[].questionGroups[].questions[].orderIndex` | `int` | Yes | `>= 0`, unique within question list |
+| `sections[].questionGroups[].questions[].options` | `array` | Yes | `2..4` items, exactly one correct |
+| `sections[].questionGroups[].questions[].options[].label` | `string` | Yes | `OptionLabel`, unique within question |
+| `sections[].questionGroups[].questions[].options[].text` | `string?` | No | Max `2000` |
+| `sections[].questionGroups[].questions[].options[].imageUrl` | `string?` | No | Max `512` |
+| `sections[].questionGroups[].questions[].options[].optionType` | `string` | Yes | `OptionType` |
+| `sections[].questionGroups[].questions[].options[].isCorrect` | `bool` | Yes | Exactly one option must be `true` |
+
+**Response body**
+
+```json
+{
+  "isValid": false,
+  "errorCount": 2,
+  "warningCount": 0,
+  "item": {
+    "title": "JLPT N5 Mock Test 01",
+    "level": "N5",
+    "sectionsCount": 1,
+    "questionGroupsCount": 1,
+    "questionsCount": 1,
+    "optionsCount": 2,
+    "isValid": false,
+    "errors": [
+      "Exam_ImportFieldRequired_400:sections[0].questionGroups[0].instruction",
+      "Exam_ImportCorrectOptionInvalid_400:sections[0].questionGroups[0].questions[0].options"
+    ],
+    "warnings": []
+  }
+}
+```
+
+### POST `/api/exams/commit-import` 🔑
+
+Create one new exam from an import payload.
+
+**Behavior**
+
+- The payload is previewed again on the server before writing.
+- If preview has any error, the commit is blocked and no records are created.
+- Import always creates a **new** exam.
+- The created exam always has `status = Draft`.
+- Existing records are never updated or overwritten in v1.
+- `audioUrl`, `imageUrl`, and `audioScript` are copied as reference values only.
+- No media upload, no file copy, and no TTS generation runs during import.
+- Extra legacy fields such as `id`, `createdAt`, `updatedAt`, `createdBy`, and `creatorName` are ignored if sent by the client.
+
+**Response body when blocked by validation**
+
+```json
+{
+  "isSuccess": false,
+  "hasValidationErrors": true,
+  "action": "skipped",
+  "title": "JLPT N5 Mock Test 01",
+  "examId": null,
+  "sectionsCount": 1,
+  "questionGroupsCount": 1,
+  "questionsCount": 1,
+  "optionsCount": 2,
+  "errors": [
+    "Exam_ImportFieldRequired_400:sections[0].questionGroups[0].instruction"
+  ]
+}
+```
+
+**Response body when successful**
+
+```json
+{
+  "isSuccess": true,
+  "hasValidationErrors": false,
+  "action": "created",
+  "title": "JLPT N5 Mock Test 01",
+  "examId": "new-exam-id",
+  "sectionsCount": 4,
+  "questionGroupsCount": 12,
+  "questionsCount": 40,
+  "optionsCount": 160,
+  "errors": []
+}
+```
+
+### Import Error Codes
+
+| Code | Trigger |
+| ---- | ------- |
+| `Exam_ImportInvalidPayload_400` | The payload is null or cannot be processed |
+| `Exam_ImportBatchHasErrors_400` | Commit was blocked because preview found validation errors |
+| `Exam_ImportFieldRequired_400` | A required field is missing |
+| `Exam_ImportFieldTooLong_400` | A string field exceeds the allowed max length |
+| `Exam_ImportFieldInvalid_400` | An enum, score, duration, or order value is invalid |
+| `Exam_ImportSectionsRequired_400` | `sections` is empty |
+| `Exam_ImportGroupsRequired_400` | A section has no `questionGroups` |
+| `Exam_ImportQuestionsRequired_400` | A group has no `questions` |
+| `Exam_ImportOptionsInvalidCount_400` | A question has fewer than `2` or more than `4` options |
+| `Exam_ImportCorrectOptionInvalid_400` | A question does not have exactly one correct option |
+| `Exam_ImportDuplicateOptionLabel_400` | Duplicate option labels exist inside one question |
+| `Exam_ImportDuplicateOrderIndex_400` | Duplicate `orderIndex` values exist within sibling nodes |
+| `Exam_ImportPassScoreInvalid_400` | `passScore` is negative or greater than `maxScore` |
 
 ### POST `/api/exams/{examId}/sections` 🔑
 
-Tạo section cho đề thi.
+Create a section for an exam.
 
-**Request body:**
+**Request body**
 
 ```json
 {
@@ -5236,114 +5541,99 @@ Tạo section cho đề thi.
 }
 ```
 
-**Rules quan trọng:**
+**Rules**
 
-- `sectionType`: bắt buộc, enum `SectionType`
-- `orderIndex`: `>= 0`
-- `durationMinutes`: `> 0`
-- `maxScore`: `> 0`
-- `passScore`: `>= 0` và `<= maxScore`
+- `sectionType` is required and must be a valid `SectionType`.
+- `orderIndex` must be `>= 0`.
+- `durationMinutes` must be `> 0`.
+- `maxScore` must be `> 0`.
+- `passScore` must be `>= 0` and `<= maxScore`.
 
 **Response data:** `ExamSectionResponse`
-
----
 
 ### PUT `/api/exams/{examId}/sections/{sectionId}` 🔑
 
-Cập nhật section.
+Update a section.
 
-**Request body:** giống `POST /api/exams/{examId}/sections`.
+**Request body:** same shape and rules as `POST /api/exams/{examId}/sections`.
 
 **Response data:** `ExamSectionResponse`
 
----
-
 ### DELETE `/api/exams/{examId}/sections/{sectionId}` 🔑
 
-Xóa section khỏi đề thi.
+Delete a section.
 
-**Response data:**
+**Response data**
 
 ```json
 "Deleted"
 ```
 
----
-
 ### POST `/api/exams/sections/{sectionId}/groups` 🔑
 
-Tạo question group trong một section.
+Create a question group inside a section.
 
-**Request body:**
+**Request body**
 
 ```json
 {
-  "passageText": "Đoạn văn đọc hiểu...",
+  "passageText": "Reading passage...",
   "audioUrl": null,
   "audioScript": null,
-  "instruction": "Đọc đoạn văn rồi trả lời câu hỏi.",
+  "instruction": "Read the passage and answer the questions.",
   "orderIndex": 0,
   "mondaiType": null
 }
 ```
 
-**Field details:**
+**Rules**
 
-| Field | Type | Enum | Mô tả |
-| ----- | ---- | ---- | ----- |
-| `passageText` | `string?` | — | Dùng cho `Dokkai` |
-| `audioUrl` | `string?` | — | URL file audio, thường dùng cho `Choukai` |
-| `audioScript` | `string?` | — | Script để generate audio TTS |
-| `instruction` | `string` | — | Bắt buộc, tối đa `2000` ký tự |
-| `orderIndex` | `int` | — | `>= 0` |
-| `mondaiType` | `string?` | `ChoukaiMondaiType` | Dùng cho nhóm câu hỏi nghe hiểu |
+- `instruction` is required and must be at most `2000` characters.
+- `orderIndex` must be `>= 0`.
+- `audioUrl` must be at most `512` characters when provided.
+- `passageText` must be at most `10000` characters when provided.
+- `mondaiType` is optional and uses `ChoukaiMondaiType`.
 
 **Response data:** `QuestionGroupResponse`
-
----
 
 ### PUT `/api/exams/sections/{sectionId}/groups/{groupId}` 🔑
 
-Cập nhật question group.
+Update a question group.
 
-**Request body:** giống `POST /api/exams/sections/{sectionId}/groups`.
+**Request body:** same shape and rules as `POST /api/exams/sections/{sectionId}/groups`.
 
 **Response data:** `QuestionGroupResponse`
 
----
-
 ### DELETE `/api/exams/sections/{sectionId}/groups/{groupId}` 🔑
 
-Xóa question group.
+Delete a question group.
 
-**Response data:**
+**Response data**
 
 ```json
 "Deleted"
 ```
 
----
-
 ### POST `/api/exams/groups/{groupId}/generate-audio` 🔑
 
-Sinh audio TTS cho `Choukai` group từ `audioScript`.
+Generate TTS audio for one Choukai group from its `audioScript`.
 
-**Quy trình backend:**
+**Backend flow**
 
-1. Đọc `audioScript` của group
-2. Gọi Azure Cognitive Services Text-to-Speech
-3. Upload file MP3 lên Cloudinary
-4. Cập nhật `audioUrl` của group
+1. Read `audioScript` from the group.
+2. Call Azure Cognitive Services Text-to-Speech.
+3. Upload the generated MP3 to Cloudinary.
+4. Update `audioUrl` on the group.
 
 **Response data:** `QuestionGroupResponse`
 
-**Error codes:**
+**Error codes**
 
-| Code | Khi nào |
+| Code | Trigger |
 | ---- | ------- |
-| `Exam_GroupNotFound_404` | Không tìm thấy group |
-| `AiQuestion_NoAudioScript_400` | Group chưa có `audioScript` |
-| `Exam_CannotModifyPublished_400` | Không sửa được đề đã publish |
+| `Exam_GroupNotFound_404` | Question group does not exist |
+| `AiQuestion_NoAudioScript_400` | The group has no `audioScript` |
+| `Exam_CannotModifyPublished_400` | The parent exam is already published |
 
 ---
 
