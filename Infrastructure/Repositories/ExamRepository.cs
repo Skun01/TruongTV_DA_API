@@ -83,6 +83,7 @@ public class ExamRepository : Repository<Exam>, IExamRepository
     {
         return await _context.Exams
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(x => x.Creator)
             .Include(x => x.Sections.OrderBy(s => s.OrderIndex))
                 .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))
@@ -95,6 +96,7 @@ public class ExamRepository : Repository<Exam>, IExamRepository
     {
         return await _context.Exams
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(x => x.Status == PublishStatus.Published)
             .Include(x => x.Sections.OrderBy(s => s.OrderIndex))
                 .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))

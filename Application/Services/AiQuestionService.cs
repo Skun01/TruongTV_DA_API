@@ -119,47 +119,9 @@ public class AiQuestionService : IAiQuestionService
         if (aiQuestion.Status != AiQuestionStatus.Pending && aiQuestion.Status != AiQuestionStatus.Edited)
             throw new AppException(MessageConstants.AiQuestionMessage.ALREADY_REVIEWED, 400);
 
-        // Parse GeneratedData JSON → tạo Question entity thực tế
-        var data = JsonSerializer.Deserialize<AiGeneratedQuestionData>(aiQuestion.GeneratedData);
-        var questionItem = data?.Questions?.FirstOrDefault();
-
-        if (questionItem != null)
-        {
-            var question = new Question
-            {
-                Id = Guid.NewGuid().ToString(),
-                GroupId = string.Empty,  // Sẽ gán khi thêm vào group cụ thể
-                QuestionText = questionItem.QuestionText,
-                Explanation = questionItem.Explanation,
-                Score = 1,
-                OrderIndex = 0,
-            };
-
-            foreach (var optionItem in questionItem.Options)
-            {
-                if (Enum.TryParse<OptionLabel>(optionItem.Label, true, out var label))
-                {
-                    question.Options.Add(new QuestionOption
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        QuestionId = question.Id,
-                        Label = label,
-                        Text = optionItem.Text,
-                        OptionType = OptionType.Text,
-                        IsCorrect = optionItem.IsCorrect,
-                    });
-                }
-            }
-
-            // Chỉ lưu Question nếu có group target
-            // Nếu không có group, giữ QuestionId = null — giáo viên sẽ gán sau
-            // Ở đây ta lưu question vào DB trước, giáo viên dùng endpoint riêng để gán vào group
-            if (question.Options.Count > 0)
-            {
-                await _unitOfWork.Questions.AddAsync(question);
-                aiQuestion.QuestionId = question.Id;
-            }
-        }
+        // Câu hỏi AI chỉ được duyệt ở bước này.
+        // Question thực tế chỉ được tạo khi đã có group target hợp lệ.
+        aiQuestion.QuestionId = null;
 
         aiQuestion.Status = AiQuestionStatus.Approved;
         aiQuestion.ReviewedBy = userId;
