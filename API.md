@@ -1,6 +1,6 @@
 # Tacho Learning API — Frontend Integration Guide
 
-> **Last updated:** 2026-04-18
+> **Last updated:** 2026-05-03
 
 ---
 
@@ -9,6 +9,7 @@
 1. [Quy ước chung](#1-quy-ước-chung)
 2. [Enum Reference](#2-enum-reference)
 3. [Auth Module](#3-auth-module)
+3.1. [Admin Users Module](#31-admin-users-module)
 4. [Cards Module — User](#4-cards-module--user)
 5. [Card Notes Module — User](#5-card-notes-module--user)
 6. [Vocabulary Module — Admin](#6-vocabulary-module--admin)
@@ -515,6 +516,188 @@ Xác nhận reset password bằng token nhận từ email.
 | Code                | Khi nào                         |
 | ------------------- | ------------------------------- |
 | `Token_Expired_409` | Token hết hạn hoặc không hợp lệ |
+
+---
+
+## 3.1 Admin Users Module
+
+> API quản trị người dùng dành cho trang admin. Tất cả endpoint trong module này yêu cầu role `admin`.
+
+### Overview
+
+| Method | Endpoint | Auth | Purpose |
+| ------ | -------- | ---- | ------- |
+| GET | `/api/admin/users` | 🔑 Admin | Search and filter users |
+| GET | `/api/admin/users/{id}` | 🔑 Admin | Get user detail |
+| PATCH | `/api/admin/users/{id}/role` | 🔑 Admin | Change user role |
+| PATCH | `/api/admin/users/{id}/status` | 🔑 Admin | Activate or deactivate account |
+| PATCH | `/api/admin/users/{id}/verification` | 🔑 Admin | Update verification status |
+| POST | `/api/admin/users/{id}/send-reset-password` | 🔑 Admin | Send reset password email |
+
+### Access and behavior rules
+
+- Chỉ `admin` mới gọi được các endpoint này.
+- Khi đổi `role`, backend sẽ thu hồi refresh token hiện có của user mục tiêu.
+- Khi khóa tài khoản (`isActive = false`), backend sẽ thu hồi refresh token hiện có của user mục tiêu.
+- User bị khóa sẽ không thể login, refresh token, hoặc tiếp tục dùng access token cũ sau khi token được kiểm tra lại với DB.
+- Admin không được tự đổi role của chính mình.
+- Admin không được tự khóa chính mình.
+
+### Shared response shapes
+
+`AdminUserListItemResponse`
+
+```json
+{
+  "id": "string",
+  "email": "string",
+  "displayName": "string",
+  "avatarUrl": "string | null",
+  "role": "user | editor | admin",
+  "isActive": true,
+  "isVerified": false,
+  "createdAt": "2026-05-03T01:00:00Z",
+  "updatedAt": "2026-05-03T01:00:00Z | null"
+}
+```
+
+`AdminUserDetailResponse`
+
+```json
+{
+  "id": "string",
+  "email": "string",
+  "displayName": "string",
+  "avatarUrl": "string | null",
+  "role": "user | editor | admin",
+  "isActive": true,
+  "isVerified": false,
+  "createdAt": "2026-05-03T01:00:00Z",
+  "updatedAt": "2026-05-03T01:00:00Z | null"
+}
+```
+
+### GET `/api/admin/users` 🔑
+
+Tìm kiếm và lọc danh sách người dùng cho màn hình quản trị.
+
+**Query params**
+
+| Param | Type | Default | Notes |
+| ----- | ---- | ------- | ----- |
+| `q` | `string` | `null` | Search theo `email` hoặc `displayName` |
+| `role` | `string` | `null` | `user`, `editor`, `admin` |
+| `isActive` | `boolean` | `null` | Lọc trạng thái hoạt động |
+| `isVerified` | `boolean` | `null` | Lọc trạng thái xác minh |
+| `page` | `int` | `1` | Pagination |
+| `pageSize` | `int` | `20` | Max `100` |
+
+**Response data:** `AdminUserListItemResponse[]`
+
+### GET `/api/admin/users/{id}` 🔑
+
+Lấy thông tin chi tiết của một người dùng theo id.
+
+**Path params**
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `id` | `string` | Yes | User id |
+
+**Response data:** `AdminUserDetailResponse`
+
+### PATCH `/api/admin/users/{id}/role` 🔑
+
+Đổi role của một người dùng.
+
+**Path params**
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `id` | `string` | Yes | User id |
+
+**Request body**
+
+```json
+{
+  "role": "editor"
+}
+```
+
+**Response data:** `AdminUserDetailResponse`
+
+**Frontend notes**
+
+- `role` chỉ chấp nhận `user`, `editor`, `admin`.
+- Backend chặn admin tự đổi role của chính mình.
+- Sau khi đổi role, user mục tiêu cần login lại để nhận token mới.
+
+### PATCH `/api/admin/users/{id}/status` 🔑
+
+Khóa hoặc mở khóa tài khoản người dùng.
+
+**Path params**
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `id` | `string` | Yes | User id |
+
+**Request body**
+
+```json
+{
+  "isActive": false
+}
+```
+
+**Response data:** `AdminUserDetailResponse`
+
+**Frontend notes**
+
+- `isActive = false` nghĩa là khóa tài khoản.
+- Backend chặn admin tự khóa chính mình.
+- Khi khóa tài khoản, refresh token hiện tại của user sẽ bị thu hồi.
+
+### PATCH `/api/admin/users/{id}/verification` 🔑
+
+Cập nhật trạng thái xác minh tài khoản.
+
+**Path params**
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `id` | `string` | Yes | User id |
+
+**Request body**
+
+```json
+{
+  "isVerified": true
+}
+```
+
+**Response data:** `AdminUserDetailResponse`
+
+### POST `/api/admin/users/{id}/send-reset-password` 🔑
+
+Gửi email đặt lại mật khẩu cho người dùng theo id.
+
+**Path params**
+
+| Param | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `id` | `string` | Yes | User id |
+
+**Response data**
+
+```json
+true
+```
+
+**Frontend notes**
+
+- API luôn trả `true` nếu xử lý thành công ở tầng service.
+- Frontend có thể dùng API này cho action “Send reset email” trong user detail hoặc user list.
 
 ---
 
@@ -7499,6 +7682,15 @@ Error handling guidance:
 | `Email_Exist_409`            | Email đã tồn tại khi register          |
 | `Token_Expired_409`          | Refresh token / reset token hết hạn    |
 | `Wrong_Current_Password_400` | Sai mật khẩu hiện tại khi đổi mật khẩu |
+
+### User
+
+| Code | Mô tả |
+| ---- | ----- |
+| `User_NotFound_404` | Không tìm thấy user theo id |
+| `User_Inactive_403` | Tài khoản đã bị khóa hoặc không còn được phép đăng nhập |
+| `User_CannotChangeOwnRole_400` | Admin không được tự đổi role của chính mình |
+| `User_CannotDeactivateSelf_400` | Admin không được tự khóa chính mình |
 
 ### Vocabulary
 

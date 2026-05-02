@@ -98,6 +98,14 @@ public static class MessageConstants
         public const string WRONG_CURRENT_PASSWORD = "Wrong_Current_Password_400";
     }
 
+    public static class UserMessage
+    {
+        public const string NOT_FOUND = "User_NotFound_404";
+        public const string INACTIVE = "User_Inactive_403";
+        public const string CANNOT_CHANGE_OWN_ROLE = "User_CannotChangeOwnRole_400";
+        public const string CANNOT_DEACTIVATE_SELF = "User_CannotDeactivateSelf_400";
+    }
+
     public static class DeckMessage
     {
         public const string NOT_FOUND = "Deck_NotFound_404";

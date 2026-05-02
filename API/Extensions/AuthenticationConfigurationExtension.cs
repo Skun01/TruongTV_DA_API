@@ -1,8 +1,10 @@
 using System.Text;
 using Application.Settings;
 using Domain.Constants;
+using Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -27,6 +29,37 @@ public static class AuthenticationConfigurationExtension
                 ValidateIssuerSigningKey = true,
                 NameClaimType = ClaimTypes.NameIdentifier,
                 RoleClaimType = ClaimTypes.Role,
+            };
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = async context =>
+                {
+                    var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                    if (string.IsNullOrWhiteSpace(userId))
+                    {
+                        context.Fail(MessageConstants.CommonMessage.UNAUTHORIZED);
+                        return;
+                    }
+
+                    var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                    var user = await dbContext.Users
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.Id == userId, context.HttpContext.RequestAborted);
+
+                    if (user == null || !user.IsActive)
+                    {
+                        context.Fail(MessageConstants.CommonMessage.UNAUTHORIZED);
+                        return;
+                    }
+
+                    var currentRole = user.Role.ToString().ToLowerInvariant();
+                    var tokenRoles = (context.Principal?.FindAll(ClaimTypes.Role) ?? Enumerable.Empty<Claim>())
+                        .Select(claim => claim.Value)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    if (!tokenRoles.Contains(currentRole))
+                        context.Fail(MessageConstants.CommonMessage.UNAUTHORIZED);
+                }
             };
         });
 

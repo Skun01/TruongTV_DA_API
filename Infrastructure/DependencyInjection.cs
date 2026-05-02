@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IDeckTypeAdminService, DeckTypeAdminService>();
         services.AddScoped<IDeckUserService, DeckUserService>();
         services.AddScoped<IDeckAdminService, DeckAdminService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IAdminLearningService, AdminLearningService>();
         services.AddScoped<ILearningService, LearningService>();
         services.AddScoped<IUserLearningSettingsService, UserLearningSettingsService>();

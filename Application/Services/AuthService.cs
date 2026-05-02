@@ -1,3 +1,4 @@
+using Application.Common;
 using Application.DTOs.Auth;
 using Application.DTOs.Internal;
 using Application.Helper;
@@ -38,6 +39,9 @@ public class AuthService : IAuthService
 
         if(user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new ApplicationException(MessageConstants.AuthMessage.INVALID_LOGIN);
+
+        if (!user.IsActive)
+            throw new AppException(MessageConstants.UserMessage.INACTIVE, 403);
         
         var accessToken = _tokenService.GenerateAccessToken(user);
 
@@ -100,6 +104,13 @@ public class AuthService : IAuthService
         if(user == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
+        if (!user.IsActive)
+        {
+            storedToken.Revoked = true;
+            await _unitOfWork.SaveChangesAsync();
+            throw new AppException(MessageConstants.UserMessage.INACTIVE, 403);
+        }
+
         storedToken.Revoked = true;
     
         // tạo token mới
@@ -140,6 +151,7 @@ public class AuthService : IAuthService
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Role = UserRole.User,
+            IsActive = true,
         };
 
         await _unitOfWork.Users.AddAsync(newUser);

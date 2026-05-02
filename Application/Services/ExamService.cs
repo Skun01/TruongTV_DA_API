@@ -177,9 +177,6 @@ public class ExamService : IExamService
         var exam = await _unitOfWork.Exams.GetByIdAsync(id)
             ?? throw new ApplicationException(MessageConstants.ExamMessage.NOT_FOUND);
 
-        if (exam.Status == PublishStatus.Published)
-            throw new AppException(MessageConstants.ExamMessage.CANNOT_MODIFY_PUBLISHED, 400);
-
         var level = EnumParsingHelper.ParseRequired<JlptLevel>(request.Level);
 
         exam.Title = request.Title.Trim();

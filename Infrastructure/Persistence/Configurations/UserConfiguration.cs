@@ -38,6 +38,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(20)
             .HasDefaultValue(UserRole.User);
 
+        builder.Property(u => u.IsActive)
+            .HasDefaultValue(true);
+
         builder.Property(u => u.PasswordHash)
             .IsRequired()
             .HasMaxLength(255);
