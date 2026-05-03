@@ -50,4 +50,13 @@ public class StudySessionRepository : Repository<StudySession>, IStudySessionRep
             .Where(x => x.CardIds.Contains(cardId))
             .ToListAsync();
     }
+
+    public async Task<List<StudySession>> GetCompletedByUserOrderedAsync(string userId)
+    {
+        return await _context.StudySessions
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.CompletedAt != null)
+            .OrderByDescending(x => x.CompletedAt)
+            .ToListAsync();
+    }
 }

@@ -74,4 +74,16 @@ public class UserCardProgressRepository : Repository<UserCardProgress>, IUserCar
             .Where(x => x.CardId == cardId)
             .ToListAsync();
     }
+
+    public async Task<List<UserCardProgress>> GetUpcomingByUserAsync(string userId, DateTime fromUtc, DateTime toUtc)
+    {
+        return await _context.UserCardProgresses
+            .AsNoTracking()
+            .Where(x => x.UserId == userId
+                && !x.IsMastered
+                && x.SrsLevel != SrsLevel.level_12
+                && x.NextReviewAt > fromUtc
+                && x.NextReviewAt <= toUtc)
+            .ToListAsync();
+    }
 }

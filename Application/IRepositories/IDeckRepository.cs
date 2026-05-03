@@ -24,4 +24,5 @@ public interface IDeckRepository : IRepository<Deck>
     Task<bool> ExistsByTypeIdAsync(string typeId);
     Task<List<Deck>> GetReadableDecksContainingCardIdsAsync(string userId, List<string> cardIds);
     Task<List<Deck>> GetAdminDecksContainingCardIdsAsync(List<string> cardIds);
+    Task<List<Deck>> GetAllReadableDecksWithFoldersAsync(string userId);
 }

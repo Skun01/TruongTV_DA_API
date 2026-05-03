@@ -9,4 +9,5 @@ public interface IStudySessionRepository : IRepository<StudySession>
     Task<List<StudySession>> GetCreatedSinceAsync(DateTime fromUtc);
     Task<List<StudySession>> GetByDeckIdAsync(string deckId);
     Task<List<StudySession>> GetByCardIdAsync(string cardId);
+    Task<List<StudySession>> GetCompletedByUserOrderedAsync(string userId);
 }

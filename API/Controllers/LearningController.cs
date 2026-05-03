@@ -1,4 +1,5 @@
 using Application.Common;
+using Application.DTOs.Dashboard.Learner;
 using Application.DTOs.Learning;
 using Application.IServices;
 using Microsoft.AspNetCore.Authorization;
@@ -12,10 +13,12 @@ namespace API.Controllers;
 public class LearningController : BaseController
 {
     private readonly ILearningService _learningService;
+    private readonly ILearnerDashboardService _dashboardService;
 
-    public LearningController(ILearningService learningService)
+    public LearningController(ILearningService learningService, ILearnerDashboardService dashboardService)
     {
         _learningService = learningService;
+        _dashboardService = dashboardService;
     }
 
     /// <summary>
@@ -131,5 +134,35 @@ public class LearningController : BaseController
     {
         var result = await _learningService.GetCardProgressAsync(cardId, GetCurrentUserId());
         return ApiResponse<CardProgressResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy chuỗi học liên tục (streak) của user hiện tại.
+    /// </summary>
+    [HttpGet("streak")]
+    public async Task<ApiResponse<LearnerStreakResponse>> GetStreak()
+    {
+        var result = await _dashboardService.GetStreakAsync(GetCurrentUserId());
+        return ApiResponse<LearnerStreakResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy số card đến hạn ôn theo từng ngày trong khoảng N ngày tới.
+    /// </summary>
+    [HttpGet("review/upcoming")]
+    public async Task<ApiResponse<UpcomingReviewsResponse>> GetUpcomingReviews([FromQuery] UpcomingReviewsQuery query)
+    {
+        var result = await _dashboardService.GetUpcomingReviewsAsync(GetCurrentUserId(), query.Days);
+        return ApiResponse<UpcomingReviewsResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy tiến độ học tập theo từng deck của user hiện tại.
+    /// </summary>
+    [HttpGet("decks/progress")]
+    public async Task<ApiResponse<DeckProgressResponse>> GetDeckProgress()
+    {
+        var result = await _dashboardService.GetDeckProgressAsync(GetCurrentUserId());
+        return ApiResponse<DeckProgressResponse>.SuccessResponse(result);
     }
 }

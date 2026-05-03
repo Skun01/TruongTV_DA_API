@@ -251,6 +251,18 @@ public class DeckRepository : Repository<Deck>, IDeckRepository
             .ToListAsync();
     }
 
+    public async Task<List<Deck>> GetAllReadableDecksWithFoldersAsync(string userId)
+    {
+        return await _context.Decks
+            .AsNoTracking()
+            .Include(d => d.Folders)
+                .ThenInclude(f => f.FolderCards)
+            .Where(d => d.Status == PublishStatus.Published
+                && d.Visibility == DeckVisibility.Public
+                || d.CreatedBy == userId)
+            .ToListAsync();
+    }
+
     private IQueryable<Deck> BuildDeckSummaryQuery(string? currentUserId)
     {
         return _context.Decks

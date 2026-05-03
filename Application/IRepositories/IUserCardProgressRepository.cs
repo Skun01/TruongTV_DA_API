@@ -11,4 +11,5 @@ public interface IUserCardProgressRepository : IRepository<UserCardProgress>
     Task<List<UserCardProgress>> GetByUserIdAsync(string userId);
     Task<List<UserCardProgress>> GetByCardIdsAsync(List<string> cardIds);
     Task<List<UserCardProgress>> GetByCardIdAsync(string cardId);
+    Task<List<UserCardProgress>> GetUpcomingByUserAsync(string userId, DateTime fromUtc, DateTime toUtc);
 }
