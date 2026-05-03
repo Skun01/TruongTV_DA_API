@@ -19,10 +19,6 @@ public class ImportSentenceItemRequestValidator : AbstractValidator<ImportSenten
             .NotEmpty()
             .MaximumLength(500);
 
-        RuleFor(x => x.SpeakerId)
-            .GreaterThan(0)
-            .When(x => x.SpeakerId.HasValue);
-
         RuleFor(x => x.Level)
             .Must(level => level is "N5" or "N4" or "N3" or "N2" or "N1")
             .When(x => !string.IsNullOrWhiteSpace(x.Level));

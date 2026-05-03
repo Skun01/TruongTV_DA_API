@@ -16,16 +16,19 @@ namespace Application.Services;
 public class VocabularyDetailService : IVocabularyDetailService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IVoicevoxService _voicevoxService;
+    private readonly ITextToSpeechService _ttsService;
+    private readonly IFileUploadService _fileUploadService;
     private readonly ILogger<VocabularyDetailService> _logger;
 
     public VocabularyDetailService(
         IUnitOfWork unitOfWork,
-        IVoicevoxService voicevoxService,
+        ITextToSpeechService ttsService,
+        IFileUploadService fileUploadService,
         ILogger<VocabularyDetailService> logger)
     {
         _unitOfWork = unitOfWork;
-        _voicevoxService = voicevoxService;
+        _ttsService = ttsService;
+        _fileUploadService = fileUploadService;
         _logger = logger;
     }
 
@@ -198,11 +201,17 @@ public class VocabularyDetailService : IVocabularyDetailService
         var writing = request.Writing.Trim();
         var reading = StringHelper.NormalizeOptional(request.Reading);
         var synthesisText = ResolveVocabularySynthesisText(writing, reading);
-        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeVocabularyAsync(_voicevoxService, synthesisText, request.SpeakerId);
 
-        var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
-            ? synthesisResult.PitchPattern
-            : request.PitchPattern;
+        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+            _ttsService,
+            _fileUploadService,
+            synthesisText,
+            currentUserId,
+            $"vocab_{cardId}.mp3",
+            MessageConstants.VocabularyMessage.AUDIO_SYNTHESIS_FAILED,
+            _logger);
+
+        var finalPitchPattern = request.PitchPattern;
 
         var card = new Card
         {
@@ -222,8 +231,7 @@ public class VocabularyDetailService : IVocabularyDetailService
             Writing = writing,
             Reading = reading,
             PitchAccent = VocabularyHelper.SerializePitchPattern(finalPitchPattern),
-            AudioUrl = synthesisResult.AudioUrl,
-            SpeakerId = synthesisResult.SpeakerId,
+            AudioUrl = audioResult.AudioUrl,
             WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType),
             Meanings = VocabularyHelper.MapMeaningItems(request.Meanings),
             Synonyms = StringHelper.NormalizeList(request.Synonyms),
@@ -254,11 +262,17 @@ public class VocabularyDetailService : IVocabularyDetailService
         var writing = request.Writing.Trim();
         var reading = StringHelper.NormalizeOptional(request.Reading);
         var synthesisText = ResolveVocabularySynthesisText(writing, reading);
-        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeVocabularyAsync(_voicevoxService, synthesisText, request.SpeakerId);
 
-        var finalPitchPattern = (request.PitchPattern == null || request.PitchPattern.Count == 0)
-            ? synthesisResult.PitchPattern
-            : request.PitchPattern;
+        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+            _ttsService,
+            _fileUploadService,
+            synthesisText,
+            currentUserId,
+            $"vocab_{cardId}.mp3",
+            MessageConstants.VocabularyMessage.AUDIO_SYNTHESIS_FAILED,
+            _logger);
+
+        var finalPitchPattern = request.PitchPattern;
 
         card.Title = request.Title.Trim();
         card.Summary = request.Summary.Trim();
@@ -270,8 +284,7 @@ public class VocabularyDetailService : IVocabularyDetailService
         detail.Writing = writing;
         detail.Reading = reading;
         detail.PitchAccent = VocabularyHelper.SerializePitchPattern(finalPitchPattern);
-        detail.AudioUrl = synthesisResult.AudioUrl;
-        detail.SpeakerId = synthesisResult.SpeakerId;
+        detail.AudioUrl = audioResult.AudioUrl;
         detail.WordType = EnumParsingHelper.ParseNullable<WordType>(request.WordType);
         detail.Meanings = VocabularyHelper.MapMeaningItems(request.Meanings);
         detail.Synonyms = StringHelper.NormalizeList(request.Synonyms);
@@ -363,7 +376,15 @@ public class VocabularyDetailService : IVocabularyDetailService
         string currentUserId)
     {
         var text = request.Text.Trim();
-        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
+
+        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+            _ttsService,
+            _fileUploadService,
+            text,
+            currentUserId,
+            $"sent_{Guid.NewGuid():N}.mp3",
+            MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
+            _logger);
 
         if (string.IsNullOrWhiteSpace(request.Id))
         {
@@ -372,8 +393,7 @@ public class VocabularyDetailService : IVocabularyDetailService
                 Id = Guid.NewGuid().ToString(),
                 Text = text,
                 Meaning = request.Meaning.Trim(),
-                AudioUrl = synthesisResult.AudioUrl,
-                SpeakerId = synthesisResult.SpeakerId,
+                AudioUrl = audioResult.AudioUrl,
                 Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
                 CreatedBy = currentUserId,
             };
@@ -388,8 +408,7 @@ public class VocabularyDetailService : IVocabularyDetailService
 
         existingSentence.Text = text;
         existingSentence.Meaning = request.Meaning.Trim();
-        existingSentence.AudioUrl = synthesisResult.AudioUrl;
-        existingSentence.SpeakerId = synthesisResult.SpeakerId;
+        existingSentence.AudioUrl = audioResult.AudioUrl;
         existingSentence.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
         existingSentence.UpdatedAt = DateTime.UtcNow;
 

@@ -11,7 +11,6 @@ public static class SentenceMappings
         {
             Text = sentence.Text,
             Meaning = sentence.Meaning,
-            SpeakerId = sentence.SpeakerId,
             Level = sentence.Level?.ToString(),
         };
     }
@@ -22,7 +21,6 @@ public static class SentenceMappings
         {
             Text = item.Text,
             Meaning = item.Meaning,
-            SpeakerId = item.SpeakerId,
             Level = item.Level,
         };
     }
@@ -35,7 +33,6 @@ public static class SentenceMappings
             Text = sentence.Text,
             Meaning = sentence.Meaning,
             AudioUrl = sentence.AudioUrl,
-            SpeakerId = sentence.SpeakerId,
             Level = sentence.Level?.ToString(),
             CreatedAt = sentence.CreatedAt,
             UpdatedAt = sentence.UpdatedAt,

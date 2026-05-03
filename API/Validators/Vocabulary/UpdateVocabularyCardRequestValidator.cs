@@ -23,10 +23,6 @@ public class UpdateVocabularyCardRequestValidator : AbstractValidator<UpdateVoca
         RuleFor(x => x.Reading)
             .MaximumLength(200);
 
-        RuleFor(x => x.SpeakerId)
-            .GreaterThan(0)
-            .When(x => x.SpeakerId.HasValue);
-
         RuleFor(x => x.WordType)
             .MaximumLength(50);
 

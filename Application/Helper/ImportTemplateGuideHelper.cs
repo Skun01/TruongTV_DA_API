@@ -10,11 +10,6 @@ public static class ImportTemplateGuideHelper
         return Enum.GetNames<TEnum>().ToList();
     }
 
-    public static List<string> RecommendedSpeakerIds()
-    {
-        return VoicevoxConstants.RecommendedSpeakerIds.Select(id => id.ToString()).ToList();
-    }
-
     public static ImportTemplateGuide CreateBaseGuide()
     {
         return new ImportTemplateGuide

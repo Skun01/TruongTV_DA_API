@@ -10,8 +10,6 @@ public static class SentenceImportHelper
     {
         var guide = ImportTemplateGuideHelper.CreateBaseGuide();
         guide.AllowedValues["level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
-        guide.AllowedValues["speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
-        guide.FieldNotes["speakerId"] = "Khuyến nghị dùng danh sách speakerId trong allowedValues.speakerId.";
 
         return new ImportSentenceRequest
         {
@@ -23,7 +21,6 @@ public static class SentenceImportHelper
                     RowNumber = 1,
                     Text = "日本へ行きたいです。",
                     Meaning = "Tôi muốn đi Nhật.",
-                    SpeakerId = 3,
                     Level = "N5",
                 },
             },
@@ -64,12 +61,6 @@ public static class SentenceImportHelper
         ValidateRequiredText(item.Meaning, "meaning", 500, previewItem.Errors);
         ValidateOptionalText(item.Level, "level", 10, previewItem.Errors);
         ValidateOptionalEnum<JlptLevel>(item.Level, "level", previewItem.Errors);
-
-        if (item.SpeakerId.HasValue && item.SpeakerId.Value <= 0)
-            previewItem.Errors.Add(BuildFieldCode(MessageConstants.SentenceMessage.IMPORT_SPEAKER_ID_INVALID, "speakerId"));
-
-        if (item.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(item.SpeakerId.Value))
-            previewItem.Errors.Add(BuildFieldCode(MessageConstants.SentenceMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, "speakerId"));
     }
 
     private static void ValidateRequiredText(string? value, string fieldName, int maxLength, List<string> errors)

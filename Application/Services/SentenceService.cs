@@ -14,13 +14,19 @@ namespace Application.Services;
 public class SentenceService : ISentenceService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IVoicevoxService _voicevoxService;
+    private readonly ITextToSpeechService _ttsService;
+    private readonly IFileUploadService _fileUploadService;
     private readonly ILogger<SentenceService> _logger;
 
-    public SentenceService(IUnitOfWork unitOfWork, IVoicevoxService voicevoxService, ILogger<SentenceService> logger)
+    public SentenceService(
+        IUnitOfWork unitOfWork,
+        ITextToSpeechService ttsService,
+        IFileUploadService fileUploadService,
+        ILogger<SentenceService> logger)
     {
         _unitOfWork = unitOfWork;
-        _voicevoxService = voicevoxService;
+        _ttsService = ttsService;
+        _fileUploadService = fileUploadService;
         _logger = logger;
     }
 
@@ -141,15 +147,21 @@ public class SentenceService : ISentenceService
     public async Task<SentenceResponse> CreateAsync(CreateSentenceRequest request, string currentUserId)
     {
         var text = request.Text.Trim();
-        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
+        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+            _ttsService,
+            _fileUploadService,
+            text,
+            currentUserId,
+            $"sent_{Guid.NewGuid():N}.mp3",
+            MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
+            _logger);
 
         var sentence = new Sentence
         {
             Id = Guid.NewGuid().ToString(),
             Text = text,
             Meaning = request.Meaning.Trim(),
-            AudioUrl = synthesisResult.AudioUrl,
-            SpeakerId = synthesisResult.SpeakerId,
+            AudioUrl = audioResult.AudioUrl,
             Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level),
             CreatedBy = currentUserId,
         };
@@ -202,12 +214,18 @@ public class SentenceService : ISentenceService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         var text = request.Text.Trim();
-        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
+        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+            _ttsService,
+            _fileUploadService,
+            text,
+            sentence.CreatedBy,
+            $"sent_{id}.mp3",
+            MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
+            _logger);
 
         sentence.Text = text;
         sentence.Meaning = request.Meaning.Trim();
-        sentence.AudioUrl = synthesisResult.AudioUrl;
-        sentence.SpeakerId = synthesisResult.SpeakerId;
+        sentence.AudioUrl = audioResult.AudioUrl;
         sentence.Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level);
         sentence.UpdatedAt = DateTime.UtcNow;
 

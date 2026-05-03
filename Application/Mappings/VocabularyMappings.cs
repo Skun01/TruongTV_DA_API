@@ -24,7 +24,6 @@ public static class VocabularyMappings
             Reading = card.VocabularyDetail?.Reading,
             PitchPattern = VocabularyHelper.ParsePitchPattern(card.VocabularyDetail?.PitchAccent),
             AudioUrl = card.VocabularyDetail?.AudioUrl,
-            SpeakerId = card.VocabularyDetail?.SpeakerId,
             WordType = card.VocabularyDetail?.WordType?.ToString(),
             Meanings = card.VocabularyDetail?.Meanings
                 .Select(m => new VocabularyMeaningResponse

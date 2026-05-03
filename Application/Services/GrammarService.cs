@@ -15,16 +15,19 @@ namespace Application.Services;
 public class GrammarService : IGrammarService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IVoicevoxService _voicevoxService;
+    private readonly ITextToSpeechService _ttsService;
+    private readonly IFileUploadService _fileUploadService;
     private readonly ILogger<GrammarService> _logger;
 
     public GrammarService(
         IUnitOfWork unitOfWork,
-        IVoicevoxService voicevoxService,
+        ITextToSpeechService ttsService,
+        IFileUploadService fileUploadService,
         ILogger<GrammarService> logger)
     {
         _unitOfWork = unitOfWork;
-        _voicevoxService = voicevoxService;
+        _ttsService = ttsService;
+        _fileUploadService = fileUploadService;
         _logger = logger;
     }
 
@@ -449,7 +452,14 @@ public class GrammarService : IGrammarService
         string currentUserId)
     {
         var text = request.Text.Trim();
-        var synthesisResult = await VoicevoxSynthesisHelper.SynthesizeSentenceAsync(_voicevoxService, text, request.SpeakerId);
+        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+            _ttsService,
+            _fileUploadService,
+            text,
+            currentUserId,
+            $"sent_{Guid.NewGuid():N}.mp3",
+            MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
+            _logger);
 
         if (string.IsNullOrWhiteSpace(request.Id))
         {
@@ -458,8 +468,7 @@ public class GrammarService : IGrammarService
                 Id = Guid.NewGuid().ToString(),
                 Text = text,
                 Meaning = request.Meaning.Trim(),
-                AudioUrl = synthesisResult.AudioUrl,
-                SpeakerId = synthesisResult.SpeakerId,
+                AudioUrl = audioResult.AudioUrl,
                 Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
                 CreatedBy = currentUserId,
             };
@@ -474,8 +483,7 @@ public class GrammarService : IGrammarService
 
         existingSentence.Text = text;
         existingSentence.Meaning = request.Meaning.Trim();
-        existingSentence.AudioUrl = synthesisResult.AudioUrl;
-        existingSentence.SpeakerId = synthesisResult.SpeakerId;
+        existingSentence.AudioUrl = audioResult.AudioUrl;
         existingSentence.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
         existingSentence.UpdatedAt = DateTime.UtcNow;
 

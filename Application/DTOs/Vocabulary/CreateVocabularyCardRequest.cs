@@ -11,7 +11,6 @@ public class CreateVocabularyCardRequest
     public string Writing { get; set; } = string.Empty;
     public string? Reading { get; set; }
     public List<int>? PitchPattern { get; set; }
-    public int? SpeakerId { get; set; }
     public string? WordType { get; set; }
 
     public List<VocabularyMeaningRequest> Meanings { get; set; } = new();

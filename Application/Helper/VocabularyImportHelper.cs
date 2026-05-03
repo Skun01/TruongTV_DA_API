@@ -14,13 +14,10 @@ public static class VocabularyImportHelper
         guide.AllowedValues["status"] = ImportTemplateGuideHelper.EnumValues<PublishStatus>();
         guide.AllowedValues["wordType"] = ImportTemplateGuideHelper.EnumValues<WordType>();
         guide.AllowedValues["meanings[].partOfSpeech"] = ImportTemplateGuideHelper.EnumValues<PartOfSpeech>();
-        guide.AllowedValues["speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
         guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
-        guide.AllowedValues["sentences[].speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
         guide.FieldNotes["status"] = "Nếu bỏ trống khi import, hệ thống mặc định Published.";
         guide.FieldNotes["meanings[].partOfSpeech"] = "Bắt buộc, phải là enum hợp lệ.";
-        guide.FieldNotes["pitchPattern"] = "Mảng số nguyên, ví dụ [0,1,0]. Có thể để trống để hệ thống tự sinh.";
-        guide.FieldNotes["speakerId"] = "Khuyến nghị dùng danh sách speakerId trong allowedValues.speakerId.";
+        guide.FieldNotes["pitchPattern"] = "Mảng số nguyên, ví dụ [0,1,0]. Admin nhập thủ công.";
         guide.FieldNotes["sentences[].id"] = "Không truyền khi import tạo mới từ template.";
         guide.FieldNotes["sentences[].position"] = "Bắt buộc > 0 để xác định thứ tự câu trong card.";
         guide.FieldNotes["sentences[].blankWord"] = "Từ/cụm từ bị ẩn trong bài tập điền từ (tuỳ chọn).";
@@ -43,7 +40,6 @@ public static class VocabularyImportHelper
                     Writing = "食べる",
                     Reading = "たべる",
                     PitchPattern = new List<int> { 0, 1, 0 },
-                    SpeakerId = 3,
                     WordType = "Native",
                     Meanings = new List<VocabularyMeaningRequest>
                     {
@@ -63,7 +59,6 @@ public static class VocabularyImportHelper
                             Text = "毎朝パンを食べる。",
                             Meaning = "Mỗi sáng tôi ăn bánh mì.",
                             Position = 1,
-                            SpeakerId = 3,
                             Level = "N5",
                             BlankWord = "食べる",
                             Hint = "Động từ chính trong câu.",
@@ -119,12 +114,6 @@ public static class VocabularyImportHelper
         ValidateOptionalEnum<JlptLevel>(item.Level, "level", previewItem.Errors);
         ValidateOptionalEnum<PublishStatus>(item.Status, "status", previewItem.Errors);
         ValidateOptionalEnum<WordType>(item.WordType, "wordType", previewItem.Errors);
-
-        if (item.SpeakerId.HasValue && item.SpeakerId.Value <= 0)
-            previewItem.Errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SPEAKER_ID_INVALID, "speakerId"));
-
-        if (item.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(item.SpeakerId.Value))
-            previewItem.Errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, "speakerId"));
 
         ValidateListItems(item.Tags, "tags", 20, 100, previewItem.Errors);
         ValidateListItems(item.Synonyms, "synonyms", null, 200, previewItem.Errors);
@@ -205,12 +194,6 @@ public static class VocabularyImportHelper
             ValidateOptionalText(sentence.BlankWord, $"{path}.blankWord", 200, errors);
             ValidateOptionalText(sentence.Hint, $"{path}.hint", 500, errors);
             ValidateAnswerList(sentence.AnswerList, $"{path}.answerList", errors);
-
-            if (sentence.SpeakerId.HasValue && sentence.SpeakerId.Value <= 0)
-                errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SPEAKER_ID_INVALID, $"{path}.speakerId"));
-
-            if (sentence.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(sentence.SpeakerId.Value))
-                errors.Add(BuildFieldCode(MessageConstants.VocabularyMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, $"{path}.speakerId"));
         }
     }
 

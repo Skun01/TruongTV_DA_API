@@ -47,7 +47,6 @@ public static class DependencyInjection
         services.AddScoped<IEmailSenderService, EmailSenderService>();
         services.AddScoped<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IFileUploadService, FileUploadService>();
-        services.AddHttpClient<IVoicevoxService, VoicevoxService>();
         services.AddHttpClient<IPronunciationAssessmentService, AzureSpeechPronunciationService>();
 
         // JLPT Exam services

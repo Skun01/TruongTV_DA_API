@@ -47,7 +47,6 @@ public static class GrammarMappings
                     Position = cs.Position,
                     Text = cs.Sentence.Text,
                     Meaning = cs.Sentence.Meaning,
-                    SpeakerId = cs.Sentence.SpeakerId,
                     Level = cs.Sentence.Level?.ToString(),
                     BlankWord = cs.BlankWord,
                     Hint = cs.Hint,

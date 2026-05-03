@@ -20,7 +20,6 @@ public static class VocabularyImportExportMappings
             Writing = detail?.Writing ?? string.Empty,
             Reading = detail?.Reading,
             PitchPattern = VocabularyHelper.ParsePitchPattern(detail?.PitchAccent),
-            SpeakerId = detail?.SpeakerId,
             WordType = detail?.WordType?.ToString(),
             Meanings = detail?.Meanings
                 .Select(m => new VocabularyMeaningRequest
@@ -41,7 +40,6 @@ public static class VocabularyImportExportMappings
                     Position = cs.Position,
                     Text = cs.Sentence.Text,
                     Meaning = cs.Sentence.Meaning,
-                    SpeakerId = cs.Sentence.SpeakerId,
                     Level = cs.Sentence.Level?.ToString(),
                     BlankWord = cs.BlankWord,
                     Hint = cs.Hint,
@@ -63,7 +61,6 @@ public static class VocabularyImportExportMappings
             Writing = item.Writing,
             Reading = item.Reading,
             PitchPattern = item.PitchPattern?.ToList(),
-            SpeakerId = item.SpeakerId,
             WordType = item.WordType,
             Meanings = (item.Meanings ?? new List<VocabularyMeaningRequest>())
                 .Select(meaning => new VocabularyMeaningRequest
@@ -82,7 +79,6 @@ public static class VocabularyImportExportMappings
                     Position = sentence.Position,
                     Text = sentence.Text,
                     Meaning = sentence.Meaning,
-                    SpeakerId = sentence.SpeakerId,
                     Level = sentence.Level,
                     BlankWord = sentence.BlankWord,
                     Hint = sentence.Hint,

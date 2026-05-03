@@ -16,8 +16,7 @@
 7. [Grammar Module — Admin](#7-grammar-module--admin)
 8. [Sentences Module — Admin](#8-sentences-module--admin)
 9. [Uploads Module — Admin](#9-uploads-module--admin)
-10. [Voicevox Module — Admin](#10-voicevox-module--admin)
-11. [Kanji Module — Admin](#8-kanji-module--admin)
+10. [Kanji Module — Admin](#8-kanji-module--admin)
 12. [Decks Module — User](#12-decks-module--user)
 13. [Decks Module — Admin](#13-decks-module--admin)
 14. [Learning Module — User](#14-learning-module--user)
@@ -936,7 +935,6 @@ Lấy chi tiết vocabulary card.
   "reading": "たべる | null",
   "pitchPattern": [0, 1, 0],
   "audioUrl": "string | null",
-  "speakerId": 3,
   "wordType": "Native | SinoJapanese | Loanword | null",
   "meanings": [
     {
@@ -979,8 +977,7 @@ Lấy chi tiết vocabulary card.
 | `status`                  | `string`   | `PublishStatus` |                                                            |
 | `wordType`                | `string?`  | `WordType`      | Nullable                                                   |
 | `pitchPattern`            | `int[]?`   | —               | Mảng pitch accent, mỗi phần tử = `0` (thấp) hoặc `1` (cao) |
-| `audioUrl`                | `string?`  | —               | URL file audio, do backend tự generate bằng VOICEVOX       |
-| `speakerId`               | `int?`     | —               | ID speaker VOICEVOX                                        |
+| `audioUrl`                | `string?`  | —               | URL file audio, do backend tự generate bằng Azure TTS + Cloudinary |
 | `meanings[].partOfSpeech` | `string`   | `PartOfSpeech`  | Từ loại                                                    |
 | `meanings[].definitions`  | `string[]` | —               | Danh sách nghĩa                                            |
 
@@ -997,12 +994,11 @@ Lấy chi tiết vocabulary card.
 
 Tạo mới một vocabulary card.
 
-**Lưu ý VOICEVOX-only:**
+**Lưu ý Azure TTS:**
 
 - ❌ Client **không gửi** `audioUrl`.
-- ✅ Backend tự generate audio bằng VOICEVOX từ `reading` (fallback `writing` nếu rỗng).
-- `speakerId` là ID speaker dùng generate, được lưu DB.
-- `pitchPattern` nếu gửi sẽ override pitch mặc định.
+- ✅ Backend tự generate audio bằng Azure TTS từ `reading` (fallback `writing` nếu rỗng), upload lên Cloudinary.
+- `pitchPattern` là input **thủ công** của admin (không auto-extract được từ Azure TTS).
 
 **Request body:**
 
@@ -1015,8 +1011,7 @@ Tạo mới một vocabulary card.
   "status": "Draft", // ❌ nullable — enum PublishStatus
   "writing": "食べる", // ⚠ bắt buộc
   "reading": "たべる", // ❌ nullable
-  "pitchPattern": [0, 1, 0], // ❌ nullable, mảng int (0=thấp, 1=cao)
-  "speakerId": 3, // ❌ nullable, int
+  "pitchPattern": [0, 1, 0], // ❌ nullable, mảng int (0=thấp, 1=cao) — nhập tay bởi admin
   "wordType": "Native", // ❌ nullable — enum WordType
   "meanings": [
     // ⚠ bắt buộc, ít nhất 1 item
@@ -1033,8 +1028,7 @@ Tạo mới một vocabulary card.
     {
       "id": "existing-sentence-id", // ❌ có id → update sentence, không id → tạo mới
       "text": "毎朝パンを食べる。", // ⚠ bắt buộc
-      "meaning": "Mỗi sáng ăn bánh mì.", // ⚠ bắt buộc
-      "speakerId": 3, // ❌ nullable
+      "meaning": "Mỗi sáng ăn bánh mì。", // ⚠ bắt buộc
       "level": "N5" // ❌ nullable — enum JlptLevel
     }
   ]
@@ -1053,7 +1047,7 @@ Cập nhật vocabulary card. Body giống `POST`.
 
 - Danh sách `sentences` gửi lên = **trạng thái cuối cùng**.
 - Sentence nào **không có** trong request → bị gỡ khỏi vocabulary.
-- Sentence có `id` → update, không có `id` → tạo mới + generate audio VOICEVOX.
+- Sentence có `id` → update, không có `id` → tạo mới + generate audio Azure TTS.
 
 **Response data:** `VocabularyDetailResponse`
 
@@ -1124,7 +1118,6 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
       "writing": "食べる",
       "reading": "たべる",
       "pitchPattern": [0, 1, 0],
-      "speakerId": 3,
       "wordType": "Native",
       "meanings": [{ "partOfSpeech": "VerbRu", "definitions": ["ăn"] }],
       "synonyms": [],
@@ -1135,7 +1128,6 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
           "text": "毎朝パンを食べる。",
           "meaning": "Mỗi sáng ăn bánh mì.",
           "position": 1,
-          "speakerId": 3,
           "level": "N5",
           "blankWord": "食べる",
           "hint": "Động từ chính trong câu.",
@@ -1204,7 +1196,7 @@ Preview payload import. Validate từng item, **chưa ghi vào DB**.
 | `Vocabulary_ImportSentenceIdNotAllowed_400:<field>` | Không được gửi `sentences[*].id` khi import |
 | `Vocabulary_ImportMeaningsRequired_400`             | Thiếu `meanings`                            |
 | `Vocabulary_ImportDefinitionsRequired_400`          | Thiếu `definitions` trong meaning           |
-| `Vocabulary_ImportSpeakerIdNotSupported_400`        | `speakerId` không hợp lệ                    |
+| `Vocabulary_ImportListTooManyItems_400`             | Vượt quá số item cho phép                   |
 | `Vocabulary_ImportListTooManyItems_400`             | Vượt quá số item cho phép                   |
 | `Vocabulary_ImportSentencesTooMany_400`             | Quá nhiều sentences                         |
 | `Vocabulary_ImportRowNumberInvalid_400`             | `rowNumber` không hợp lệ                    |
@@ -1478,7 +1470,6 @@ Tạo mới grammar card.
       "id": "optional-existing-id", // ❌ có id → update, không id → tạo mới
       "text": "ご飯を食べてから、勉強します。", // ⚠ bắt buộc
       "meaning": "Ăn cơm xong rồi học.", // ⚠ bắt buộc
-      "speakerId": 3, // ❌ nullable
       "level": "N5" // ❌ nullable — enum JlptLevel
     }
   ]
@@ -1564,8 +1555,7 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
   "guide": {
     "jsonNamingConvention": "camelCase",
     "allowedValues": {
-      "level": ["N5", "N4", "N3", "N2", "N1"],
-      "speakerId": ["2", "3", "8", "10", "11"]
+      "level": ["N5", "N4", "N3", "N2", "N1"]
     },
     "fieldNotes": {
       "items": "Danh sách bản ghi import.",
@@ -1601,7 +1591,6 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
           "text": "音楽を聞きながら勉強します。",
           "meaning": "Vừa nghe nhạc vừa học.",
           "position": 1,
-          "speakerId": 3,
           "level": "N4",
           "blankWord": "聞きながら",
           "hint": "Mẫu vừa làm A vừa làm B.",
@@ -1644,7 +1633,7 @@ Preview payload import grammar, validate từng item, **chưa ghi DB**.
 | `Grammar_ImportRelatedGrammarNotFound_404:<field>` | `relatedId` không tìm thấy       |
 | `Grammar_ImportDuplicateRelation_400:<field>`      | Relation trùng lặp               |
 | `Grammar_ImportSentenceIdNotAllowed_400:<field>`   | Không được gửi `sentences[*].id` |
-| `Grammar_ImportSpeakerIdNotSupported_400`          | `speakerId` không hợp lệ         |
+| `Grammar_ImportRowNumberInvalid_400`               | `rowNumber` không hợp lệ         |
 | `Grammar_ImportListTooManyItems_400`               | Quá số item cho phép             |
 | `Grammar_ImportSentencesTooMany_400`               | Quá nhiều sentences              |
 | `Grammar_ImportRowNumberInvalid_400`               | `rowNumber` không hợp lệ         |
@@ -1659,7 +1648,7 @@ Commit batch import grammar.
 
 1. Backend chạy `preview` nội bộ trước.
 2. Nếu còn item invalid → trả `Grammar_ImportBatchHasErrors_400`.
-3. Hợp lệ → tạo tuần tự. Mỗi sentence sẽ generate audio bằng VOICEVOX.
+3. Hợp lệ → tạo tuần tự. Mỗi sentence sẽ generate audio bằng Azure TTS.
 
 **Request body:** Cùng shape với `import/preview`.
 
@@ -2160,7 +2149,6 @@ Tìm kiếm danh sách sentence.
   "text": "日本へ行きたいです。",
   "meaning": "Tôi muốn đi Nhật.",
   "audioUrl": "string | null",
-  "speakerId": 3,
   "level": "N5 | null",
   "createdAt": "datetime",
   "updatedAt": "datetime | null"
@@ -2187,10 +2175,10 @@ Lấy chi tiết sentence theo ID.
 
 Tạo sentence mới.
 
-**Lưu ý VOICEVOX-only:**
+**Lưu ý Azure TTS:**
 
 - ❌ Client **không gửi** `audioUrl`.
-- ✅ Backend tự generate audio bằng VOICEVOX từ `text` và `speakerId`.
+- ✅ Backend tự generate audio bằng Azure TTS từ `text`, upload lên Cloudinary.
 
 **Request body:**
 
@@ -2198,7 +2186,6 @@ Tạo sentence mới.
 {
   "text": "日本へ行きたいです。", // ⚠ bắt buộc
   "meaning": "Tôi muốn đi Nhật.", // ⚠ bắt buộc
-  "speakerId": 3, // ❌ nullable
   "level": "N5" // ❌ nullable — enum JlptLevel
 }
 ```
@@ -2241,7 +2228,6 @@ Tải file JSON template mẫu cho import sentences.
       "rowNumber": 1,
       "text": "日本へ行きたいです。",
       "meaning": "Tôi muốn đi Nhật.",
-      "speakerId": 3,
       "level": "N5"
     }
   ]
@@ -2283,7 +2269,6 @@ Preview import sentences, validate từng item, **chưa ghi DB**.
       "rowNumber": 1,
       "text": "日本へ行きたいです。",
       "meaning": "Tôi muốn đi Nhật.",
-      "speakerId": 3,
       "level": "N5"
     }
   ]
@@ -2318,7 +2303,7 @@ Preview import sentences, validate từng item, **chưa ghi DB**.
 | `Sentence_ImportFieldRequired_400:<field>` | Field bắt buộc thiếu. VD: `text`, `meaning` |
 | `Sentence_ImportFieldTooLong_400:<field>`  | Vượt độ dài                                 |
 | `Sentence_ImportFieldInvalid_400:<field>`  | Giá trị enum không hợp lệ. VD: `level`      |
-| `Sentence_ImportSpeakerIdNotSupported_400` | `speakerId` không hợp lệ                    |
+| `Sentence_ImportRowNumberInvalid_400`      | `rowNumber` không hợp lệ                    |
 | `Sentence_ImportRowNumberInvalid_400`      | `rowNumber` không hợp lệ                    |
 
 ---
@@ -2331,7 +2316,7 @@ Commit batch import sentences.
 
 1. Backend chạy `preview` nội bộ trước.
 2. Nếu còn lỗi → không ghi DB.
-3. Hợp lệ → tạo tuần tự, mỗi sentence generate audio VOICEVOX.
+3. Hợp lệ → tạo tuần tự, mỗi sentence generate audio Azure TTS.
 
 **Request body:** Cùng shape với `import/preview`.
 
@@ -2419,62 +2404,7 @@ Upload file image và lưu metadata vào `MediaAssets`.
 
 ---
 
-## 10. Voicevox Module — Admin
-
-> 🔒 Yêu cầu đăng nhập.  
-> VOICEVOX là engine Text-to-Speech để generate audio cho sentences.
-
-### Tổng quan
-
-| Method | Endpoint                 | Auth    | Mô tả                          |
-| ------ | ------------------------ | ------- | ------------------------------ |
-| GET    | `/api/voicevox/speakers` | 🔒 Auth | Lấy danh sách speaker khả dụng |
-| POST   | `/api/voicevox/preview`  | 🔒 Auth | Generate preview audio         |
-
----
-
-### GET `/api/voicevox/speakers` 🔒
-
-Lấy danh sách speaker VOICEVOX được phép sử dụng.
-
-**Response data item:**
-
-```json
-{
-  "speakerId": 3,
-  "characterName": "ずんだもん",
-  "styleName": "ノーマル"
-}
-```
-
----
-
-### POST `/api/voicevox/preview` 🔒
-
-Generate audio preview để phát thử khi admin đổi speaker.
-
-**Request body:**
-
-```json
-{
-  "speakerId": 3, // ⚠ bắt buộc, int
-  "text": "こんにちは。" // ❌ nullable, nếu rỗng backend dùng text mặc định
-}
-```
-
-**Response data:**
-
-```json
-{
-  "speakerId": 3,
-  "text": "こんにちは。こちらは音声プレビューです。",
-  "audioUrl": "/audio-cache/example.wav"
-}
-```
-
----
-
-## 12. Decks Module — User
+## 10. Decks Module — User
 
 > User-facing deck APIs for discovery, bookmarks, fork, and personal deck management.
 
@@ -7088,7 +7018,6 @@ Default paging: `page = 1`, `pageSize = 20`
 | `text` | `string` | No | Sentence text |
 | `meaning` | `string` | No | Sentence meaning |
 | `audioUrl` | `string` | Yes | Sentence audio URL |
-| `speakerId` | `number` | Yes | VoiceVox speaker id when available |
 | `level` | `string` | Yes | JLPT level |
 | `isAttached` | `boolean` | No | Whether the sentence is already attached to the topic |
 | `attachedPosition` | `number` | Yes | Existing position when attached |
@@ -7699,7 +7628,7 @@ Error handling guidance:
 | `Vocabulary_CardNotFound_404`         | Card không tồn tại                     |
 | `Vocabulary_DetailNotFound_404`       | Chi tiết vocabulary không tìm thấy     |
 | `Vocabulary_ReadForbidden_401`        | Không có quyền xem card chưa Published |
-| `Vocabulary_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX            |
+| `Vocabulary_AudioSynthesisFailed_500` | Lỗi generate audio Azure TTS            |
 
 ### Grammar
 
@@ -7717,7 +7646,7 @@ Error handling guidance:
 | Code                                | Mô tả                       |
 | ----------------------------------- | --------------------------- |
 | `Sentence_NotFound_404`             | Sentence không tồn tại      |
-| `Sentence_AudioSynthesisFailed_500` | Lỗi generate audio VOICEVOX |
+| `Sentence_AudioSynthesisFailed_500` | Lỗi generate audio Azure TTS |
 
 ### Deck
 

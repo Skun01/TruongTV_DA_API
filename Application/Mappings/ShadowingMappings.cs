@@ -122,7 +122,6 @@ public static class ShadowingMappings
             Text = sentence.Text,
             Meaning = sentence.Meaning,
             AudioUrl = sentence.AudioUrl,
-            SpeakerId = sentence.SpeakerId,
             Level = sentence.Level?.ToString(),
             IsAttached = attachedLink != null,
             AttachedPosition = attachedLink?.Position,

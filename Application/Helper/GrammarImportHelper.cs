@@ -15,16 +15,15 @@ public static class GrammarImportHelper
         guide.AllowedValues["register"] = ImportTemplateGuideHelper.EnumValues<RegisterType>();
         guide.AllowedValues["relations[].relationType"] = ImportTemplateGuideHelper.EnumValues<GrammarRelationType>();
         guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
-        guide.AllowedValues["sentences[].speakerId"] = ImportTemplateGuideHelper.RecommendedSpeakerIds();
-        guide.FieldNotes["status"] = "Nếu bỏ trống khi import, hệ thống mặc định Published.";
-        guide.FieldNotes["structures"] = "Bắt buộc, ít nhất 1 phần tử.";
-        guide.FieldNotes["relations[].relatedId"] = "Phải là cardId của grammar đã tồn tại.";
-        guide.FieldNotes["relations[].relationType"] = "Bắt buộc khi có relation.";
-        guide.FieldNotes["sentences[].id"] = "Không truyền khi import tạo mới từ template.";
-        guide.FieldNotes["sentences[].position"] = "Bắt buộc > 0 để xác định thứ tự câu trong card.";
-        guide.FieldNotes["sentences[].blankWord"] = "Từ/cụm từ bị ẩn trong bài tập điền từ (tuỳ chọn).";
-        guide.FieldNotes["sentences[].hint"] = "Gợi ý cho câu hỏi điền từ (tuỳ chọn).";
-        guide.FieldNotes["sentences[].answerList"] = "Danh sách đáp án chấp nhận (tuỳ chọn).";
+        guide.FieldNotes["status"] = "Neu bo trong khi import, he thong mac dinh Published.";
+        guide.FieldNotes["structures"] = "Bat buoc, it nhat 1 phan tu.";
+        guide.FieldNotes["relations[].relatedId"] = "Phai la cardId cua grammar da ton tai.";
+        guide.FieldNotes["relations[].relationType"] = "Bat buoc khi co relation.";
+        guide.FieldNotes["sentences[].id"] = "Khong truyen khi import tao moi tu template.";
+        guide.FieldNotes["sentences[].position"] = "Bat buoc > 0 de xac dinh thu tu cau trong card.";
+        guide.FieldNotes["sentences[].blankWord"] = "Tu/cum tu bi an trong bai tap dien tu (tuy chon).";
+        guide.FieldNotes["sentences[].hint"] = "Go y cho cau hoi dien tu (tuy chon).";
+        guide.FieldNotes["sentences[].answerList"] = "Danh sach dap an chap nhan (tuy chon).";
 
         return new ImportGrammarRequest
         {
@@ -34,8 +33,8 @@ public static class GrammarImportHelper
                 new()
                 {
                     RowNumber = 1,
-                    Title = "〜ながら",
-                    Summary = "Vừa làm A vừa làm B.",
+                    Title = "~ながら",
+                    Summary = "Vua lam A vua lam B.",
                     Level = "N4",
                     Tags = new List<string> { "grammar", "simultaneous" },
                     Status = "Published",
@@ -46,21 +45,21 @@ public static class GrammarImportHelper
                             Pattern = "V1(1) + ながら + V2(2)",
                             Annotations = new Dictionary<string, string>
                             {
-                                { "1", "Hành động phụ diễn ra đồng thời." },
-                                { "2", "Hành động chính." },
+                                { "1", "Hanh dong phu dien ra dong thoi." },
+                                { "2", "Hanh dong chinh." },
                             },
                         },
                     },
-                    Explanation = "Dùng khi chủ thể vừa làm hành động A vừa làm hành động B.",
-                    Caution = "Hai hành động cần cùng chủ thể.",
+                    Explanation = "Dung khi chu the vua lam hanh dong A vua lam hanh dong B.",
+                    Caution = "Hai hanh dong can cung chu the.",
                     Register = "Standard",
-                    AlternateForms = new List<string> { "〜つつ" },
+                    AlternateForms = new List<string> { "~つつ" },
                     Relations = new List<GrammarRelationUpsertRequest>(),
                     Resources = new List<GrammarResourceUpsertRequest>
                     {
                         new()
                         {
-                            Title = "Bài giảng mẫu",
+                            Title = "Bai giang mau",
                             Url = "https://example.com/grammar/nagara",
                         },
                     },
@@ -69,12 +68,11 @@ public static class GrammarImportHelper
                         new()
                         {
                             Text = "音楽を聞きながら勉強します。",
-                            Meaning = "Tôi vừa nghe nhạc vừa học.",
+                            Meaning = "Toi vua nghe nhac vua hoc.",
                             Position = 1,
-                            SpeakerId = 3,
                             Level = "N4",
                             BlankWord = "聞きながら",
-                            Hint = "Mẫu vừa làm A vừa làm B.",
+                            Hint = "Mau vua lam A vua lam B.",
                             AnswerList = new List<string> { "聞きながら" },
                         },
                     },
@@ -225,12 +223,6 @@ public static class GrammarImportHelper
             ValidateOptionalText(sentence.BlankWord, $"{path}.blankWord", 200, errors);
             ValidateOptionalText(sentence.Hint, $"{path}.hint", 500, errors);
             ValidateAnswerList(sentence.AnswerList, $"{path}.answerList", errors);
-
-            if (sentence.SpeakerId.HasValue && sentence.SpeakerId.Value <= 0)
-                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SPEAKER_ID_INVALID, $"{path}.speakerId"));
-
-            if (sentence.SpeakerId.HasValue && !VoicevoxConstants.RecommendedSpeakerIdSet.Contains(sentence.SpeakerId.Value))
-                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_SPEAKER_ID_NOT_SUPPORTED, $"{path}.speakerId"));
         }
     }
 
