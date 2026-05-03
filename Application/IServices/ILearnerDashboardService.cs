@@ -7,4 +7,5 @@ public interface ILearnerDashboardService
     Task<LearnerStreakResponse> GetStreakAsync(string userId);
     Task<UpcomingReviewsResponse> GetUpcomingReviewsAsync(string userId, int days);
     Task<DeckProgressResponse> GetDeckProgressAsync(string userId);
+    Task<LearnerDashboardSummaryResponse> GetSummaryAsync(string userId);
 }

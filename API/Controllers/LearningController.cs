@@ -165,4 +165,15 @@ public class LearningController : BaseController
         var result = await _dashboardService.GetDeckProgressAsync(GetCurrentUserId());
         return ApiResponse<DeckProgressResponse>.SuccessResponse(result);
     }
+
+    /// <summary>
+    /// Tổng hợp tất cả metrics quan trọng của dashboard learner vào một endpoint duy nhất.
+    /// Bao gồm streak, review hôm nay, review sắp tới, progress theo deck, và sessions gần đây.
+    /// </summary>
+    [HttpGet("dashboard/summary")]
+    public async Task<ApiResponse<LearnerDashboardSummaryResponse>> GetDashboardSummary()
+    {
+        var result = await _dashboardService.GetSummaryAsync(GetCurrentUserId());
+        return ApiResponse<LearnerDashboardSummaryResponse>.SuccessResponse(result);
+    }
 }

@@ -155,4 +155,56 @@ public class LearnerDashboardService : ILearnerDashboardService
 
         return new DeckProgressResponse { Decks = deckItems };
     }
+
+    public async Task<LearnerDashboardSummaryResponse> GetSummaryAsync(string userId)
+    {
+        var streakTask = GetStreakAsync(userId);
+        var upcomingTask = GetUpcomingReviewsAsync(userId, 7);
+        var deckProgressTask = GetDeckProgressAsync(userId);
+        var sessionsTask = _unitOfWork.StudySessions.GetRecentByUserAsync(userId, 5);
+
+        await Task.WhenAll(streakTask, upcomingTask, deckProgressTask, sessionsTask);
+
+        var streak = await streakTask;
+        var upcoming = await upcomingTask;
+        var deckProgress = await deckProgressTask;
+        var sessions = await sessionsTask;
+
+        var recentSessions = sessions
+            .Where(s => s.CompletedAt.HasValue)
+            .OrderByDescending(s => s.CompletedAt)
+            .Take(5)
+            .Select(s =>
+            {
+                var attempts = s.CorrectCount + s.IncorrectCount;
+                return new RecentSessionSummary
+                {
+                    Id = s.Id,
+                    Mode = s.Mode.ToString(),
+                    CorrectCount = s.CorrectCount,
+                    IncorrectCount = s.IncorrectCount,
+                    Accuracy = attempts == 0 ? 0 : Math.Round((double)s.CorrectCount / attempts * 100, 2),
+                    CompletedAt = s.CompletedAt,
+                };
+            })
+            .ToList();
+
+        return new LearnerDashboardSummaryResponse
+        {
+            Streak = streak,
+            TodayReview = new Application.DTOs.Learning.TodayReviewSummaryResponse
+            {
+                DueCount = upcoming.DueToday,
+                TotalCards = upcoming.DueToday,
+            },
+            UpcomingReviews = new UpcomingReviewsSummary
+            {
+                DueToday = upcoming.DueToday,
+                DueTomorrow = upcoming.DueTomorrow,
+                DueThisWeek = upcoming.DueThisWeek,
+            },
+            DeckProgress = deckProgress.Decks.Take(5).ToList(),
+            RecentSessions = recentSessions,
+        };
+    }
 }
