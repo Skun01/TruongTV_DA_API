@@ -15,4 +15,6 @@ public interface IExamSessionRepository : IRepository<ExamSession>
         ExamSessionStatus? status,
         int page,
         int pageSize);
+    Task<List<ExamSession>> GetRecentByUserAsync(string userId, int limit);
+    Task<(int TotalExamsTaken, int TotalPassed, int TotalFailed, double AverageScore, double PassRate)> GetHistoryStatsByUserAsync(string userId);
 }

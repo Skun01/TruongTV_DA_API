@@ -1,6 +1,8 @@
 using Application.DTOs.Dashboard.Learner;
+using Application.DTOs.Learning;
 using Application.IRepositories;
 using Application.IServices;
+using Application.Mappings;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -205,6 +207,24 @@ public class LearnerDashboardService : ILearnerDashboardService
             },
             DeckProgress = deckProgress.Decks.Take(5).ToList(),
             RecentSessions = recentSessions,
+        };
+    }
+
+    public async Task<ExamHistoryResponse> GetExamHistoryAsync(ExamHistoryQuery query, string userId)
+    {
+        var limit = Math.Clamp(query.Limit, 1, 100);
+        var sessionsTask = _unitOfWork.ExamSessions.GetRecentByUserAsync(userId, limit);
+        var statsTask = _unitOfWork.ExamSessions.GetHistoryStatsByUserAsync(userId);
+
+        await Task.WhenAll(sessionsTask, statsTask);
+
+        var sessions = await sessionsTask;
+        var stats = await statsTask;
+
+        return new ExamHistoryResponse
+        {
+            Items = sessions.Select(x => x.ToExamHistoryItem()).ToList(),
+            Stats = stats.ToExamHistoryStats(),
         };
     }
 }

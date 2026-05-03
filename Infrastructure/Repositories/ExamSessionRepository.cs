@@ -89,4 +89,40 @@ public class ExamSessionRepository : Repository<ExamSession>, IExamSessionReposi
 
         return (items, total);
     }
+
+    public async Task<List<ExamSession>> GetRecentByUserAsync(string userId, int limit)
+    {
+        return await _context.ExamSessions
+            .AsNoTracking()
+            .Include(x => x.Exam)
+                .ThenInclude(x => x.Sections)
+            .Include(x => x.SectionScores)
+            .Where(x => x.UserId == userId && x.Status == ExamSessionStatus.Submitted)
+            .OrderByDescending(x => x.SubmittedAt ?? x.StartedAt)
+            .Take(limit)
+            .ToListAsync();
+    }
+
+    public async Task<(int TotalExamsTaken, int TotalPassed, int TotalFailed, double AverageScore, double PassRate)> GetHistoryStatsByUserAsync(string userId)
+    {
+        var submittedSessions = _context.ExamSessions
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.Status == ExamSessionStatus.Submitted);
+
+        var totalExamsTaken = await submittedSessions.CountAsync();
+        if (totalExamsTaken == 0)
+            return (0, 0, 0, 0, 0);
+
+        var totalPassed = await submittedSessions.CountAsync(x => x.IsPassed == true);
+        var averageScore = await submittedSessions.AverageAsync(x => (double?)(x.TotalScore ?? 0)) ?? 0;
+        var totalFailed = totalExamsTaken - totalPassed;
+        var passRate = (double)totalPassed / totalExamsTaken * 100;
+
+        return (
+            totalExamsTaken,
+            totalPassed,
+            totalFailed,
+            Math.Round(averageScore, 2),
+            Math.Round(passRate, 2));
+    }
 }

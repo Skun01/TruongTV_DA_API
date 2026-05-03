@@ -176,4 +176,14 @@ public class LearningController : BaseController
         var result = await _dashboardService.GetSummaryAsync(GetCurrentUserId());
         return ApiResponse<LearnerDashboardSummaryResponse>.SuccessResponse(result);
     }
+
+    /// <summary>
+    /// Lấy lịch sử các bài thi đã nộp gần đây của user hiện tại cùng thống kê tổng quan.
+    /// </summary>
+    [HttpGet("dashboard/exam-history")]
+    public async Task<ApiResponse<ExamHistoryResponse>> GetExamHistory([FromQuery] ExamHistoryQuery query)
+    {
+        var result = await _dashboardService.GetExamHistoryAsync(query, GetCurrentUserId());
+        return ApiResponse<ExamHistoryResponse>.SuccessResponse(result);
+    }
 }
