@@ -7,4 +7,5 @@ public interface IRepository<T> where T : class
     Task AddAsync(T entity);
     void UpdateAsync(T entity);
     void DeleteAsync(T entity);
+    Task<int> CountAsync(System.Linq.Expressions.Expression<Func<T, bool>>? predicate = null);
 }

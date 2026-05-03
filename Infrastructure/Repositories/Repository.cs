@@ -38,4 +38,11 @@ public class Repository<T> : IRepository<T> where T : class
     {
         dbSet.Update(entity);
     }
+
+    public async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<T, bool>>? predicate = null)
+    {
+        return predicate == null
+            ? await dbSet.CountAsync()
+            : await dbSet.CountAsync(predicate);
+    }
 }
