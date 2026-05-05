@@ -78,13 +78,8 @@ public class LearnerDashboardService : ILearnerDashboardService
         var tomorrowEndUtc = today.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var weekEndUtc = today.AddDays(days).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var dueByUserTask = _unitOfWork.UserCardProgresses.GetDueByUserAsync(userId, now);
-        var upcomingTask = _unitOfWork.UserCardProgresses.GetUpcomingByUserAsync(userId, todayEndUtc, weekEndUtc);
-
-        await Task.WhenAll(dueByUserTask, upcomingTask);
-
-        var dueNow = await dueByUserTask;
-        var upcoming = await upcomingTask;
+        var dueNow = await _unitOfWork.UserCardProgresses.GetDueByUserAsync(userId, now);
+        var upcoming = await _unitOfWork.UserCardProgresses.GetUpcomingByUserAsync(userId, todayEndUtc, weekEndUtc);
 
         var dueByDay = upcoming
             .GroupBy(p => DateOnly.FromDateTime(p.NextReviewAt))
@@ -160,17 +155,10 @@ public class LearnerDashboardService : ILearnerDashboardService
 
     public async Task<LearnerDashboardSummaryResponse> GetSummaryAsync(string userId)
     {
-        var streakTask = GetStreakAsync(userId);
-        var upcomingTask = GetUpcomingReviewsAsync(userId, 7);
-        var deckProgressTask = GetDeckProgressAsync(userId);
-        var sessionsTask = _unitOfWork.StudySessions.GetRecentByUserAsync(userId, 5);
-
-        await Task.WhenAll(streakTask, upcomingTask, deckProgressTask, sessionsTask);
-
-        var streak = await streakTask;
-        var upcoming = await upcomingTask;
-        var deckProgress = await deckProgressTask;
-        var sessions = await sessionsTask;
+        var streak = await GetStreakAsync(userId);
+        var upcoming = await GetUpcomingReviewsAsync(userId, 7);
+        var deckProgress = await GetDeckProgressAsync(userId);
+        var sessions = await _unitOfWork.StudySessions.GetRecentByUserAsync(userId, 5);
 
         var recentSessions = sessions
             .Where(s => s.CompletedAt.HasValue)
@@ -213,13 +201,8 @@ public class LearnerDashboardService : ILearnerDashboardService
     public async Task<ExamHistoryResponse> GetExamHistoryAsync(ExamHistoryQuery query, string userId)
     {
         var limit = Math.Clamp(query.Limit, 1, 100);
-        var sessionsTask = _unitOfWork.ExamSessions.GetRecentByUserAsync(userId, limit);
-        var statsTask = _unitOfWork.ExamSessions.GetHistoryStatsByUserAsync(userId);
-
-        await Task.WhenAll(sessionsTask, statsTask);
-
-        var sessions = await sessionsTask;
-        var stats = await statsTask;
+        var sessions = await _unitOfWork.ExamSessions.GetRecentByUserAsync(userId, limit);
+        var stats = await _unitOfWork.ExamSessions.GetHistoryStatsByUserAsync(userId);
 
         return new ExamHistoryResponse
         {

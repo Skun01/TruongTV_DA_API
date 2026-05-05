@@ -3457,6 +3457,92 @@ const deckAdminKeys = {
 
 ---
 
+## 13A. Dashboard Module — Admin
+
+> Top-level dashboard APIs for `learning-admin`. All endpoints in this section require `Editor` or `Admin`.
+
+### Overview
+
+| Method | Endpoint | Auth | Purpose |
+| ------ | -------- | ---- | ------- |
+| GET | `/api/admin/dashboard/content/summary` | 🔑 Editor/Admin | Return top-level published content counters for admin dashboard cards |
+| GET | `/api/admin/dashboard/users/summary` | 🔑 Editor/Admin | Return top-level learner counters for admin dashboard cards |
+
+### Authorization and access rules
+
+- Requires `EditorOrAdmin` policy.
+- These endpoints are read-only summary endpoints.
+- User counts in this module only include accounts with role `User`.
+
+### GET `/api/admin/dashboard/content/summary`
+
+Return top-level published content counters for the admin dashboard.
+
+Success response:
+
+```json
+{
+  "vocabularyCount": 1240,
+  "grammarCount": 320,
+  "kanjiCount": 540,
+  "deckCount": 86
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `vocabularyCount` | `int` | Count of cards where `cardType = Vocab` |
+| `grammarCount` | `int` | Count of cards where `cardType = Grammar` |
+| `kanjiCount` | `int` | Count of cards where `cardType = Kanji` |
+| `deckCount` | `int` | Count of decks where `status = Published` |
+
+Frontend notes:
+
+- This endpoint is suitable for top summary cards only.
+- `deckCount` excludes draft and archived decks.
+- Backend does not split content counts by visibility or ownership in this response.
+
+### GET `/api/admin/dashboard/users/summary`
+
+Return top-level learner counters for the admin dashboard.
+
+Success response:
+
+```json
+{
+  "totalUsers": 1820,
+  "newUsersToday": 14,
+  "newUsersThisWeek": 67,
+  "activeUsersToday": 241
+}
+```
+
+Response field notes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `totalUsers` | `int` | Count of all accounts where `role = User` |
+| `newUsersToday` | `int` | Users created from the start of the current UTC day |
+| `newUsersThisWeek` | `int` | Users created from the start of the current UTC week |
+| `activeUsersToday` | `int` | Distinct users who created at least one study session today |
+
+Frontend notes:
+
+- All time boundaries are based on server UTC time.
+- The current week starts on Sunday in UTC because backend uses `DayOfWeek`.
+- `activeUsersToday` is based on study session creation, not login activity.
+- These numbers are aggregate dashboard metrics, so coarse polling is acceptable if product wants near-live cards.
+
+### Suggested frontend admin usage
+
+1. Load both summary endpoints in parallel on dashboard page open.
+2. Render them as lightweight KPI cards rather than tables.
+3. Treat these responses as dashboard-only summaries, not as the source of truth for user management or deck management tables.
+
+---
+
 ## 14. Learning Module — User
 
 > User-facing study APIs for `learning-app`. All endpoints in this section require authentication.
@@ -3476,6 +3562,11 @@ const deckAdminKeys = {
 | GET | `/api/learning/review/today` | 🔒 Auth | Get today due-count summary |
 | GET | `/api/learning/review/due-cards` | 🔒 Auth | Get globally due card progresses for the current user |
 | GET | `/api/learning/progress/cards/{cardId}` | 🔒 Auth | Get current user progress for one card |
+| GET | `/api/learning/streak` | 🔒 Auth | Get current learner streak summary |
+| GET | `/api/learning/review/upcoming` | 🔒 Auth | Get upcoming due-card counts for the next N days |
+| GET | `/api/learning/decks/progress` | 🔒 Auth | Get per-deck progress summary for the current user |
+| GET | `/api/learning/dashboard/summary` | 🔒 Auth | Get a compact learner dashboard summary payload |
+| GET | `/api/learning/dashboard/exam-history` | 🔒 Auth | Get recent submitted exam sessions plus aggregate exam stats |
 | GET | `/api/learning/settings/me` | 🔒 Auth | Get user default learning settings |
 | PUT | `/api/learning/settings/me` | 🔒 Auth | Create or update user default learning settings |
 
@@ -3494,6 +3585,8 @@ const deckAdminKeys = {
 - If `deckId` is provided and `cardIds[]` is empty, backend uses all cards inside the selected deck.
 - If `deckId` is omitted, `cardIds[]` is required.
 - Session response still includes `folderIds`. These are derived from the selected cards only when the session belongs to a specific deck. Global review sessions return `[]`.
+- Dashboard endpoints in this module are always scoped to the current authenticated user.
+- Day-based learner dashboard metrics use server UTC boundaries.
 - Session settings are resolved with this precedence:
   1. `settings` sent in `POST /api/learning/sessions`
   2. user default settings from `GET /api/learning/settings/me`
@@ -3960,6 +4053,295 @@ Get current user progress for one card.
   - `isMastered = false`
   - `nextReviewAt = current server time`
 
+### GET `/api/learning/streak` 🔒
+
+Return the current learner streak summary for the authenticated user.
+
+**Response data**
+
+```json
+{
+  "currentStreak": 6,
+  "longestStreak": 14,
+  "lastStudyDate": "2026-05-03T00:00:00Z"
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `currentStreak` | `int` | Current streak computed from distinct completed-study dates |
+| `longestStreak` | `int` | Longest streak computed from completed-study dates |
+| `lastStudyDate` | `datetime \| null` | Most recent completed-study date normalized to UTC midnight |
+
+**Frontend notes**
+
+- This endpoint uses completed study sessions only.
+- If the user has never completed a session, backend returns `currentStreak = 0`, `longestStreak = 0`, `lastStudyDate = null`.
+- Treat `lastStudyDate` as a server-derived date marker, not as a precise activity timestamp.
+
+### GET `/api/learning/review/upcoming` 🔒
+
+Return upcoming due-card counts for the current user over the next `N` days.
+
+**Query params**
+
+| Param | Type | Required | Default | Notes |
+| ----- | ---- | -------- | ------- | ----- |
+| `days` | `int` | No | `7` | Number of forward-looking days for upcoming review counts |
+
+**Response data**
+
+```json
+{
+  "dueToday": 18,
+  "dueTomorrow": 11,
+  "dueThisWeek": 42,
+  "dueByDay": [
+    { "date": "2026-05-04", "count": 11 },
+    { "date": "2026-05-05", "count": 7 },
+    { "date": "2026-05-06", "count": 6 }
+  ]
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `dueToday` | `int` | Count of due progress rows at request time |
+| `dueTomorrow` | `int` | Count of progress rows due during the next UTC day |
+| `dueThisWeek` | `int` | `dueToday + upcoming future due count` within the selected day window |
+| `dueByDay` | `DailyReviewCount[]` | Future due counts grouped by UTC date |
+
+`DailyReviewCount`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `date` | `date` | `DateOnly` value serialized as `YYYY-MM-DD` |
+| `count` | `int` | Due rows for that date |
+
+**Frontend notes**
+
+- `dueByDay` does not repeat the already-due-today count; it represents future grouped days from the upcoming window.
+- Backend currently provides no explicit validator for `days`; frontend should send positive integers only.
+- All date windows are based on server UTC time.
+
+### GET `/api/learning/decks/progress` 🔒
+
+Return current progress grouped by readable deck for the authenticated user.
+
+**Response data**
+
+```json
+{
+  "decks": [
+    {
+      "deckId": "deck-1",
+      "deckTitle": "N5 Week 1",
+      "totalCards": 120,
+      "masteredCards": 44,
+      "dueCards": 13,
+      "learningCards": 63,
+      "completionPercent": 36.67
+    }
+  ]
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `decks` | `DeckProgressItem[]` | Deck-level progress rows |
+
+`DeckProgressItem`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `deckId` | `string` | Deck id |
+| `deckTitle` | `string` | Deck title |
+| `totalCards` | `int` | Distinct cards currently inside the deck |
+| `masteredCards` | `int` | Cards considered mastered for the user |
+| `dueCards` | `int` | Non-mastered tracked cards whose `nextReviewAt <= now` |
+| `learningCards` | `int` | Non-mastered tracked cards whose `nextReviewAt > now` |
+| `completionPercent` | `double` | `(masteredCards / totalCards) * 100`, rounded to 2 decimals |
+
+**Frontend notes**
+
+- Only decks with `totalCards > 0` are returned.
+- Rows are sorted by `dueCards` descending.
+- This endpoint returns the full deck list, while `GET /api/learning/dashboard/summary` only returns the top 5 rows.
+
+### GET `/api/learning/dashboard/summary` 🔒
+
+Return a compact learner dashboard payload for the authenticated user.
+
+This endpoint aggregates:
+
+- streak summary
+- today review count
+- upcoming review summary
+- top 5 deck progress rows
+- latest 5 recent study sessions
+
+**Response data**
+
+```json
+{
+  "streak": {
+    "currentStreak": 6,
+    "longestStreak": 14,
+    "lastStudyDate": "2026-05-03T00:00:00Z"
+  },
+  "todayReview": {
+    "deckId": null,
+    "folderIds": [],
+    "dueCount": 18,
+    "totalCards": 18
+  },
+  "upcomingReviews": {
+    "dueToday": 18,
+    "dueTomorrow": 11,
+    "dueThisWeek": 42
+  },
+  "deckProgress": [
+    {
+      "deckId": "deck-1",
+      "deckTitle": "N5 Week 1",
+      "totalCards": 120,
+      "masteredCards": 44,
+      "dueCards": 13,
+      "learningCards": 63,
+      "completionPercent": 36.67
+    }
+  ],
+  "recentSessions": [
+    {
+      "id": "study-session-id",
+      "deckTitle": null,
+      "mode": "MultipleChoice",
+      "correctCount": 8,
+      "incorrectCount": 2,
+      "accuracy": 80.0,
+      "completedAt": "2026-05-03T09:12:00Z"
+    }
+  ]
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `streak` | `LearnerStreakResponse` | Same contract as `GET /api/learning/streak` |
+| `todayReview` | `TodayReviewSummaryResponse` | Global summary shape reused inside dashboard response |
+| `upcomingReviews` | `UpcomingReviewsSummary` | Compact future review counters |
+| `deckProgress` | `DeckProgressItem[]` | Top 5 deck rows only |
+| `recentSessions` | `RecentSessionSummary[]` | Up to 5 recent sessions |
+
+`TodayReviewSummaryResponse` in this endpoint
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `deckId` | `string \| null` | Always `null` in this dashboard summary response |
+| `folderIds` | `string[]` | Always `[]` in this dashboard summary response |
+| `dueCount` | `int` | Current due count |
+| `totalCards` | `int` | Same value as `dueCount` in this dashboard summary response |
+
+`UpcomingReviewsSummary`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `dueToday` | `int` | Current due count |
+| `dueTomorrow` | `int` | Due count for next UTC day |
+| `dueThisWeek` | `int` | Due count over dashboard 7-day window |
+
+`RecentSessionSummary`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | `string` | Study session id |
+| `deckTitle` | `string \| null` | Nullable; currently may be `null` in this endpoint |
+| `mode` | `StudyMode` | `FillInBlank`, `MultipleChoice`, `Flashcard` |
+| `correctCount` | `int` | Correct or known submissions |
+| `incorrectCount` | `int` | Incorrect or learning submissions |
+| `accuracy` | `double` | `(correctCount / attempts) * 100`, rounded to 2 decimals |
+| `completedAt` | `datetime \| null` | Completion timestamp |
+
+**Frontend notes**
+
+- Prefer this endpoint for a learner home/dashboard landing page because it collapses several calls into one payload.
+- If the UI needs the full deck list, call `GET /api/learning/decks/progress`.
+- If the UI needs future daily grouping, call `GET /api/learning/review/upcoming` because `dashboard/summary` only returns compact counters.
+
+### GET `/api/learning/dashboard/exam-history` 🔒
+
+Return recent submitted exam sessions plus aggregate exam statistics for the authenticated user.
+
+**Query params**
+
+| Param | Type | Required | Default | Validation |
+| ----- | ---- | -------- | ------- | ---------- |
+| `limit` | `int` | No | `5` | `1 <= limit <= 100` |
+
+**Response data**
+
+```json
+{
+  "items": [
+    {
+      "examSessionId": "session-1",
+      "examId": "exam-1",
+      "examTitle": "JLPT N5 Mock Test 01",
+      "examLevel": "N5",
+      "startedAt": "2026-05-02T07:00:00Z",
+      "submittedAt": "2026-05-02T08:35:00Z",
+      "totalScore": 87,
+      "maxScore": 120,
+      "isPassed": true,
+      "accuracy": 72.5
+    }
+  ],
+  "stats": {
+    "totalExamsTaken": 12,
+    "totalPassed": 8,
+    "totalFailed": 4,
+    "averageScore": 79.42,
+    "passRate": 66.67
+  }
+}
+```
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `items` | `ExamHistoryItem[]` | Recent exam sessions limited by `limit` |
+| `stats` | `ExamHistoryStats` | Aggregate stats across all submitted exam sessions for the current user |
+
+`ExamHistoryItem`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `examSessionId` | `string` | Exam session id |
+| `examId` | `string` | Exam id |
+| `examTitle` | `string` | Exam title |
+| `examLevel` | `JlptLevel` | `N5`, `N4`, `N3`, `N2`, `N1` |
+| `startedAt` | `datetime` | Session start time |
+| `submittedAt` | `datetime \| null` | Submission time |
+| `totalScore` | `int \| null` | Stored total score for the session |
+| `maxScore` | `int` | Sum of section max scores for the exam |
+| `isPassed` | `bool \| null` | Pass flag from the submitted session |
+| `accuracy` | `double` | `(totalScore / maxScore) * 100`, rounded to 2 decimals |
+
+`ExamHistoryStats`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `totalExamsTaken` | `int` | Count of all submitted exam sessions for the current user |
+| `totalPassed` | `int` | Submitted exam sessions where `isPassed = true` |
+| `totalFailed` | `int` | `totalExamsTaken - totalPassed` |
+| `averageScore` | `double` | Raw average of `totalScore`, rounded to 2 decimals |
+| `passRate` | `double` | `(totalPassed / totalExamsTaken) * 100`, rounded to 2 decimals |
+
+**Frontend notes**
+
+- This endpoint only includes sessions whose backend status is `Submitted`.
+- `stats` is calculated across all submitted exam sessions for the current user, not just the limited `items` slice.
+- `averageScore` is a raw score average, not a normalized percentage. Use `passRate` and per-item `accuracy` for percentage displays.
+
 ### GET `/api/learning/settings/me` 🔒
 
 Get current user default learning settings.
@@ -4030,6 +4412,12 @@ Create or update user default learning settings.
 - Load `GET /api/learning/settings/me` on settings page.
 - Save persistent defaults with `PUT /api/learning/settings/me`.
 - When opening a one-off study modal, send temporary overrides in `POST /api/learning/sessions` instead of mutating user defaults.
+
+4. Learner dashboard flow
+- Load `GET /api/learning/dashboard/summary` for the learner landing page and compact widgets.
+- If the UI needs daily forecast grouping, call `GET /api/learning/review/upcoming`.
+- If the UI needs the full deck list instead of the dashboard top 5 slice, call `GET /api/learning/decks/progress`.
+- If the UI needs exam widgets or an exam history page, call `GET /api/learning/dashboard/exam-history`.
 
 ---
 

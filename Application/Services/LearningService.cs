@@ -94,8 +94,12 @@ public class LearningService : ILearningService
             .Select(x => x.DeckId!)
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        var decks = await Task.WhenAll(deckIds.Select(deckId => GetReadableDeckAsync(deckId, userId)));
-        var deckMap = decks.ToDictionary(x => x.Id, StringComparer.Ordinal);
+        var deckMap = new Dictionary<string, Deck>(StringComparer.Ordinal);
+        foreach (var deckId in deckIds)
+        {
+            var deck = await GetReadableDeckAsync(deckId, userId);
+            deckMap[deck.Id] = deck;
+        }
 
         return sessions
             .Select(session => session.ToResponse(
