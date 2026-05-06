@@ -44,6 +44,7 @@ public class UnitOfWork : IUnitOfWork
     private IExamSessionRepository? _examSessions;
     private IRepository<SessionAnswer>? _sessionAnswers;
     private IRepository<SessionSectionScore>? _sessionSectionScores;
+    private IExamSessionAiAnalysisRepository? _examSessionAiAnalyses;
     private IAiGeneratedQuestionRepository? _aiGeneratedQuestions;
     
     public UnitOfWork(AppDbContext context)
@@ -88,6 +89,7 @@ public class UnitOfWork : IUnitOfWork
     public IExamSessionRepository ExamSessions => _examSessions ??= new ExamSessionRepository(_context);
     public IRepository<SessionAnswer> SessionAnswers => _sessionAnswers ??= new Repository<SessionAnswer>(_context);
     public IRepository<SessionSectionScore> SessionSectionScores => _sessionSectionScores ??= new Repository<SessionSectionScore>(_context);
+    public IExamSessionAiAnalysisRepository ExamSessionAiAnalyses => _examSessionAiAnalyses ??= new ExamSessionAiAnalysisRepository(_context);
     public IAiGeneratedQuestionRepository AiGeneratedQuestions => _aiGeneratedQuestions ??= new AiGeneratedQuestionRepository(_context);
 
     // Conversation module

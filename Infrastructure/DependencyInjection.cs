@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IExamService, ExamService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IExamSessionService, ExamSessionService>();
+        services.AddScoped<IExamSessionAiAnalysisService, ExamSessionAiAnalysisService>();
         services.AddScoped<IAiQuestionService, AiQuestionService>();
 
         // AI Generation

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Application.DTOs.Ai;
 using Application.Helper;
 using Application.IServices.IInternal;
 using Application.Settings;
@@ -85,6 +86,65 @@ public class GeminiGenerationService : IAiGenerationService
         {
             _logger.LogError(ex, "Lỗi gọi Gemini API sinh câu hỏi JLPT {Level}/{Section}", level, sectionType);
             throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
+        }
+    }
+
+    public async Task<AiGeneratedJsonResult> GenerateStructuredJsonAsync(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.Gemini.ApiKey) || string.IsNullOrWhiteSpace(_settings.Gemini.Model))
+            throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+
+        try
+        {
+            var client = new Client(apiKey: _settings.Gemini.ApiKey);
+
+            var response = await client.Models.GenerateContentAsync(
+                model: _settings.Gemini.Model,
+                contents: userPrompt,
+                config: new GenerateContentConfig
+                {
+                    SystemInstruction = new Content
+                    {
+                        Parts = new List<Part>
+                        {
+                            new() { Text = systemPrompt }
+                        }
+                    },
+                    MaxOutputTokens = _settings.MaxTokens,
+                    ResponseMimeType = "application/json"
+                },
+                cancellationToken: cancellationToken);
+
+            var content = string.Concat(
+                response.Candidates?
+                    .SelectMany(candidate => candidate.Content?.Parts ?? Enumerable.Empty<Part>())
+                    .Select(part => part.Text)
+                    .Where(text => !string.IsNullOrWhiteSpace(text))
+                ?? Enumerable.Empty<string>());
+
+            if (string.IsNullOrWhiteSpace(content))
+                throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+
+            var json = AiGenerationResponseParser.ExtractJson(content, MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+            JsonDocument.Parse(json);
+
+            return new AiGeneratedJsonResult
+            {
+                Content = json,
+                Model = _settings.Gemini.Model,
+            };
+        }
+        catch (ApplicationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi gọi Gemini API sinh JLPT AI analysis");
+            throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
         }
     }
 }

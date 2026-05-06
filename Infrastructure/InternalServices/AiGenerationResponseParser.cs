@@ -4,7 +4,7 @@ namespace Infrastructure.InternalServices;
 
 internal static class AiGenerationResponseParser
 {
-    public static string ExtractJson(string content)
+    public static string ExtractJson(string content, string errorCode = MessageConstants.AiQuestionMessage.GENERATION_FAILED)
     {
         var trimmed = content.Trim();
 
@@ -27,7 +27,7 @@ internal static class AiGenerationResponseParser
             jsonStart = trimmed.IndexOf('[');
 
         if (jsonStart == -1)
-            throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
+            throw new ApplicationException(errorCode);
 
         return trimmed.Substring(jsonStart);
     }

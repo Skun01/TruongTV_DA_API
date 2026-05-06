@@ -188,6 +188,9 @@ public static class MessageConstants
         public const string NOT_SUBMITTED = "ExamSession_NotSubmitted_400";
         public const string QUESTION_NOT_IN_EXAM = "ExamSession_QuestionNotInExam_400";
         public const string FORBIDDEN = "ExamSession_Forbidden_403";
+        public const string AI_ANALYSIS_UNAVAILABLE = "ExamSession_AiAnalysisUnavailable_503";
+        public const string AI_ANALYSIS_INVALID = "ExamSession_AiAnalysisInvalid_502";
+        public const string AI_ANALYSIS_RATE_LIMITED = "ExamSession_AiAnalysisRateLimited_429";
     }
 
     public static class AiQuestionMessage

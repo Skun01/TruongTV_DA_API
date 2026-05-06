@@ -25,6 +25,7 @@ public class ExamSessionRepository : Repository<ExamSession>, IExamSessionReposi
     {
         return await _context.ExamSessions
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(x => x.Exam)
                 .ThenInclude(e => e.Sections.OrderBy(s => s.OrderIndex))
                     .ThenInclude(s => s.QuestionGroups.OrderBy(g => g.OrderIndex))

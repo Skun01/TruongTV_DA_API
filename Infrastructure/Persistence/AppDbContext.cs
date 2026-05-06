@@ -45,6 +45,7 @@ public class AppDbContext : DbContext
     public DbSet<ExamSession> ExamSessions { set; get; }
     public DbSet<SessionAnswer> SessionAnswers { set; get; }
     public DbSet<SessionSectionScore> SessionSectionScores { set; get; }
+    public DbSet<ExamSessionAiAnalysis> ExamSessionAiAnalyses { set; get; }
     public DbSet<AiGeneratedQuestion> AiGeneratedQuestions { set; get; }
 
     // Conversation module

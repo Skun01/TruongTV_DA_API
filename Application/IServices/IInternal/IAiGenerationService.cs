@@ -1,3 +1,4 @@
+using Application.DTOs.Ai;
 using Domain.Enums;
 
 namespace Application.IServices.IInternal;
@@ -12,5 +13,10 @@ public interface IAiGenerationService
         SectionType sectionType,
         string topic,
         int count,
+        CancellationToken cancellationToken = default);
+
+    Task<AiGeneratedJsonResult> GenerateStructuredJsonAsync(
+        string systemPrompt,
+        string userPrompt,
         CancellationToken cancellationToken = default);
 }

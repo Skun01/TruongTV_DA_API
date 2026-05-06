@@ -21,4 +21,5 @@ public class User : BaseEntity
     public ICollection<StudySession> StudySessions { get; set; } = new List<StudySession>();
     public UserLearningSettings? LearningSettings { get; set; }
     public ICollection<ExamSession> ExamSessions { get; set; } = new List<ExamSession>();
+    public ICollection<ExamSessionAiAnalysis> ExamSessionAiAnalyses { get; set; } = new List<ExamSessionAiAnalysis>();
 }

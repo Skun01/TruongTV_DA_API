@@ -19,4 +19,5 @@ public class ExamSession : BaseEntity
 
     public ICollection<SessionAnswer> Answers { get; set; } = new List<SessionAnswer>();
     public ICollection<SessionSectionScore> SectionScores { get; set; } = new List<SessionSectionScore>();
+    public ICollection<ExamSessionAiAnalysis> AiAnalyses { get; set; } = new List<ExamSessionAiAnalysis>();
 }

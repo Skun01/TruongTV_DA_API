@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Application.DTOs.Ai;
 using Application.Helper;
 using Application.IServices.IInternal;
 using Application.Settings;
@@ -78,4 +79,51 @@ public class OpenAiGenerationService : IAiGenerationService
         }
     }
 
+    public async Task<AiGeneratedJsonResult> GenerateStructuredJsonAsync(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.OpenAI.ApiKey) || string.IsNullOrWhiteSpace(_settings.OpenAI.Model))
+            throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+
+        try
+        {
+            var client = new ChatClient(_settings.OpenAI.Model, _settings.OpenAI.ApiKey);
+            var messages = new List<ChatMessage>
+            {
+                new SystemChatMessage(systemPrompt),
+                new UserChatMessage(userPrompt)
+            };
+
+            var options = new ChatCompletionOptions
+            {
+                MaxOutputTokenCount = _settings.MaxTokens
+            };
+
+            var response = await client.CompleteChatAsync(messages, options, cancellationToken);
+            var content = string.Concat(response.Value.Content.Select(c => c.Text));
+
+            if (string.IsNullOrWhiteSpace(content))
+                throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+
+            var json = AiGenerationResponseParser.ExtractJson(content, MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+            JsonDocument.Parse(json);
+
+            return new AiGeneratedJsonResult
+            {
+                Content = json,
+                Model = _settings.OpenAI.Model,
+            };
+        }
+        catch (ApplicationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi gọi OpenAI API sinh JLPT AI analysis");
+            throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
+        }
+    }
 }

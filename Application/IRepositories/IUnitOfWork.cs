@@ -41,6 +41,7 @@ public interface IUnitOfWork
     IExamSessionRepository ExamSessions { get; }
     IRepository<SessionAnswer> SessionAnswers { get; }
     IRepository<SessionSectionScore> SessionSectionScores { get; }
+    IExamSessionAiAnalysisRepository ExamSessionAiAnalyses { get; }
     IAiGeneratedQuestionRepository AiGeneratedQuestions { get; }
 
     // Conversation module

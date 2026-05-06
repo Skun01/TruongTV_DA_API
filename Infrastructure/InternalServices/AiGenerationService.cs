@@ -1,3 +1,4 @@
+using Application.DTOs.Ai;
 using Application.IServices.IInternal;
 using Application.Settings;
 using Domain.Constants;
@@ -48,5 +49,25 @@ public class AiGenerationService : IAiGenerationService
             return _openRouterGenerationService.GenerateQuestionsJsonAsync(level, sectionType, topic, count, cancellationToken);
 
         throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
+    }
+
+    public Task<AiGeneratedJsonResult> GenerateStructuredJsonAsync(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken cancellationToken = default)
+    {
+        if (_settings.Provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
+            return _openAiGenerationService.GenerateStructuredJsonAsync(systemPrompt, userPrompt, cancellationToken);
+
+        if (_settings.Provider.Equals("Anthropic", StringComparison.OrdinalIgnoreCase))
+            return _anthropicGenerationService.GenerateStructuredJsonAsync(systemPrompt, userPrompt, cancellationToken);
+
+        if (_settings.Provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase))
+            return _geminiGenerationService.GenerateStructuredJsonAsync(systemPrompt, userPrompt, cancellationToken);
+
+        if (_settings.Provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase))
+            return _openRouterGenerationService.GenerateStructuredJsonAsync(systemPrompt, userPrompt, cancellationToken);
+
+        throw new ApplicationException(MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE);
     }
 }

@@ -12,10 +12,14 @@ namespace API.Controllers;
 public class ExamSessionsController : BaseController
 {
     private readonly IExamSessionService _examSessionService;
+    private readonly IExamSessionAiAnalysisService _examSessionAiAnalysisService;
 
-    public ExamSessionsController(IExamSessionService examSessionService)
+    public ExamSessionsController(
+        IExamSessionService examSessionService,
+        IExamSessionAiAnalysisService examSessionAiAnalysisService)
     {
         _examSessionService = examSessionService;
+        _examSessionAiAnalysisService = examSessionAiAnalysisService;
     }
 
     /// <summary>
@@ -81,6 +85,30 @@ public class ExamSessionsController : BaseController
         var userId = GetCurrentUserId();
         var result = await _examSessionService.GetSessionResultAsync(id, userId);
         return ApiResponse<SessionResultResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy AI analysis cho kết quả bài thi đã nộp
+    /// </summary>
+    [HttpGet("{id}/ai-analysis")]
+    public async Task<ApiResponse<JlptAiAnalysisResponse>> GetAiAnalysis([FromRoute] string id)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _examSessionAiAnalysisService.GetAsync(id, userId);
+        return ApiResponse<JlptAiAnalysisResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Generate lại AI analysis theo yêu cầu của học viên
+    /// </summary>
+    [HttpPost("{id}/ai-analysis/regenerate")]
+    public async Task<ApiResponse<JlptAiAnalysisResponse>> RegenerateAiAnalysis(
+        [FromRoute] string id,
+        [FromBody] RegenerateJlptAiAnalysisRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _examSessionAiAnalysisService.RegenerateAsync(id, request, userId);
+        return ApiResponse<JlptAiAnalysisResponse>.SuccessResponse(result);
     }
 
     /// <summary>
