@@ -47,6 +47,11 @@ public class AppDbContext : DbContext
     public DbSet<SessionSectionScore> SessionSectionScores { set; get; }
     public DbSet<AiGeneratedQuestion> AiGeneratedQuestions { set; get; }
 
+    // Conversation module
+    public DbSet<ConversationSession> ConversationSessions { set; get; }
+    public DbSet<ConversationMessage> ConversationMessages { set; get; }
+    public DbSet<ExtractedVocabulary> ExtractedVocabularies { set; get; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

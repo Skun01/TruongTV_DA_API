@@ -64,6 +64,13 @@ public static class DependencyInjection
         services.AddHttpClient<OpenRouterGenerationService>();
         services.AddScoped<IAiGenerationService, AiGenerationService>();
 
+        // AI Conversation
+        services.AddHttpClient<OpenRouterConversationService>();
+        services.AddScoped<IAiConversationService, OpenRouterConversationService>();
+
+        // Conversation Service
+        services.AddScoped<IConversationService, ConversationService>();
+
         // TTS — Azure Cognitive Services Text-to-Speech
         services.AddHttpClient<ITextToSpeechService, AzureTextToSpeechService>();
 

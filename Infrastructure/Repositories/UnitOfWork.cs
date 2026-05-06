@@ -90,6 +90,15 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<SessionSectionScore> SessionSectionScores => _sessionSectionScores ??= new Repository<SessionSectionScore>(_context);
     public IAiGeneratedQuestionRepository AiGeneratedQuestions => _aiGeneratedQuestions ??= new AiGeneratedQuestionRepository(_context);
 
+    // Conversation module
+    private IConversationSessionRepository? _conversationSessions;
+    private IConversationMessageRepository? _conversationMessages;
+    private IExtractedVocabularyRepository? _extractedVocabularies;
+
+    public IConversationSessionRepository ConversationSessions => _conversationSessions ??= new ConversationSessionRepository(_context);
+    public IConversationMessageRepository ConversationMessages => _conversationMessages ??= new ConversationMessageRepository(_context);
+    public IExtractedVocabularyRepository ExtractedVocabularies => _extractedVocabularies ??= new ExtractedVocabularyRepository(_context);
+
     public async Task<int> SaveChangesAsync()
     {
         return await _context.SaveChangesAsync();

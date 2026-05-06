@@ -43,5 +43,10 @@ public interface IUnitOfWork
     IRepository<SessionSectionScore> SessionSectionScores { get; }
     IAiGeneratedQuestionRepository AiGeneratedQuestions { get; }
 
+    // Conversation module
+    IConversationSessionRepository ConversationSessions { get; }
+    IConversationMessageRepository ConversationMessages { get; }
+    IExtractedVocabularyRepository ExtractedVocabularies { get; }
+
     Task<int> SaveChangesAsync();
 }

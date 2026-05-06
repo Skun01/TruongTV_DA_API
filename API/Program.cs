@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using API.Extensions;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -15,7 +16,11 @@ builder.Host.UseSerilog((context, services, configuration) =>
 
 builder.Services.AddCorsConfigurationExtension(builder.Configuration);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddApiBehaviorExtension();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();

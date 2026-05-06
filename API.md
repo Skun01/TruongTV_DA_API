@@ -26,6 +26,7 @@
 18. [JLPT AI Questions Module — Admin](#18-jlpt-ai-questions-module--admin)
 19. [JLPT Exam Sessions Module — User](#19-jlpt-exam-sessions-module--user)
 20. [Shadowing Module](#20-shadowing-module)
+21. [AI Conversation Module](#21-ai-conversation-module)
 
 ---
 
@@ -8062,3 +8063,269 @@ Error handling guidance:
 | `Learning_CardNotInSession_400` | Card submit không nằm trong session |
 | `Learning_InvalidSubmission_400` | Submit không hợp lệ hoặc submit trùng card đã làm |
 | `Learning_NoCardsAvailable_400` | Không có card nào để tạo session |
+
+---
+
+## 21. AI Conversation Module
+
+> APIs for AI-powered Japanese conversation practice. User chats with AI in realistic scenarios, adjusting difficulty based on JLPT level.
+
+### 21.1 Endpoint Inventory
+
+| Method | Endpoint | Auth | Description |
+| ------ | -------- | ---- | ----------- |
+| GET | `/api/conversations/scenarios` | 🌐 Public | List available conversation scenarios |
+| POST | `/api/conversations/start` | 🔒 Auth | Start a new conversation session |
+| POST | `/api/conversations/{conversationId}/message` | 🔒 Auth | Send a message in a conversation |
+| GET | `/api/conversations/{conversationId}/result` | 🔒 Auth | Get conversation result and feedback |
+| GET | `/api/conversations` | 🔒 Auth | Get paginated conversation history |
+| DELETE | `/api/conversations/{conversationId}` | 🔒 Auth | Delete a conversation |
+
+### 21.2 Scenarios
+
+Predefined conversation scenarios:
+
+| Scenario ID | Name | Description |
+| ---------- | ---- | ----------- |
+| `Shopping` | Đi Shopping | Mua sắm ở cửa hàng |
+| `Interview` | Phỏng vấn xin việc | Ứng tuyển công việc |
+| `Direction` | Hỏi đường | Hỏi đường ở Nhật |
+| `Meeting` | Gặp gỡ bạn mới | Làm quen bạn mới |
+| `Restaurant` | Nhà hàng | Ăn uống ở nhà hàng |
+| `Custom` | Tự nhập kịch bản | Nhập kịch bản tùy chỉnh |
+
+### 21.3 Common Models
+
+#### ConversationSessionStatus
+
+| Value | Description |
+| ----- | ----------- |
+| `Active` | Conversation đang diễn ra |
+| `Completed` | Conversation đã kết thúc |
+
+#### StartConversationRequest
+
+```json
+{
+  "scenario": "Shopping | Interview | Direction | Meeting | Restaurant | Custom",
+  "level": "N5 | N4 | N3 | N2 | N1",
+  "customScenario": "string (optional, required when scenario = Custom)"
+}
+```
+
+#### StartConversationResponse
+
+```json
+{
+  "conversationId": "string (uuid)",
+  "aiMessage": {
+    "text": "string",
+    "suggestions": ["string"]
+  }
+}
+```
+
+#### SendMessageRequest
+
+```json
+{
+  "userMessage": "string"
+}
+```
+
+#### SendMessageResponse
+
+```json
+{
+  "aiMessage": {
+    "text": "string",
+    "suggestions": ["string"],
+    "newVocabulary": [
+      {
+        "word": "string",
+        "reading": "string",
+        "meaning": "string",
+        "example": "string"
+      }
+    ],
+    "grammarPoints": ["string"]
+  },
+  "summary": {
+    "totalMessages": "number",
+    "userMessagesCount": "number",
+    "newWordsLearned": "number"
+  }
+}
+```
+
+#### ConversationResultResponse
+
+```json
+{
+  "conversationId": "string",
+  "scenario": "string",
+  "level": "N5 | N4 | N3 | N2 | N1",
+  "duration": "string (e.g., '15m')",
+  "totalMessages": "number",
+  "newVocabulary": [
+    {
+      "word": "string",
+      "reading": "string",
+      "meaning": "string",
+      "example": "string"
+    }
+  ],
+  "grammarPoints": ["string"],
+  "feedback": "string",
+  "score": "number (0-100)"
+}
+```
+
+#### ConversationListItemResponse
+
+```json
+{
+  "conversationId": "string",
+  "scenario": "string",
+  "level": "N5 | N4 | N3 | N2 | N1",
+  "status": "Active | Completed",
+  "startedAt": "datetime",
+  "completedAt": "datetime | null",
+  "totalMessages": "number",
+  "score": "number"
+}
+```
+
+### 21.4 API Details
+
+#### GET `/api/conversations/scenarios`
+
+**Purpose:** Get list of available conversation scenarios.
+
+**Success response:**
+- `data`: `ScenarioListResponse`
+
+```json
+{
+  "scenarios": [
+    {
+      "id": "Shopping",
+      "name": "Đi Shopping",
+      "icon": "🛍️",
+      "description": "Mua sắm ở cửa hàng"
+    }
+  ]
+}
+```
+
+---
+
+#### POST `/api/conversations/start`
+
+**Purpose:** Start a new AI conversation session.
+
+**JSON body fields:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `scenario` | `string` | Yes | Scenario ID (Shopping, Interview, Direction, Meeting, Restaurant, Custom) |
+| `level` | `string` | Yes | JLPT level (N5, N4, N3, N2, N1) |
+| `customScenario` | `string` | No | Required when scenario is "Custom" |
+
+**Success response:**
+- `data`: `StartConversationResponse`
+
+**Frontend notes:**
+- AI immediately responds with an opening message and 2-3 suggested replies
+- Store `conversationId` for subsequent message exchanges
+
+---
+
+#### POST `/api/conversations/{conversationId}/message`
+
+**Purpose:** Send a message and receive AI response.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `conversationId` | `string` | Yes | Conversation UUID from start response |
+
+**JSON body fields:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `userMessage` | `string` | Yes | User's Japanese text (max 2000 chars) |
+
+**Success response:**
+- `data`: `SendMessageResponse`
+
+**Frontend notes:**
+- `newVocabulary` contains words AI detected as new for the user
+- `grammarPoints` contains grammar patterns AI explained
+- `suggestions` are 2-3 possible replies the user could send next
+
+---
+
+#### GET `/api/conversations/{conversationId}/result`
+
+**Purpose:** End conversation and get detailed results.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `conversationId` | `string` | Yes | Conversation UUID |
+
+**Success response:**
+- `data`: `ConversationResultResponse`
+
+**Frontend notes:**
+- Calling this marks the conversation as completed
+- Can be called multiple times (idempotent)
+- `score` is 0-100 based on conversation engagement and learning
+- `feedback` is AI-generated evaluation in Vietnamese
+
+---
+
+#### GET `/api/conversations`
+
+**Purpose:** Get paginated conversation history for the current user.
+
+**Query params:**
+
+| Field | Type | Required | Default | Description |
+| ----- | ---- | -------- | ------- | ----------- |
+| `page` | `number` | No | `1` | Page number |
+| `pageSize` | `number` | No | `20` | Items per page |
+
+**Success response:**
+- `data`: `ConversationListItemResponse[]`
+- `metaData`: pagination metadata
+
+---
+
+#### DELETE `/api/conversations/{conversationId}`
+
+**Purpose:** Delete a conversation.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `conversationId` | `string` | Yes | Conversation UUID |
+
+**Success response:**
+- `data`: `boolean` (`true`)
+
+**Frontend notes:**
+- Returns `true` on success - remove from local state
+
+### 21.5 Error Codes
+
+| Code | Description |
+| ---- | ----------- |
+| `User_NotFound_404` | User session not found |
+| `Common_400` | Invalid request (e.g., conversation already completed) |
+| `Common_404` | Resource not found |
+| `AiQuestion_GenerationFailed_500` | AI generation failed |
