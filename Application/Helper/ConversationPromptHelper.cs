@@ -1,9 +1,12 @@
 using Domain.Enums;
+using Domain.Entities;
 
 namespace Application.Helper;
 
 public static class ConversationPromptHelper
 {
+    public const string PromptVersion = "conversation-v2";
+
     private const string SystemPrompt = @"Bạn là người bản xứ Nhật Bản, trẻ trung, thân thiện.
 Nhiệm vụ: hội thoại tiếng Nhật với user theo kịch bản thực tế.
 LUÔN điều chỉnh độ khó theo JLPT level:
@@ -31,12 +34,8 @@ LUẬT NGHIÊM NGẶT:
 
     public static string GetSystemPrompt() => SystemPrompt;
 
-    public static string BuildStartPrompt(string scenario, JlptLevel level, string? customScenario = null)
+    public static string BuildStartPrompt(string scenarioText, JlptLevel level)
     {
-        var scenarioText = scenario.Equals("Custom", StringComparison.OrdinalIgnoreCase)
-            ? customScenario ?? "Tự chọn kịch bản"
-            : GetScenarioDescription(scenario);
-
         return $@"Kịch bản: {scenarioText}
 Mức độ: JLPT {level}
 
@@ -45,12 +44,12 @@ Phản hồi JSON theo format quy định.";
     }
 
     public static string BuildContinuePrompt(
-        string scenario,
+        string scenarioText,
         JlptLevel level,
         string conversationHistory,
         string userMessage)
     {
-        return $@"Kịch bản: {scenario}
+        return $@"Kịch bản: {scenarioText}
 Mức độ: JLPT {level}
 
 Lịch sử hội thoại:
@@ -63,13 +62,13 @@ Phản hồi JSON theo format quy định.";
     }
 
     public static string BuildEndPrompt(
-        string scenario,
+        string scenarioText,
         JlptLevel level,
         string conversationHistory,
         int totalMessages,
         int userMessagesCount)
     {
-        return $@"Kịch bản: {scenario}
+        return $@"Kịch bản: {scenarioText}
 Mức độ: JLPT {level}
 
 Lịch sử hội thoại:
@@ -88,6 +87,22 @@ Trả về JSON format:
   ""feedback"": ""feedback tiếng Việt"",
   ""score"": 0-100
 }}";
+    }
+
+    public static string ResolveScenarioText(string scenario, string? customScenario = null)
+    {
+        return scenario.Equals("Custom", StringComparison.OrdinalIgnoreCase)
+            ? customScenario?.Trim() ?? "Tự chọn kịch bản"
+            : GetScenarioDescription(scenario);
+    }
+
+    public static string BuildConversationHistory(IEnumerable<ConversationMessage> messages)
+    {
+        return string.Join(
+            "\n",
+            messages
+                .OrderBy(x => x.CreatedAt)
+                .Select(x => $"{(x.Sender == MessageSender.User ? "User" : "AI")}: {x.Text}"));
     }
 
     private static string GetScenarioDescription(string scenario)

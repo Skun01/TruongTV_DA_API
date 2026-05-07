@@ -1,6 +1,4 @@
-using System.Text.Json;
 using Application.Common;
-using Application.DTOs.Common;
 using Application.DTOs.Conversations;
 using Application.DTOs.Conversations.Queries;
 using Application.Helper;
@@ -30,68 +28,55 @@ public class ConversationService : IConversationService
         return ConversationMappings.GetScenarios();
     }
 
+    public async Task<ConversationDetailResponse> GetConversationAsync(
+        string conversationId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = await GetOwnedConversationAsync(conversationId, userId);
+        var orderedMessages = OrderMessages(session);
+        var scenarioText = ConversationPromptHelper.ResolveScenarioText(session.Scenario, session.CustomScenario);
+
+        return session.ToDetailResponse(orderedMessages, scenarioText);
+    }
+
     public async Task<StartConversationResponse> StartConversationAsync(
         StartConversationRequest request,
         string userId,
         CancellationToken cancellationToken = default)
     {
+        var startedAt = DateTime.UtcNow;
+        var conversationId = Guid.NewGuid().ToString();
+        var scenarioText = ConversationPromptHelper.ResolveScenarioText(request.Scenario, request.CustomScenario);
+
+        var generation = await _aiConversationService.GenerateConversationJsonAsync(
+            ConversationPromptHelper.GetSystemPrompt(),
+            ConversationPromptHelper.BuildStartPrompt(scenarioText, request.Level),
+            cancellationToken);
+
+        var aiContent = ConversationAiResponseParser.ParseMessage(generation.Content);
+
         var session = new ConversationSession
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = conversationId,
             UserId = userId,
             Scenario = request.Scenario,
             CustomScenario = request.CustomScenario,
             Level = request.Level,
             Status = ConversationSessionStatus.Active,
-            StartedAt = DateTime.UtcNow,
-            TotalMessages = 0,
+            StartedAt = startedAt,
+            TotalMessages = 1,
             UserMessagesCount = 0,
             Score = 0
         };
 
+        var aiMessage = CreateAiMessage(conversationId, aiContent, startedAt);
+
         await _unitOfWork.ConversationSessions.AddAsync(session);
-        await _unitOfWork.SaveChangesAsync();
-
-        var systemPrompt = ConversationPromptHelper.GetSystemPrompt();
-        var userPrompt = ConversationPromptHelper.BuildStartPrompt(request.Scenario, request.Level, request.CustomScenario);
-
-        var jsonResponse = await _aiConversationService.GenerateConversationJsonAsync(systemPrompt, userPrompt, cancellationToken);
-        var aiData = ParseAiResponse(jsonResponse);
-
-        var aiMessage = new ConversationMessage
-        {
-            Id = Guid.NewGuid().ToString(),
-            ConversationId = session.Id,
-            Sender = MessageSender.AI,
-            Text = aiData.Text,
-            Suggestions = aiData.Suggestions,
-            NewVocabulary = aiData.NewVocabulary.Select(v => new ExtractedVocabulary
-            {
-                Id = Guid.NewGuid().ToString(),
-                MessageId = "",
-                Word = v.Word,
-                Reading = v.Reading,
-                Meaning = v.Meaning,
-                Example = v.Example,
-                JlptLevel = ParseJlptLevel(v.JlptLevel)
-            }).ToList(),
-            GrammarPoints = aiData.GrammarPoints,
-            CreatedAt = DateTime.UtcNow
-        };
-
         await _unitOfWork.ConversationMessages.AddAsync(aiMessage);
-        session.TotalMessages = 1;
         await _unitOfWork.SaveChangesAsync();
 
-        return new StartConversationResponse
-        {
-            ConversationId = session.Id,
-            AiMessage = new AiMessageDto
-            {
-                Text = aiMessage.Text,
-                Suggestions = aiMessage.Suggestions ?? new List<string>()
-            }
-        };
+        return aiMessage.ToStartConversationResponse(conversationId);
     }
 
     public async Task<SendMessageResponse> SendMessageAsync(
@@ -100,13 +85,25 @@ public class ConversationService : IConversationService
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var session = await _unitOfWork.ConversationSessions.GetByIdWithMessagesAsync(conversationId);
-
-        if (session == null || session.UserId != userId)
-            throw new ApplicationException(MessageConstants.UserMessage.NOT_FOUND);
+        var session = await GetOwnedConversationAsync(conversationId, userId);
 
         if (session.Status == ConversationSessionStatus.Completed)
-            throw new ApplicationException(MessageConstants.CommonMessage.INVALID);
+            throw new ApplicationException(MessageConstants.ConversationMessage.ALREADY_COMPLETED);
+
+        var orderedMessages = OrderMessages(session);
+        var scenarioText = ConversationPromptHelper.ResolveScenarioText(session.Scenario, session.CustomScenario);
+
+        var generation = await _aiConversationService.GenerateConversationJsonAsync(
+            ConversationPromptHelper.GetSystemPrompt(),
+            ConversationPromptHelper.BuildContinuePrompt(
+                scenarioText,
+                session.Level,
+                ConversationPromptHelper.BuildConversationHistory(orderedMessages),
+                request.UserMessage),
+            cancellationToken);
+
+        var aiContent = ConversationAiResponseParser.ParseMessage(generation.Content);
+        var createdAt = DateTime.UtcNow;
 
         var userMessage = new ConversationMessage
         {
@@ -114,132 +111,88 @@ public class ConversationService : IConversationService
             ConversationId = session.Id,
             Sender = MessageSender.User,
             Text = request.UserMessage,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = createdAt
         };
+
+        var aiMessage = CreateAiMessage(session.Id, aiContent, createdAt.AddMilliseconds(1));
 
         await _unitOfWork.ConversationMessages.AddAsync(userMessage);
-        session.TotalMessages++;
-        session.UserMessagesCount++;
-
-        var history = string.Join("\n", session.Messages.Select(m =>
-            $"{(m.Sender == MessageSender.User ? "User" : "AI")}: {m.Text}"));
-
-        var systemPrompt = ConversationPromptHelper.GetSystemPrompt();
-        var userPrompt = ConversationPromptHelper.BuildContinuePrompt(
-            session.Scenario,
-            session.Level,
-            history,
-            request.UserMessage);
-
-        var jsonResponse = await _aiConversationService.GenerateConversationJsonAsync(systemPrompt, userPrompt, cancellationToken);
-        var aiData = ParseAiResponse(jsonResponse);
-
-        var aiMessage = new ConversationMessage
-        {
-            Id = Guid.NewGuid().ToString(),
-            ConversationId = session.Id,
-            Sender = MessageSender.AI,
-            Text = aiData.Text,
-            Suggestions = aiData.Suggestions,
-            NewVocabulary = aiData.NewVocabulary.Select(v => new ExtractedVocabulary
-            {
-                Id = Guid.NewGuid().ToString(),
-                MessageId = "",
-                Word = v.Word,
-                Reading = v.Reading,
-                Meaning = v.Meaning,
-                Example = v.Example,
-                JlptLevel = ParseJlptLevel(v.JlptLevel)
-            }).ToList(),
-            GrammarPoints = aiData.GrammarPoints,
-            CreatedAt = DateTime.UtcNow
-        };
-
         await _unitOfWork.ConversationMessages.AddAsync(aiMessage);
-        session.TotalMessages++;
+
+        session.TotalMessages += 2;
+        session.UserMessagesCount++;
 
         await _unitOfWork.SaveChangesAsync();
 
-        var totalNewWords = session.Messages
-            .SelectMany(m => m.NewVocabulary)
-            .Count(v => !string.IsNullOrWhiteSpace(v.Word));
+        var newWordsLearned = orderedMessages
+            .Append(aiMessage)
+            .CountLearnedWords();
 
-        return new SendMessageResponse
-        {
-            AiMessage = new SendAiMessageDto
-            {
-                Text = aiMessage.Text,
-                Suggestions = aiMessage.Suggestions ?? new List<string>(),
-                NewVocabulary = aiMessage.NewVocabulary.Select(v => new VocabularyItemDto
-                {
-                    Word = v.Word,
-                    Reading = v.Reading,
-                    Meaning = v.Meaning,
-                    Example = v.Example
-                }).ToList(),
-                GrammarPoints = aiMessage.GrammarPoints
-            },
-            Summary = new ConversationSummaryDto
-            {
-                TotalMessages = session.TotalMessages,
-                UserMessagesCount = session.UserMessagesCount,
-                NewWordsLearned = totalNewWords
-            }
-        };
+        return aiMessage.ToSendMessageResponse(session.TotalMessages, session.UserMessagesCount, newWordsLearned);
     }
 
-    public async Task<ConversationResultResponse> GetResultAsync(
+    public async Task<ConversationResultResponse> CompleteConversationAsync(
         string conversationId,
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var session = await _unitOfWork.ConversationSessions.GetByIdWithMessagesAsync(conversationId);
+        var session = await GetOwnedConversationAsync(conversationId, userId);
+        var orderedMessages = OrderMessages(session);
 
-        if (session == null || session.UserId != userId)
-            throw new ApplicationException(MessageConstants.UserMessage.NOT_FOUND);
-
-        if (session.Status == ConversationSessionStatus.Active)
+        if (session.Status == ConversationSessionStatus.Completed
+            && !string.IsNullOrWhiteSpace(session.Feedback))
         {
-            session.Status = ConversationSessionStatus.Completed;
-            session.CompletedAt = DateTime.UtcNow;
-            session.Score = CalculateScore(session);
-            await _unitOfWork.SaveChangesAsync();
+            return BuildResultResponse(session, orderedMessages);
         }
 
-        var history = string.Join("\n", session.Messages.Select(m =>
-            $"{(m.Sender == MessageSender.User ? "User" : "AI")}: {m.Text}"));
+        session.Status = ConversationSessionStatus.Completed;
+        session.CompletedAt ??= DateTime.UtcNow;
 
-        var systemPrompt = ConversationPromptHelper.GetSystemPrompt();
-        var userPrompt = ConversationPromptHelper.BuildEndPrompt(
-            session.Scenario,
-            session.Level,
-            history,
-            session.TotalMessages,
-            session.UserMessagesCount);
+        var engagementScore = CalculateEngagementScore(session.TotalMessages, orderedMessages);
 
-        string feedback;
-        int score;
         try
         {
-            var jsonResponse = await _aiConversationService.GenerateConversationJsonAsync(systemPrompt, userPrompt, cancellationToken);
-            var endData = ParseEndResponse(jsonResponse);
-            feedback = endData.Feedback;
-            score = endData.Score;
-            session.Score = (session.Score + score) / 2;
+            var scenarioText = ConversationPromptHelper.ResolveScenarioText(session.Scenario, session.CustomScenario);
+            var generation = await _aiConversationService.GenerateConversationJsonAsync(
+                ConversationPromptHelper.GetSystemPrompt(),
+                ConversationPromptHelper.BuildEndPrompt(
+                    scenarioText,
+                    session.Level,
+                    ConversationPromptHelper.BuildConversationHistory(orderedMessages),
+                    session.TotalMessages,
+                    session.UserMessagesCount),
+                cancellationToken);
+
+            var evaluation = ConversationAiResponseParser.ParseEvaluation(generation.Content);
+            session.Feedback = evaluation.Feedback;
+            session.Score = Math.Clamp((engagementScore + evaluation.Score) / 2, 0, 100);
+            session.ResultModel = generation.Model;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
-            feedback = $"Bạn đã hoàn thành cuộc hội thoại với {session.TotalMessages} tin nhắn.";
-            score = session.Score;
+            session.Feedback = $"Bạn đã hoàn thành cuộc hội thoại với {session.TotalMessages} tin nhắn.";
+            session.Score = engagementScore;
+            session.ResultModel = null;
         }
+
+        session.FeedbackGeneratedAt = DateTime.UtcNow;
+        session.ResultPromptVersion = ConversationPromptHelper.PromptVersion;
 
         await _unitOfWork.SaveChangesAsync();
 
-        var duration = session.CompletedAt.HasValue
-            ? $"{(session.CompletedAt.Value - session.StartedAt).Minutes}m"
-            : "0m";
+        return BuildResultResponse(session, orderedMessages);
+    }
 
-        return session.ToResultResponse(session.Messages.ToList(), feedback, duration);
+    public Task<ConversationResultResponse> GetResultAsync(
+        string conversationId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        return CompleteConversationAsync(conversationId, userId, cancellationToken);
     }
 
     public async Task<(List<ConversationListItemResponse> Items, MetaData Meta)> SearchHistoryAsync(
@@ -251,7 +204,7 @@ public class ConversationService : IConversationService
         var items = await _unitOfWork.ConversationSessions.GetByUserIdAsync(userId, page, pageSize);
         var totalCount = await _unitOfWork.ConversationSessions.CountByUserIdAsync(userId);
 
-        var responseItems = items.Select(s => s.ToListItemResponse()).ToList();
+        var responseItems = items.Select(x => x.ToListItemResponse()).ToList();
 
         return (responseItems, new MetaData
         {
@@ -266,96 +219,77 @@ public class ConversationService : IConversationService
         var session = await _unitOfWork.ConversationSessions.GetByIdAsync(conversationId);
 
         if (session == null || session.UserId != userId)
-            throw new ApplicationException(MessageConstants.UserMessage.NOT_FOUND);
+            throw new ApplicationException(MessageConstants.ConversationMessage.NOT_FOUND);
 
         _unitOfWork.ConversationSessions.DeleteAsync(session);
         await _unitOfWork.SaveChangesAsync();
     }
 
-    private static int CalculateScore(ConversationSession session)
+    private ConversationResultResponse BuildResultResponse(ConversationSession session, List<ConversationMessage> orderedMessages)
+    {
+        var duration = ConversationDurationHelper.Format(session.StartedAt, session.CompletedAt);
+        return session.ToResultResponse(orderedMessages, duration);
+    }
+
+    private async Task<ConversationSession> GetOwnedConversationAsync(string conversationId, string userId)
+    {
+        var session = await _unitOfWork.ConversationSessions.GetByIdWithMessagesAsync(conversationId);
+
+        if (session == null || session.UserId != userId)
+            throw new ApplicationException(MessageConstants.ConversationMessage.NOT_FOUND);
+
+        return session;
+    }
+
+    private static List<ConversationMessage> OrderMessages(ConversationSession session)
+    {
+        return session.Messages
+            .OrderBy(x => x.CreatedAt)
+            .ToList();
+    }
+
+    private static ConversationMessage CreateAiMessage(
+        string conversationId,
+        ConversationAiMessageContent aiContent,
+        DateTime createdAt)
+    {
+        return new ConversationMessage
+        {
+            Id = Guid.NewGuid().ToString(),
+            ConversationId = conversationId,
+            Sender = MessageSender.AI,
+            Text = aiContent.Text,
+            Suggestions = aiContent.Suggestions,
+            NewVocabulary = aiContent.NewVocabulary
+                .Select(x => new ExtractedVocabulary
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Word = x.Word,
+                    Reading = x.Reading,
+                    Meaning = x.Meaning,
+                    Example = x.Example,
+                    JlptLevel = ParseJlptLevel(x.JlptLevel)
+                })
+                .ToList(),
+            GrammarPoints = aiContent.GrammarPoints,
+            CreatedAt = createdAt
+        };
+    }
+
+    private static int CalculateEngagementScore(int totalMessages, IEnumerable<ConversationMessage> messages)
     {
         var score = 50;
 
-        if (session.TotalMessages >= 5) score += 10;
-        if (session.TotalMessages >= 10) score += 10;
+        if (totalMessages >= 5)
+            score += 10;
 
-        var newWords = session.Messages
-            .SelectMany(m => m.NewVocabulary)
-            .Count(v => !string.IsNullOrWhiteSpace(v.Word));
+        if (totalMessages >= 10)
+            score += 10;
+
+        var newWords = messages.CountLearnedWords();
         score += Math.Min(newWords * 10, 30);
 
         return Math.Min(score, 100);
-    }
-
-    private static ConversationAiResponse ParseAiResponse(string json)
-    {
-        try
-        {
-            var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            var text = root.GetProperty("text").GetString() ?? "";
-            var suggestions = new List<string>();
-            if (root.TryGetProperty("suggestions", out var sugElement) && sugElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var s in sugElement.EnumerateArray())
-                    suggestions.Add(s.GetString() ?? "");
-            }
-
-            var vocabulary = new List<VocabularyResponse>();
-            if (root.TryGetProperty("newVocabulary", out var vocabElement) && vocabElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var v in vocabElement.EnumerateArray())
-                {
-                    vocabulary.Add(new VocabularyResponse
-                    {
-                        Word = v.GetProperty("word").GetString() ?? "",
-                        Reading = v.TryGetProperty("reading", out var r) ? r.GetString() ?? "" : "",
-                        Meaning = v.GetProperty("meaning").GetString() ?? "",
-                        Example = v.TryGetProperty("example", out var e) ? e.GetString() ?? "" : "",
-                        JlptLevel = v.TryGetProperty("jlptLevel", out var l) ? l.GetString() ?? "N5" : "N5"
-                    });
-                }
-            }
-
-            var grammarPoints = new List<string>();
-            if (root.TryGetProperty("grammarPoints", out var gramElement) && gramElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var g in gramElement.EnumerateArray())
-                    grammarPoints.Add(g.GetString() ?? "");
-            }
-
-            return new ConversationAiResponse
-            {
-                Text = text,
-                Suggestions = suggestions,
-                NewVocabulary = vocabulary,
-                GrammarPoints = grammarPoints
-            };
-        }
-        catch
-        {
-            throw new ApplicationException(MessageConstants.AiQuestionMessage.GENERATION_FAILED);
-        }
-    }
-
-    private static EndConversationResponse ParseEndResponse(string json)
-    {
-        try
-        {
-            var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            return new EndConversationResponse
-            {
-                Feedback = root.GetProperty("feedback").GetString() ?? "",
-                Score = root.TryGetProperty("score", out var s) ? s.GetInt32() : 50
-            };
-        }
-        catch
-        {
-            return new EndConversationResponse { Feedback = "Cuộc hội thoại đã kết thúc.", Score = 50 };
-        }
     }
 
     private static JlptLevel ParseJlptLevel(string? level)
@@ -369,28 +303,5 @@ public class ConversationService : IConversationService
             "N5" => JlptLevel.N5,
             _ => JlptLevel.N5
         };
-    }
-
-    private class ConversationAiResponse
-    {
-        public string Text { get; set; } = "";
-        public List<string> Suggestions { get; set; } = new();
-        public List<VocabularyResponse> NewVocabulary { get; set; } = new();
-        public List<string> GrammarPoints { get; set; } = new();
-    }
-
-    private class VocabularyResponse
-    {
-        public string Word { get; set; } = "";
-        public string Reading { get; set; } = "";
-        public string Meaning { get; set; } = "";
-        public string Example { get; set; } = "";
-        public string JlptLevel { get; set; } = "N5";
-    }
-
-    private class EndConversationResponse
-    {
-        public string Feedback { get; set; } = "";
-        public int Score { get; set; } = 50;
     }
 }

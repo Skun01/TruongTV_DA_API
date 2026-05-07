@@ -66,8 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IAiGenerationService, AiGenerationService>();
 
         // AI Conversation
-        services.AddHttpClient<OpenRouterConversationService>();
-        services.AddScoped<IAiConversationService, OpenRouterConversationService>();
+        services.AddScoped<IAiConversationService, AiConversationService>();
 
         // Conversation Service
         services.AddScoped<IConversationService, ConversationService>();

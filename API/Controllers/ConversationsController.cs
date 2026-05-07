@@ -27,6 +27,16 @@ public class ConversationsController : BaseController
         return ApiResponse<ScenarioListResponse>.SuccessResponse(result);
     }
 
+    [HttpGet("{conversationId}")]
+    public async Task<ApiResponse<ConversationDetailResponse>> GetConversation(
+        [FromRoute] string conversationId,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _conversationService.GetConversationAsync(conversationId, userId, cancellationToken);
+        return ApiResponse<ConversationDetailResponse>.SuccessResponse(result);
+    }
+
     [HttpPost("start")]
     public async Task<ApiResponse<StartConversationResponse>> StartConversation(
         [FromBody] StartConversationRequest request,
@@ -46,6 +56,16 @@ public class ConversationsController : BaseController
         var userId = GetCurrentUserId();
         var result = await _conversationService.SendMessageAsync(conversationId, request, userId, cancellationToken);
         return ApiResponse<SendMessageResponse>.SuccessResponse(result);
+    }
+
+    [HttpPost("{conversationId}/complete")]
+    public async Task<ApiResponse<ConversationResultResponse>> CompleteConversation(
+        [FromRoute] string conversationId,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _conversationService.CompleteConversationAsync(conversationId, userId, cancellationToken);
+        return ApiResponse<ConversationResultResponse>.SuccessResponse(result);
     }
 
     [HttpGet("{conversationId}/result")]

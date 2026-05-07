@@ -14,8 +14,10 @@ public class ConversationMessageRepository : Repository<ConversationMessage>, IC
     public async Task<List<ConversationMessage>> GetByConversationIdAsync(string conversationId)
     {
         return await dbSet
+            .Include(x => x.NewVocabulary)
             .Where(x => x.ConversationId == conversationId)
             .OrderBy(x => x.CreatedAt)
+            .AsSplitQuery()
             .ToListAsync();
     }
 }

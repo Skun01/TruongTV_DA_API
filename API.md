@@ -8075,8 +8075,10 @@ Error handling guidance:
 | Method | Endpoint | Auth | Description |
 | ------ | -------- | ---- | ----------- |
 | GET | `/api/conversations/scenarios` | 🌐 Public | List available conversation scenarios |
+| GET | `/api/conversations/{conversationId}` | 🔒 Auth | Get conversation transcript and metadata |
 | POST | `/api/conversations/start` | 🔒 Auth | Start a new conversation session |
 | POST | `/api/conversations/{conversationId}/message` | 🔒 Auth | Send a message in a conversation |
+| POST | `/api/conversations/{conversationId}/complete` | 🔒 Auth | Complete a conversation and persist final result |
 | GET | `/api/conversations/{conversationId}/result` | 🔒 Auth | Get conversation result and feedback |
 | GET | `/api/conversations` | 🔒 Auth | Get paginated conversation history |
 | DELETE | `/api/conversations/{conversationId}` | 🔒 Auth | Delete a conversation |
@@ -8122,6 +8124,42 @@ Predefined conversation scenarios:
     "text": "string",
     "suggestions": ["string"]
   }
+}
+```
+
+#### ConversationDetailResponse
+
+```json
+{
+  "conversationId": "string",
+  "scenario": "string",
+  "customScenario": "string | null",
+  "scenarioText": "string",
+  "level": "N5 | N4 | N3 | N2 | N1",
+  "status": "Active | Completed",
+  "startedAt": "datetime",
+  "completedAt": "datetime | null",
+  "totalMessages": "number",
+  "userMessagesCount": "number",
+  "score": "number",
+  "messages": [
+    {
+      "messageId": "string",
+      "sender": "User | AI",
+      "text": "string",
+      "suggestions": ["string"],
+      "newVocabulary": [
+        {
+          "word": "string",
+          "reading": "string",
+          "meaning": "string",
+          "example": "string"
+        }
+      ],
+      "grammarPoints": ["string"],
+      "createdAt": "datetime"
+    }
+  ]
 }
 ```
 
@@ -8220,6 +8258,25 @@ Predefined conversation scenarios:
 
 ---
 
+#### GET `/api/conversations/{conversationId}`
+
+**Purpose:** Get conversation transcript and metadata for the current user.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `conversationId` | `string` | Yes | Conversation UUID |
+
+**Success response:**
+- `data`: `ConversationDetailResponse`
+
+**Frontend notes:**
+- Returns ordered transcript including AI suggestions, extracted vocabulary, and grammar points per message
+- Use this endpoint to restore a conversation screen after refresh
+
+---
+
 #### POST `/api/conversations/start`
 
 **Purpose:** Start a new AI conversation session.
@@ -8267,9 +8324,9 @@ Predefined conversation scenarios:
 
 ---
 
-#### GET `/api/conversations/{conversationId}/result`
+#### POST `/api/conversations/{conversationId}/complete`
 
-**Purpose:** End conversation and get detailed results.
+**Purpose:** Mark the conversation as completed and persist final feedback.
 
 **Path params:**
 
@@ -8281,8 +8338,27 @@ Predefined conversation scenarios:
 - `data`: `ConversationResultResponse`
 
 **Frontend notes:**
-- Calling this marks the conversation as completed
-- Can be called multiple times (idempotent)
+- First call finalizes the conversation and stores the generated feedback
+- Repeated calls return the cached result
+
+---
+
+#### GET `/api/conversations/{conversationId}/result`
+
+**Purpose:** Compatibility endpoint to get final conversation results.
+
+**Path params:**
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `conversationId` | `string` | Yes | Conversation UUID |
+
+**Success response:**
+- `data`: `ConversationResultResponse`
+
+**Frontend notes:**
+- If the conversation is still active, this endpoint will finalize it once
+- If the conversation is already completed, the stored result is returned without regenerating feedback
 - `score` is 0-100 based on conversation engagement and learning
 - `feedback` is AI-generated evaluation in Vietnamese
 
@@ -8325,7 +8401,7 @@ Predefined conversation scenarios:
 
 | Code | Description |
 | ---- | ----------- |
-| `User_NotFound_404` | User session not found |
-| `Common_400` | Invalid request (e.g., conversation already completed) |
+| `Conversation_NotFound_404` | Conversation not found or not owned by current user |
+| `Conversation_AlreadyCompleted_400` | Conversation has already been completed |
 | `Common_404` | Resource not found |
 | `AiQuestion_GenerationFailed_500` | AI generation failed |

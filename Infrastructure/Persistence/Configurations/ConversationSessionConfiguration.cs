@@ -41,6 +41,21 @@ public class ConversationSessionConfiguration : IEntityTypeConfiguration<Convers
         builder.Property(x => x.CompletedAt)
             .IsRequired(false);
 
+        builder.Property(x => x.Feedback)
+            .IsRequired(false)
+            .HasColumnType("text");
+
+        builder.Property(x => x.FeedbackGeneratedAt)
+            .IsRequired(false);
+
+        builder.Property(x => x.ResultModel)
+            .IsRequired(false)
+            .HasMaxLength(200);
+
+        builder.Property(x => x.ResultPromptVersion)
+            .IsRequired(false)
+            .HasMaxLength(100);
+
         builder.Property(x => x.TotalMessages)
             .HasDefaultValue(0);
 

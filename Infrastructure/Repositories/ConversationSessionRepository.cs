@@ -15,6 +15,8 @@ public class ConversationSessionRepository : Repository<ConversationSession>, IC
     {
         return await dbSet
             .Include(x => x.Messages)
+            .ThenInclude(x => x.NewVocabulary)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 

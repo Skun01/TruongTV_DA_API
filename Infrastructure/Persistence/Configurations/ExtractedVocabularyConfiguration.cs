@@ -44,6 +44,11 @@ public class ExtractedVocabularyConfiguration : IEntityTypeConfiguration<Extract
         builder.Property(x => x.UpdatedAt)
             .IsRequired(false);
 
+        builder.HasOne(x => x.Message)
+            .WithMany(x => x.NewVocabulary)
+            .HasForeignKey(x => x.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(x => x.MessageId)
             .HasDatabaseName("idx_extracted_vocabularies_message");
     }

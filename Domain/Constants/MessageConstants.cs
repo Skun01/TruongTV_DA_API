@@ -193,6 +193,12 @@ public static class MessageConstants
         public const string AI_ANALYSIS_RATE_LIMITED = "ExamSession_AiAnalysisRateLimited_429";
     }
 
+    public static class ConversationMessage
+    {
+        public const string NOT_FOUND = "Conversation_NotFound_404";
+        public const string ALREADY_COMPLETED = "Conversation_AlreadyCompleted_400";
+    }
+
     public static class AiQuestionMessage
     {
         public const string NOT_FOUND = "AiQuestion_NotFound_404";

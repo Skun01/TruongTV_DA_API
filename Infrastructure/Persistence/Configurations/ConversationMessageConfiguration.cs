@@ -1,9 +1,9 @@
+using System.Text.Json;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Text.Json;
 
 namespace Infrastructure.Persistence.Configurations;
 
@@ -50,19 +50,6 @@ public class ConversationMessageConfiguration : IEntityTypeConfiguration<Convers
                 value => JsonSerializer.Serialize(value ?? new(), jsonOptions),
                 value => JsonSerializer.Deserialize<List<string>>(value, jsonOptions) ?? new())
             .Metadata.SetValueComparer(stringListComparer);
-
-        var vocabComparer = new ValueComparer<List<ExtractedVocabulary>>(
-            (left, right) => JsonSerializer.Serialize(left ?? new(), jsonOptions) == JsonSerializer.Serialize(right ?? new(), jsonOptions),
-            value => JsonSerializer.Serialize(value ?? new(), jsonOptions).GetHashCode(),
-            value => JsonSerializer.Deserialize<List<ExtractedVocabulary>>(JsonSerializer.Serialize(value ?? new(), jsonOptions), jsonOptions) ?? new());
-
-        builder.Property(x => x.NewVocabulary)
-            .IsRequired(false)
-            .HasColumnType("jsonb")
-            .HasConversion(
-                value => JsonSerializer.Serialize(value ?? new(), jsonOptions),
-                value => JsonSerializer.Deserialize<List<ExtractedVocabulary>>(value, jsonOptions) ?? new())
-            .Metadata.SetValueComparer(vocabComparer);
 
         builder.Property(x => x.CreatedAt)
             .IsRequired();

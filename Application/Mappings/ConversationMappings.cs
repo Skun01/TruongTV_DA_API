@@ -36,21 +36,63 @@ public static class ConversationMappings
         };
     }
 
+    public static ConversationDetailResponse ToDetailResponse(
+        this ConversationSession session,
+        List<ConversationMessage> messages,
+        string scenarioText)
+    {
+        return new ConversationDetailResponse
+        {
+            ConversationId = session.Id,
+            Scenario = session.Scenario,
+            CustomScenario = session.CustomScenario,
+            ScenarioText = scenarioText,
+            Level = session.Level,
+            Status = session.Status,
+            StartedAt = session.StartedAt,
+            CompletedAt = session.CompletedAt,
+            TotalMessages = session.TotalMessages,
+            UserMessagesCount = session.UserMessagesCount,
+            Score = session.Score,
+            Messages = messages.Select(x => x.ToMessageItemResponse()).ToList()
+        };
+    }
+
+    public static StartConversationResponse ToStartConversationResponse(this ConversationMessage aiMessage, string conversationId)
+    {
+        return new StartConversationResponse
+        {
+            ConversationId = conversationId,
+            AiMessage = aiMessage.ToAiMessageDto()
+        };
+    }
+
+    public static SendMessageResponse ToSendMessageResponse(
+        this ConversationMessage aiMessage,
+        int totalMessages,
+        int userMessagesCount,
+        int newWordsLearned)
+    {
+        return new SendMessageResponse
+        {
+            AiMessage = aiMessage.ToSendAiMessageDto(),
+            Summary = new ConversationSummaryDto
+            {
+                TotalMessages = totalMessages,
+                UserMessagesCount = userMessagesCount,
+                NewWordsLearned = newWordsLearned
+            }
+        };
+    }
+
     public static ConversationResultResponse ToResultResponse(
         this ConversationSession session,
         List<ConversationMessage> messages,
-        string feedback,
         string duration)
     {
         var allVocabulary = messages
             .SelectMany(m => m.NewVocabulary)
-            .Select(v => new VocabularyItemDto
-            {
-                Word = v.Word,
-                Reading = v.Reading,
-                Meaning = v.Meaning,
-                Example = v.Example
-            })
+            .Select(v => v.ToVocabularyItemDto())
             .DistinctBy(v => v.Word)
             .ToList();
 
@@ -68,8 +110,63 @@ public static class ConversationMappings
             TotalMessages = session.TotalMessages,
             NewVocabulary = allVocabulary,
             GrammarPoints = allGrammarPoints,
-            Feedback = feedback,
+            Feedback = session.Feedback ?? string.Empty,
             Score = session.Score
         };
+    }
+
+    public static AiMessageDto ToAiMessageDto(this ConversationMessage message)
+    {
+        return new AiMessageDto
+        {
+            Text = message.Text,
+            Suggestions = message.Suggestions ?? new List<string>()
+        };
+    }
+
+    public static SendAiMessageDto ToSendAiMessageDto(this ConversationMessage message)
+    {
+        return new SendAiMessageDto
+        {
+            Text = message.Text,
+            Suggestions = message.Suggestions ?? new List<string>(),
+            NewVocabulary = message.NewVocabulary.Select(x => x.ToVocabularyItemDto()).ToList(),
+            GrammarPoints = message.GrammarPoints
+        };
+    }
+
+    public static ConversationMessageItemResponse ToMessageItemResponse(this ConversationMessage message)
+    {
+        return new ConversationMessageItemResponse
+        {
+            MessageId = message.Id,
+            Sender = message.Sender,
+            Text = message.Text,
+            Suggestions = message.Suggestions ?? new List<string>(),
+            NewVocabulary = message.NewVocabulary.Select(x => x.ToVocabularyItemDto()).ToList(),
+            GrammarPoints = message.GrammarPoints,
+            CreatedAt = message.CreatedAt
+        };
+    }
+
+    public static VocabularyItemDto ToVocabularyItemDto(this ExtractedVocabulary vocabulary)
+    {
+        return new VocabularyItemDto
+        {
+            Word = vocabulary.Word,
+            Reading = vocabulary.Reading,
+            Meaning = vocabulary.Meaning,
+            Example = vocabulary.Example
+        };
+    }
+
+    public static int CountLearnedWords(this IEnumerable<ConversationMessage> messages)
+    {
+        return messages
+            .SelectMany(x => x.NewVocabulary)
+            .Select(x => x.Word)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
     }
 }
