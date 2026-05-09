@@ -74,6 +74,23 @@ public static class ExamSessionAiAnalysisMappings
         return JsonSerializer.Serialize(response, JsonOptions);
     }
 
+    public static JlptAiAnalysisSummaryOnlyResponse ToSummaryOnlyResponse(this JlptAiAnalysisResponse response)
+    {
+        return new JlptAiAnalysisSummaryOnlyResponse
+        {
+            AnalysisId = response.AnalysisId,
+            SessionId = response.SessionId,
+            ExamId = response.ExamId,
+            ExamTitle = response.ExamTitle,
+            Level = response.Level,
+            Status = response.Status,
+            GeneratedAt = response.GeneratedAt,
+            Summary = response.Summary,
+            SectionAnalyses = response.SectionAnalyses,
+            NextActions = response.NextActions,
+        };
+    }
+
     private static List<JlptAiSectionAnalysis> BuildSectionAnalyses(JlptAiAnalysisContent content, ExamSession session)
     {
         var sectionContentLookup = content.SectionAnalyses

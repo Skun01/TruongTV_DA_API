@@ -59,6 +59,12 @@ public class ExamSessionAiAnalysisService : IExamSessionAiAnalysisService
         return await GenerateAndPersistAsync(session, input, inputHash, ExamSessionAiAnalysisTriggerType.AutoGenerate, null);
     }
 
+    public async Task<JlptAiAnalysisSummaryOnlyResponse> GetSummaryOnlyAsync(string sessionId, string userId)
+    {
+        var full = await GetAsync(sessionId, userId);
+        return full.ToSummaryOnlyResponse();
+    }
+
     public async Task<JlptAiAnalysisResponse> RegenerateAsync(string sessionId, RegenerateJlptAiAnalysisRequest request, string userId)
     {
         var session = await LoadSubmittedSessionAsync(sessionId, userId);

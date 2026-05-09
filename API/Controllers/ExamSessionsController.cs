@@ -88,7 +88,18 @@ public class ExamSessionsController : BaseController
     }
 
     /// <summary>
-    /// Lấy AI analysis cho kết quả bài thi đã nộp
+    /// Lấy AI analysis tóm tắt cho trang kết quả nhanh (không có mistake patterns, question insights, recommendations)
+    /// </summary>
+    [HttpGet("{id}/ai-analysis/summary")]
+    public async Task<ApiResponse<JlptAiAnalysisSummaryOnlyResponse>> GetAiAnalysisSummary([FromRoute] string id)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _examSessionAiAnalysisService.GetSummaryOnlyAsync(id, userId);
+        return ApiResponse<JlptAiAnalysisSummaryOnlyResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Lấy AI analysis đầy đủ cho trang ôn tập chi tiết
     /// </summary>
     [HttpGet("{id}/ai-analysis")]
     public async Task<ApiResponse<JlptAiAnalysisResponse>> GetAiAnalysis([FromRoute] string id)
