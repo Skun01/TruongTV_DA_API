@@ -12,6 +12,11 @@ public class StudyQuestionResponse
     public string? Hint { get; set; }
     public string? FrontText { get; set; }
     public string? BackText { get; set; }
+    public string? SentenceId { get; set; }
+    public string QuestionSource { get; set; } = string.Empty;
+    public int AttemptNo { get; set; }
+    public int MaxAttempts { get; set; }
+    public int AcceptedAnswerCount { get; set; }
     public bool AllowsMultipleSelection { get; set; }
     public List<StudyQuestionOptionResponse> Options { get; set; } = new();
     public bool IsCompleted { get; set; }

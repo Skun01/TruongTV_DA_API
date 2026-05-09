@@ -3642,6 +3642,10 @@ Frontend notes:
 - `MultipleChoice` prefers distractors from the current session scope first, then falls back to same-type cards outside the session.
 - `Flashcard` uses `flashcardResult = Known` as correct and `flashcardResult = Learning` as incorrect.
 - `GET /api/learning/review/due-cards` is intended to feed `cardIds[]` into `POST /api/learning/sessions`.
+- Session creation filters out cards that are not ready for the selected `mode`; filtered cards are returned in `skippedCardIds`.
+- `FillInBlank` for `Vocab` and `Grammar` requires a valid attached sentence with `blankWord` or `answerList`; `Kanji` may use card-level prompt fallback.
+- Incorrect submissions are repeated once at the end of the session. Each card can be attempted at most 2 times per session.
+- Mode-specific submit payload is enforced server-side. Invalid payloads return `Learning_InvalidSubmission_400`.
 
 ### Request and response models
 
@@ -3688,6 +3692,9 @@ Frontend notes:
   "remainingCards": 16,
   "correctCount": 3,
   "incorrectCount": 1,
+  "submittedAttempts": 4,
+  "retryCards": 1,
+  "skippedCardIds": ["card-id-not-ready"],
   "createdAt": "2026-04-18T11:00:00Z",
   "completedAt": null,
   "settings": {
@@ -3711,6 +3718,9 @@ Frontend notes:
 | `remainingCards` | `int` | `totalCards - completedCards` |
 | `correctCount` | `int` | Number of correct or known submissions |
 | `incorrectCount` | `int` | Number of incorrect or learning submissions |
+| `submittedAttempts` | `int` | `correctCount + incorrectCount`, includes retry attempts |
+| `retryCards` | `int` | Number of cards waiting for one retry inside this session |
+| `skippedCardIds` | `string[]` | Requested cards skipped because they are not ready for selected `mode` |
 | `createdAt` | `datetime` | Session creation time |
 | `completedAt` | `datetime \| null` | Set when all cards are submitted |
 | `settings` | `StudySessionSettingsResponse` | Snapshot stored on the session |
@@ -3729,6 +3739,11 @@ Frontend notes:
   "hint": null,
   "frontText": null,
   "backText": null,
+  "sentenceId": null,
+  "questionSource": "CardPrompt",
+  "attemptNo": 1,
+  "maxAttempts": 2,
+  "acceptedAnswerCount": 1,
   "allowsMultipleSelection": false,
   "options": [
     { "id": "ăn", "text": "ăn" },
@@ -3752,6 +3767,11 @@ Frontend notes:
 | `hint` | `string \| null` | Fill-in-blank only when configured |
 | `frontText` | `string \| null` | Flashcard front |
 | `backText` | `string \| null` | Flashcard back |
+| `sentenceId` | `string \| null` | Fill-in-blank sentence id when question comes from an attached sentence |
+| `questionSource` | `string` | `Sentence` or `CardPrompt` |
+| `attemptNo` | `int` | `1` for first attempt, `2` for retry attempt |
+| `maxAttempts` | `int` | Currently always `2` |
+| `acceptedAnswerCount` | `int` | Count of accepted answers without leaking answer text before submit |
 | `allowsMultipleSelection` | `boolean` | Currently always `false` for multiple-choice |
 | `options` | `StudyQuestionOptionResponse[]` | Multiple-choice only |
 | `isCompleted` | `boolean` | Currently returned as `false` for active question payloads |
@@ -3764,6 +3784,15 @@ Frontend notes:
   "cardId": "card-id",
   "mode": "Flashcard",
   "acceptedAnswers": [],
+  "canonicalAnswer": null,
+  "submittedAnswers": [],
+  "normalizedSubmittedAnswers": [],
+  "completedQuestionText": null,
+  "sentenceId": null,
+  "attemptNo": 1,
+  "maxAttempts": 2,
+  "willRepeat": false,
+  "isFinalAttempt": true,
   "srsLevel": "level_2",
   "nextReviewAt": "2026-04-19T11:05:00Z",
   "isMastered": false,
@@ -3779,6 +3808,15 @@ Frontend notes:
 | `cardId` | `string` | Submitted card id |
 | `mode` | `StudyMode` | Mode used for evaluation |
 | `acceptedAnswers` | `string[]` | Correct answers used to judge submission |
+| `canonicalAnswer` | `string \| null` | Primary accepted answer, usually `acceptedAnswers[0]` |
+| `submittedAnswers` | `string[]` | User answers after trim |
+| `normalizedSubmittedAnswers` | `string[]` | User answers after backend matching normalization |
+| `completedQuestionText` | `string \| null` | Full sentence for fill-in feedback when available |
+| `sentenceId` | `string \| null` | Sentence used by fill-in evaluation |
+| `attemptNo` | `int` | Attempt number for this card in this session |
+| `maxAttempts` | `int` | Currently always `2` |
+| `willRepeat` | `boolean` | `true` when wrong answer is requeued for one retry |
+| `isFinalAttempt` | `boolean` | `true` when this submission finalizes the card in this session |
 | `srsLevel` | `SrsLevel` | Progress level after update |
 | `nextReviewAt` | `datetime` | Next due time after update |
 | `isMastered` | `boolean` | `true` when level reaches `level_12` |
@@ -3819,6 +3857,7 @@ Create a new study session.
 - If frontend needs "study whole deck", send `cardIds: []`.
 - If frontend needs a global due-card review session, omit `deckId` and send only the `cardIds[]` returned by `GET /api/learning/review/due-cards`.
 - If frontend already filtered cards by folder, it should still send the final card ids only.
+- After session creation, use `totalCards` as the actual study count and show `skippedCardIds.length` only as optional warning/admin diagnostics.
 
 ### GET `/api/learning/sessions/{sessionId}` 🔒
 
@@ -3866,6 +3905,9 @@ Mode-specific behavior:
   - `questionText` contains the sentence or fallback prompt.
   - `secondaryText` usually contains sentence meaning or card title.
   - `hint` is returned when sentence metadata has a hint.
+  - `questionSource = Sentence` means `sentenceId` is available and `questionText` is a real blanked sentence.
+  - `questionSource = CardPrompt` means backend used card-level fallback, currently expected mainly for kanji.
+  - `acceptedAnswerCount` tells frontend how many accepted answers exist without exposing them before submit.
 - `MultipleChoice`
   - `questionText` is `title` when `multipleChoiceQuestion = TitleToSummary`.
   - `questionText` is `summary` when `multipleChoiceQuestion = SummaryToTitle`.
@@ -3879,6 +3921,7 @@ Mode-specific behavior:
 
 - `null` means the session is completed or no more cards remain.
 - Frontend should call this endpoint after each successful submit to fetch the next card.
+- If `attemptNo = 2`, this is the one allowed retry for that card.
 
 ### POST `/api/learning/sessions/{sessionId}/submit` 🔒
 
@@ -3943,6 +3986,12 @@ Flashcard:
 
 - Backend rejects submit if `cardId` is not in the session.
 - Backend rejects duplicate submit for a card already completed in the same session.
+- Backend rejects mode-invalid payloads:
+  - `FillInBlank` requires at least one non-empty `answers[]` item.
+  - `MultipleChoice` requires exactly one `selectedOptionIds[]` item.
+  - `Flashcard` requires `flashcardResult = Learning | Known`.
+- For wrong answers, use `canonicalAnswer` and `completedQuestionText` for feedback.
+- If `willRepeat = true`, keep the current feedback UI short and call `/next`; backend will return the card again after the remaining non-retry cards.
 - For flashcard UI, map buttons directly to:
   - `Learning`
   - `Known`
@@ -3963,6 +4012,9 @@ Get session result summary.
   "completedCards": 20,
   "correctCount": 14,
   "incorrectCount": 6,
+  "submittedAttempts": 20,
+  "retryCards": 0,
+  "skippedCardIds": [],
   "accuracy": 70.0,
   "createdAt": "2026-04-18T11:00:00Z",
   "completedAt": "2026-04-18T11:20:00Z",

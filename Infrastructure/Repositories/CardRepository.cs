@@ -459,6 +459,8 @@ public class CardRepository : Repository<Card>, ICardRepository
             .Include(c => c.VocabularyDetail)
             .Include(c => c.GrammarDetail)
             .Include(c => c.KanjiDetail)
+            .Include(c => c.CardSentences.OrderBy(cs => cs.Position))
+                .ThenInclude(cs => cs.Sentence)
             .Where(c => cardIds.Contains(c.Id) && c.Status == PublishStatus.Published)
             .ToListAsync();
     }

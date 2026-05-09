@@ -12,6 +12,7 @@ namespace Application.Services;
 
 public class LearningService : ILearningService
 {
+    private const int MaxAttemptsPerCard = 2;
     private readonly IUnitOfWork _unitOfWork;
     private readonly Random _random = new();
 
@@ -50,13 +51,22 @@ public class LearningService : ILearningService
         if (cardIds.Count == 0)
             throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
+        var (eligibleCardIds, skippedCardIds) = await ResolveEligibleCardScopeAsync(cardIds, mode, deck == null);
+        if (eligibleCardIds.Count == 0)
+            throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
+
+        selectedFolderIds = deck == null
+            ? new List<string>()
+            : LearningSessionHelper.ResolveSelectedFolderIds(deck, eligibleCardIds);
+
         var session = LearningSessionHelper.CreateSession(
             userId,
             deck?.Id,
             mode,
             settings,
             selectedFolderIds,
-            cardIds);
+            eligibleCardIds,
+            skippedCardIds);
 
         await _unitOfWork.StudySessions.AddAsync(session);
         await _unitOfWork.SaveChangesAsync();
@@ -109,7 +119,10 @@ public class LearningService : ILearningService
         if (session.CompletedAt.HasValue)
             return null;
 
-        var nextCardId = session.CardIds.FirstOrDefault(cardId => !session.CompletedCardIds.Contains(cardId, StringComparer.Ordinal));
+        var nextCardId = session.CardIds.FirstOrDefault(cardId =>
+            !session.CompletedCardIds.Contains(cardId, StringComparer.Ordinal)
+            && !session.RetryCardIds.Contains(cardId, StringComparer.Ordinal))
+            ?? session.RetryCardIds.FirstOrDefault(cardId => !session.CompletedCardIds.Contains(cardId, StringComparer.Ordinal));
         if (nextCardId == null)
         {
             session.CompletedAt = DateTime.UtcNow;
@@ -136,6 +149,8 @@ public class LearningService : ILearningService
         if (session.CompletedCardIds.Contains(request.CardId, StringComparer.Ordinal))
             throw new AppException(MessageConstants.LearningMessage.INVALID_SUBMISSION, 400);
 
+        ValidateSubmissionForMode(session.Mode, request);
+
         var card = await GetStudyCardRequiredAsync(request.CardId);
         var progress = await _unitOfWork.UserCardProgresses.GetByUserAndCardIdAsync(userId, request.CardId);
         var isNewProgress = progress == null;
@@ -143,7 +158,17 @@ public class LearningService : ILearningService
 
         var payload = LearningQuestionHelper.BuildAnswerPayload(card, progress, session);
         var now = DateTime.UtcNow;
-        var isCorrect = LearningQuestionHelper.EvaluateSubmission(payload, request, session.Mode);
+        var attemptNo = GetAttemptNo(session, request.CardId);
+        var matchResult = session.Mode == StudyMode.FillInBlank
+            ? LearningAnswerMatcher.Match(request.Answers, payload.AcceptedAnswers)
+            : new LearningAnswerMatchResult(
+                LearningQuestionHelper.EvaluateSubmission(payload, request, session.Mode),
+                request.Answers.Where(answer => !string.IsNullOrWhiteSpace(answer)).Select(answer => answer.Trim()).ToList(),
+                new List<string>(),
+                payload.AcceptedAnswers.FirstOrDefault());
+        var isCorrect = matchResult.IsCorrect;
+        var isFinalAttempt = isCorrect || attemptNo >= MaxAttemptsPerCard;
+        var willRepeat = !isCorrect && !isFinalAttempt;
 
         LearningQuestionHelper.ApplyProgress(progress, session.Mode, request, isCorrect, now);
         if (!string.IsNullOrWhiteSpace(payload.SelectedSentenceId))
@@ -152,15 +177,24 @@ public class LearningService : ILearningService
         progress.LastReviewedAt = now;
         progress.UpdatedAt = now;
 
-        if (!session.CompletedCardIds.Contains(request.CardId, StringComparer.Ordinal))
-            session.CompletedCardIds.Add(request.CardId);
-
         if (isCorrect)
             session.CorrectCount++;
         else
             session.IncorrectCount++;
 
-        if (session.CompletedCardIds.Count >= session.CardIds.Count)
+        if (willRepeat)
+        {
+            if (!session.RetryCardIds.Contains(request.CardId, StringComparer.Ordinal))
+                session.RetryCardIds.Add(request.CardId);
+        }
+        else
+        {
+            session.RetryCardIds.RemoveAll(cardId => string.Equals(cardId, request.CardId, StringComparison.Ordinal));
+            if (!session.CompletedCardIds.Contains(request.CardId, StringComparer.Ordinal))
+                session.CompletedCardIds.Add(request.CardId);
+        }
+
+        if (session.CompletedCardIds.Count >= session.CardIds.Count && session.RetryCardIds.Count == 0)
             session.CompletedAt = now;
 
         session.UpdatedAt = now;
@@ -177,6 +211,15 @@ public class LearningService : ILearningService
             CardId = card.Id,
             Mode = session.Mode.ToString(),
             AcceptedAnswers = payload.AcceptedAnswers,
+            CanonicalAnswer = matchResult.CanonicalAnswer,
+            SubmittedAnswers = matchResult.SubmittedAnswers,
+            NormalizedSubmittedAnswers = matchResult.NormalizedSubmittedAnswers,
+            CompletedQuestionText = payload.CompletedQuestionText,
+            SentenceId = payload.SelectedSentenceId,
+            AttemptNo = attemptNo,
+            MaxAttempts = MaxAttemptsPerCard,
+            WillRepeat = willRepeat,
+            IsFinalAttempt = isFinalAttempt,
             SrsLevel = progress.SrsLevel.ToString(),
             NextReviewAt = progress.NextReviewAt,
             IsMastered = progress.IsMastered,
@@ -230,6 +273,14 @@ public class LearningService : ILearningService
         if (cardIds.Count == 0)
             throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
+        var (eligibleCardIds, skippedCardIds) = await ResolveEligibleCardScopeAsync(cardIds, existingSession.Mode, string.IsNullOrWhiteSpace(existingSession.DeckId));
+        if (eligibleCardIds.Count == 0)
+            throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
+
+        selectedFolderIds = deck == null
+            ? new List<string>()
+            : LearningSessionHelper.ResolveSelectedFolderIds(deck, eligibleCardIds);
+
         var session = LearningSessionHelper.CreateSession(
             userId,
             existingSession.DeckId,
@@ -240,7 +291,8 @@ public class LearningService : ILearningService
                 existingSession.MultipleChoiceQuestion,
                 existingSession.ShuffleOptions),
             selectedFolderIds,
-            cardIds);
+            eligibleCardIds,
+            skippedCardIds);
 
         await _unitOfWork.StudySessions.AddAsync(session);
         await _unitOfWork.SaveChangesAsync();
@@ -313,6 +365,11 @@ public class LearningService : ILearningService
             Hint = payload.Hint,
             FrontText = payload.FrontText,
             BackText = payload.BackText,
+            SentenceId = payload.SelectedSentenceId,
+            QuestionSource = payload.QuestionSource,
+            AttemptNo = GetAttemptNo(session, card.Id),
+            MaxAttempts = MaxAttemptsPerCard,
+            AcceptedAnswerCount = payload.AcceptedAnswers.Count,
             AllowsMultipleSelection = payload.AcceptedAnswers.Count > 1,
             IsCompleted = false,
         };
@@ -370,6 +427,61 @@ public class LearningService : ILearningService
 
         await _unitOfWork.UserCardProgresses.AddAsync(progress);
         return progress;
+    }
+
+    private async Task<(List<string> EligibleCardIds, List<string> SkippedCardIds)> ResolveEligibleCardScopeAsync(
+        List<string> cardIds,
+        StudyMode mode,
+        bool requireAllCards)
+    {
+        var cards = await _unitOfWork.Cards.GetStudyCardsByIdsAsync(cardIds);
+        if (requireAllCards && cards.Count != cardIds.Count)
+            throw new AppException(MessageConstants.LearningMessage.INVALID_SCOPE, 400);
+
+        var cardMap = cards.ToDictionary(card => card.Id, StringComparer.Ordinal);
+        var eligibleCardIds = new List<string>();
+        var skippedCardIds = new List<string>();
+
+        foreach (var cardId in cardIds)
+        {
+            if (cardMap.TryGetValue(cardId, out var card)
+                && LearningModeEligibilityHelper.IsCardEligible(card, mode))
+            {
+                eligibleCardIds.Add(cardId);
+                continue;
+            }
+
+            skippedCardIds.Add(cardId);
+        }
+
+        return (eligibleCardIds, skippedCardIds);
+    }
+
+    private static int GetAttemptNo(StudySession session, string cardId)
+    {
+        return session.RetryCardIds.Contains(cardId, StringComparer.Ordinal)
+            ? MaxAttemptsPerCard
+            : 1;
+    }
+
+    private static void ValidateSubmissionForMode(StudyMode mode, SubmitStudyAnswerRequest request)
+    {
+        switch (mode)
+        {
+            case StudyMode.FillInBlank:
+                if (!request.Answers.Any(answer => !string.IsNullOrWhiteSpace(answer)))
+                    throw new AppException(MessageConstants.LearningMessage.INVALID_SUBMISSION, 400);
+                break;
+            case StudyMode.MultipleChoice:
+                if (request.SelectedOptionIds.Count != 1 || request.SelectedOptionIds.Any(string.IsNullOrWhiteSpace))
+                    throw new AppException(MessageConstants.LearningMessage.INVALID_SUBMISSION, 400);
+                break;
+            case StudyMode.Flashcard:
+                LearningHelper.ParseFlashcardResult(request.FlashcardResult);
+                break;
+            default:
+                throw new AppException(MessageConstants.LearningMessage.INVALID_MODE, 400);
+        }
     }
 
     private async Task<StudySession> GetOwnedSessionAsync(string sessionId, string userId)

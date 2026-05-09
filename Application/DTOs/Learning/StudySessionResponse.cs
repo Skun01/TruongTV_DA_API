@@ -12,6 +12,9 @@ public class StudySessionResponse
     public int RemainingCards { get; set; }
     public int CorrectCount { get; set; }
     public int IncorrectCount { get; set; }
+    public int SubmittedAttempts { get; set; }
+    public int RetryCards { get; set; }
+    public List<string> SkippedCardIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public StudySessionSettingsResponse Settings { get; set; } = new();

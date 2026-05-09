@@ -10,6 +10,9 @@ public class StudySessionResultResponse
     public int CompletedCards { get; set; }
     public int CorrectCount { get; set; }
     public int IncorrectCount { get; set; }
+    public int SubmittedAttempts { get; set; }
+    public int RetryCards { get; set; }
+    public List<string> SkippedCardIds { get; set; } = new();
     public double Accuracy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }

@@ -492,20 +492,11 @@ public class AdminLearningService : IAdminLearningService
 
     private LearningPreviewResponse BuildFillInBlankPreview(Card card, List<string> warnings)
     {
-        var selectedSentence = card.CardSentences
-            .Where(cs => cs.Sentence != null)
-            .OrderBy(cs => cs.Position)
-            .FirstOrDefault();
+        var selectedSentence = LearningModeEligibilityHelper.GetFirstFillInBlankSentence(card);
 
         if (selectedSentence != null)
         {
             var acceptedAnswers = StringHelper.NormalizeAnswerList(selectedSentence.AnswerList, selectedSentence.BlankWord);
-            if (acceptedAnswers.Count == 0)
-            {
-                acceptedAnswers = LearningHelper.BuildFallbackAnswers(card);
-                warnings.Add("No configured answerList found. Preview is using generated fallback answers.");
-            }
-
             var blankValue = selectedSentence.BlankWord ?? acceptedAnswers.FirstOrDefault() ?? string.Empty;
 
             return new LearningPreviewResponse
@@ -516,7 +507,24 @@ public class AdminLearningService : IAdminLearningService
                 QuestionText = LearningHelper.ReplaceFirstBlank(selectedSentence.Sentence!.Text, blankValue),
                 SecondaryText = selectedSentence.Sentence.Meaning,
                 Hint = selectedSentence.Hint,
+                SentenceId = selectedSentence.SentenceId,
+                QuestionSource = "Sentence",
+                AcceptedAnswerCount = acceptedAnswers.Count,
                 AllowsMultipleSelection = acceptedAnswers.Count > 1,
+                Warnings = warnings,
+            };
+        }
+
+        if (card.CardType != CardType.Kanji)
+        {
+            warnings.Add("Card is not ready for fill-in-blank. Attach a valid sentence and configure blankWord or answerList.");
+
+            return new LearningPreviewResponse
+            {
+                CardId = card.Id,
+                Mode = StudyMode.FillInBlank.ToString(),
+                Prompt = "Điền vào chỗ trống",
+                QuestionSource = "Sentence",
                 Warnings = warnings,
             };
         }
@@ -531,6 +539,8 @@ public class AdminLearningService : IAdminLearningService
             Prompt = "Điền đáp án phù hợp cho thẻ",
             QuestionText = card.Summary,
             SecondaryText = card.Title,
+            QuestionSource = "CardPrompt",
+            AcceptedAnswerCount = fallbackAnswers.Count,
             AllowsMultipleSelection = fallbackAnswers.Count > 1,
             Warnings = warnings,
         };
@@ -578,6 +588,8 @@ public class AdminLearningService : IAdminLearningService
                 ? "Chọn từ khóa đúng của nghĩa"
                 : "Chọn nghĩa đúng của thẻ",
             QuestionText = questionType == MultipleChoiceQuestionType.SummaryToTitle ? card.Summary : card.Title,
+            QuestionSource = "CardPrompt",
+            AcceptedAnswerCount = string.IsNullOrWhiteSpace(acceptedAnswer) ? 0 : 1,
             AllowsMultipleSelection = false,
             Options = finalOptions
                 .Select(option => new LearningPreviewOptionResponse
@@ -608,6 +620,7 @@ public class AdminLearningService : IAdminLearningService
             Prompt = "Xem flashcard rồi đánh dấu đang học hoặc đã biết",
             FrontText = frontText,
             BackText = backText,
+            QuestionSource = "CardPrompt",
             AllowsMultipleSelection = false,
             Warnings = warnings,
         };

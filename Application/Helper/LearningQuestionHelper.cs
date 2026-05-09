@@ -23,9 +23,7 @@ public static class LearningQuestionHelper
     {
         return mode switch
         {
-            StudyMode.FillInBlank => request.Answers
-                .Select(answer => answer.Trim())
-                .Any(answer => payload.AcceptedAnswers.Contains(answer, StringComparer.OrdinalIgnoreCase)),
+            StudyMode.FillInBlank => LearningAnswerMatcher.Match(request.Answers, payload.AcceptedAnswers).IsCorrect,
             StudyMode.MultipleChoice => payload.AcceptedAnswers.Count > 0
                 && payload.AcceptedAnswers.Count == request.SelectedOptionIds.Count
                 && payload.AcceptedAnswers.All(answer => request.SelectedOptionIds.Contains(answer, StringComparer.OrdinalIgnoreCase)),
@@ -109,9 +107,6 @@ public static class LearningQuestionHelper
                 selected.AnswerList,
                 selected.BlankWord);
 
-            if (acceptedAnswers.Count == 0)
-                acceptedAnswers = LearningHelper.BuildFallbackAnswers(card);
-
             var blankValue = selected.BlankWord ?? acceptedAnswers.FirstOrDefault() ?? string.Empty;
             return new LearningAnswerPayload(
                 "Điền vào chỗ trống",
@@ -120,9 +115,14 @@ public static class LearningQuestionHelper
                 selected.Hint,
                 acceptedAnswers,
                 selected.SentenceId,
+                "Sentence",
+                selected.Sentence.Text,
                 null,
                 null);
         }
+
+        if (card.CardType != CardType.Kanji)
+            throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
         var fallbackAnswers = LearningHelper.BuildFallbackAnswers(card);
         return new LearningAnswerPayload(
@@ -131,6 +131,8 @@ public static class LearningQuestionHelper
             card.Title,
             null,
             fallbackAnswers,
+            null,
+            "CardPrompt",
             null,
             null,
             null);
@@ -152,6 +154,8 @@ public static class LearningQuestionHelper
             null,
             new List<string> { answer },
             null,
+            "CardPrompt",
+            null,
             null,
             null);
     }
@@ -165,6 +169,8 @@ public static class LearningQuestionHelper
             null,
             new List<string>(),
             null,
+            "CardPrompt",
+            null,
             LearningHelper.ResolveFlashcardContent(card, session.FlashcardFront),
             LearningHelper.ResolveFlashcardContent(card, session.FlashcardBack));
     }
@@ -172,7 +178,7 @@ public static class LearningQuestionHelper
     private static CardSentence? SelectCardSentence(Card card, UserCardProgress? progress)
     {
         var sentences = card.CardSentences
-            .Where(cs => cs.Sentence != null)
+            .Where(LearningModeEligibilityHelper.IsFillInBlankSentenceReady)
             .OrderBy(cs => cs.Position)
             .ToList();
 

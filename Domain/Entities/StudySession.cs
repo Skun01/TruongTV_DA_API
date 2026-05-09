@@ -18,6 +18,8 @@ public class StudySession : BaseEntity
     public List<string> SelectedFolderIds { get; set; } = new();
     public List<string> CardIds { get; set; } = new();
     public List<string> CompletedCardIds { get; set; } = new();
+    public List<string> RetryCardIds { get; set; } = new();
+    public List<string> SkippedCardIds { get; set; } = new();
     public int CorrectCount { get; set; }
     public int IncorrectCount { get; set; }
     public DateTime? CompletedAt { get; set; }

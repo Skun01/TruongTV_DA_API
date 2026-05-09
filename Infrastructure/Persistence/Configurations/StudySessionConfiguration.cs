@@ -58,6 +58,14 @@ public class StudySessionConfiguration : IEntityTypeConfiguration<StudySession>
             .HasColumnType("text[]")
             .HasDefaultValueSql("'{}'::text[]");
 
+        builder.Property(x => x.RetryCardIds)
+            .HasColumnType("text[]")
+            .HasDefaultValueSql("'{}'::text[]");
+
+        builder.Property(x => x.SkippedCardIds)
+            .HasColumnType("text[]")
+            .HasDefaultValueSql("'{}'::text[]");
+
         builder.Property(x => x.CorrectCount)
             .HasDefaultValue(0);
 

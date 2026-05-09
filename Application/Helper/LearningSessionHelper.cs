@@ -13,7 +13,8 @@ public static class LearningSessionHelper
         StudyMode mode,
         LearningSessionSettings settings,
         List<string> selectedFolderIds,
-        List<string> cardIds)
+        List<string> cardIds,
+        List<string>? skippedCardIds = null)
     {
         return new StudySession
         {
@@ -27,6 +28,7 @@ public static class LearningSessionHelper
             ShuffleOptions = settings.ShuffleOptions,
             SelectedFolderIds = selectedFolderIds,
             CardIds = cardIds,
+            SkippedCardIds = skippedCardIds ?? new List<string>(),
         };
     }
 

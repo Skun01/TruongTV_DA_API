@@ -66,12 +66,12 @@ public static class LearningAdminHelper
 
     public static bool IsFillInBlankReady(Card card, List<LearningAdminCardIssueItemResponse> issues)
     {
-        if (card.CardType == CardType.Kanji)
-            return true;
-
-        return !issues.Any(issue =>
-            issue.Type == LearningIssueType.MissingSentence.ToString()
-            || issue.Type == LearningIssueType.DuplicateSentencePosition.ToString());
+        return LearningModeEligibilityHelper.IsFillInBlankReady(card)
+            && !issues.Any(issue =>
+                issue.Type == LearningIssueType.MissingSentence.ToString()
+                || issue.Type == LearningIssueType.MissingAnswerList.ToString()
+                || issue.Type == LearningIssueType.BlankWordNotFoundInSentence.ToString()
+                || issue.Type == LearningIssueType.DuplicateSentencePosition.ToString());
     }
 
     public static bool IsMultipleChoiceReady(List<LearningAdminCardIssueItemResponse> issues)
