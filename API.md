@@ -707,10 +707,11 @@ true
 
 ### Tổng quan
 
-| Method | Endpoint             | Auth      | Mô tả                |
-| ------ | -------------------- | --------- | -------------------- |
-| GET    | `/api/cards/search`  | 🌐 Public | Search card tổng hợp |
-| GET    | `/api/kanji/{cardId}`| 🌐 Public | Lấy chi tiết kanji   |
+| Method | Endpoint                         | Auth      | Mô tả                         |
+| ------ | -------------------------------- | --------- | ----------------------------- |
+| GET    | `/api/cards/search`              | 🌐 Public | Search card tổng hợp          |
+| POST   | `/api/cards/{cardId}/explain`    | 🔒 Auth   | AI giải thích card            |
+| GET    | `/api/kanji/{cardId}`            | 🌐 Public | Lấy chi tiết kanji            |
 
 ---
 
@@ -751,6 +752,47 @@ Tìm kiếm card đã Published cho user. Gộp cả Vocabulary + Grammar + Kanj
 ```
 
 > ℹ `alternateForms` chỉ có dữ liệu khi `cardType = Grammar`. Với `Vocab` và `Kanji` luôn trả `[]`.
+
+---
+
+### POST `/api/cards/{cardId}/explain` 🔒
+
+AI giải thích một card đã Published. Dùng được cho `Vocab`, `Grammar`, `Kanji`.
+
+**Path params:**
+
+| Param    | Type     | Mô tả        |
+| -------- | -------- | ------------ |
+| `cardId` | `string` | ID của card  |
+
+**Request body:** có thể gửi `{}` nếu chỉ cần giải thích mặc định.
+
+```json
+{
+  "userQuestion": "string | null"
+}
+```
+
+**Response data:**
+
+```json
+{
+  "cardId": "string",
+  "cardType": "Vocab | Grammar | Kanji",
+  "title": "string",
+  "level": "N5 | N4 | N3 | N2 | N1 | null",
+  "answer": "string",
+  "model": "string"
+}
+```
+
+**Error codes:**
+
+| Code                              | Khi nào                              |
+| --------------------------------- | ------------------------------------ |
+| `Card_NotFound_404`               | Card không tồn tại hoặc chưa publish |
+| `Card_AiExplanationUnavailable_503` | Provider AI không khả dụng           |
+| `Card_AiExplanationInvalid_502`   | AI trả JSON không hợp lệ             |
 
 ---
 

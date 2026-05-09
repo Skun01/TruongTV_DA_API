@@ -4,23 +4,38 @@ using Application.DTOs.Grammar;
 using Application.DTOs.Kanji;
 using Application.DTOs.Vocabulary;
 using Application.Helper;
+using Application.IRepositories;
 using Application.IServices;
+using Application.IServices.IInternal;
 using Application.Mappings;
+using Domain.Constants;
 using Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
 public class CardService : ICardService
 {
+    private static readonly TimeSpan AiTimeout = TimeSpan.FromSeconds(30);
+
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IAiGenerationService _aiGenerationService;
+    private readonly ILogger<CardService> _logger;
     private readonly IVocabularyDetailService _vocabularyDetailService;
     private readonly IGrammarService _grammarService;
     private readonly IKanjiService _kanjiService;
 
     public CardService(
+        IUnitOfWork unitOfWork,
+        IAiGenerationService aiGenerationService,
+        ILogger<CardService> logger,
         IVocabularyDetailService vocabularyDetailService,
         IGrammarService grammarService,
         IKanjiService kanjiService)
     {
+        _unitOfWork = unitOfWork;
+        _aiGenerationService = aiGenerationService;
+        _logger = logger;
         _vocabularyDetailService = vocabularyDetailService;
         _grammarService = grammarService;
         _kanjiService = kanjiService;
@@ -65,6 +80,71 @@ public class CardService : ICardService
         };
 
         return (pagedItems, meta);
+    }
+
+    public async Task<CardExplanationResponse> ExplainAsync(string cardId, ExplainCardRequest request)
+    {
+        var card = await _unitOfWork.Cards.GetExplainCardByIdAsync(cardId)
+            ?? throw new ApplicationException(MessageConstants.CardMessage.NOT_FOUND);
+
+        try
+        {
+            using var cts = new CancellationTokenSource(AiTimeout);
+            var contentResult = await GenerateValidatedExplanationAsync(card, request.UserQuestion, cts.Token);
+
+            return contentResult.Content.ToExplanationResponse(card, contentResult.Model);
+        }
+        catch (ApplicationException ex) when (IsAiProviderUnavailable(ex.Message))
+        {
+            throw new ApplicationException(MessageConstants.CardMessage.AI_EXPLANATION_UNAVAILABLE);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new ApplicationException(MessageConstants.CardMessage.AI_EXPLANATION_UNAVAILABLE);
+        }
+    }
+
+    private async Task<GenerationContentResult> GenerateValidatedExplanationAsync(
+        Domain.Entities.Card card,
+        string? userQuestion,
+        CancellationToken cancellationToken)
+    {
+        var systemPrompt = CardExplanationPromptHelper.GetSystemPrompt();
+        var userPrompt = CardExplanationPromptHelper.BuildUserPrompt(card, userQuestion);
+
+        var initialResult = await _aiGenerationService.GenerateStructuredJsonAsync(systemPrompt, userPrompt, cancellationToken);
+        var initialContent = TryParseContent(initialResult.Content);
+        if (initialContent != null)
+            return new GenerationContentResult(initialContent, initialResult.Model);
+
+        _logger.LogWarning("AI card explanation JSON không hợp lệ cho card {CardId}, thử repair một lần", card.Id);
+
+        var repairPrompt = CardExplanationPromptHelper.BuildRepairPrompt(card, userQuestion, initialResult.Content);
+        var repairedResult = await _aiGenerationService.GenerateStructuredJsonAsync(systemPrompt, repairPrompt, cancellationToken);
+        var repairedContent = TryParseContent(repairedResult.Content);
+
+        if (repairedContent == null)
+            throw new ApplicationException(MessageConstants.CardMessage.AI_EXPLANATION_INVALID);
+
+        return new GenerationContentResult(repairedContent, repairedResult.Model);
+    }
+
+    private static CardExplanationContent? TryParseContent(string json)
+    {
+        try
+        {
+            return CardExplanationValidationHelper.ParseAndNormalize(json);
+        }
+        catch (ApplicationException ex) when (ex.Message == MessageConstants.CardMessage.AI_EXPLANATION_INVALID)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsAiProviderUnavailable(string message)
+    {
+        return message == MessageConstants.ExamSessionMessage.AI_ANALYSIS_UNAVAILABLE
+            || message == MessageConstants.AiQuestionMessage.GENERATION_FAILED;
     }
 
     private async Task<(List<CardListItemResponse> Items, MetaData Meta)> SearchVocabularyOnlyAsync(
@@ -218,4 +298,5 @@ public class CardService : ICardService
     }
 
     private sealed record SearchCardItem(CardListItemResponse Item, DateTime CreatedAt, DateTime? UpdatedAt);
+    private sealed record GenerationContentResult(CardExplanationContent Content, string Model);
 }

@@ -463,6 +463,21 @@ public class CardRepository : Repository<Card>, ICardRepository
             .ToListAsync();
     }
 
+    public async Task<Card?> GetExplainCardByIdAsync(string cardId)
+    {
+        return await _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .Include(c => c.GrammarDetail)
+            .Include(c => c.GrammarResources)
+            .Include(c => c.KanjiDetail)
+            .Include(c => c.KanjiRadicals)
+                .ThenInclude(kr => kr.Radical)
+            .Include(c => c.CardSentences.OrderBy(cs => cs.Position))
+                .ThenInclude(cs => cs.Sentence)
+            .FirstOrDefaultAsync(c => c.Id == cardId && c.Status == PublishStatus.Published);
+    }
+
     private IQueryable<Card> BuildLearningAdminQuery()
     {
         return _context.Cards

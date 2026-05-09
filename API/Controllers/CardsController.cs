@@ -29,4 +29,17 @@ public class CardsController : BaseController
 
         return ApiResponse<List<CardListItemResponse>>.SuccessResponse(items, meta);
     }
+
+    /// <summary>
+    /// Giải thích card bằng AI cho người học hiện tại.
+    /// </summary>
+    [HttpPost("{cardId}/explain")]
+    public async Task<ApiResponse<CardExplanationResponse>> Explain(
+        [FromRoute] string cardId,
+        [FromBody] ExplainCardRequest? request)
+    {
+        var result = await _cardService.ExplainAsync(cardId, request ?? new ExplainCardRequest());
+
+        return ApiResponse<CardExplanationResponse>.SuccessResponse(result);
+    }
 }

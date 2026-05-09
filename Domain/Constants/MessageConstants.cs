@@ -124,6 +124,13 @@ public static class MessageConstants
         public const string IN_USE = "DeckType_InUse_400";
     }
 
+    public static class CardMessage
+    {
+        public const string NOT_FOUND = "Card_NotFound_404";
+        public const string AI_EXPLANATION_UNAVAILABLE = "Card_AiExplanationUnavailable_503";
+        public const string AI_EXPLANATION_INVALID = "Card_AiExplanationInvalid_502";
+    }
+
     public static class LearningMessage
     {
         public const string CARD_NOT_FOUND = "Learning_CardNotFound_404";
