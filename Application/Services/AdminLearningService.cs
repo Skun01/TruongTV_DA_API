@@ -48,7 +48,7 @@ public class AdminLearningService : IAdminLearningService
             var existingLink = existingLinks.FirstOrDefault(x => x.SentenceId == sentenceRequest.SentenceId);
             if (existingLink != null)
             {
-                ApplySentenceConfig(existingLink, sentenceRequest.Position, sentenceRequest.BlankWord, sentenceRequest.Hint, sentenceRequest.AnswerList);
+                LearningHelper.ApplySentenceConfig(existingLink, sentenceRequest.Position, sentenceRequest.BlankWord, sentenceRequest.Hint, sentenceRequest.AnswerList);
                 _unitOfWork.CardSentences.UpdateAsync(existingLink);
                 continue;
             }
@@ -116,7 +116,7 @@ public class AdminLearningService : IAdminLearningService
         var link = await _unitOfWork.CardSentences.GetByCardAndSentenceIdAsync(cardId, sentenceId)
             ?? throw new AppException(MessageConstants.LearningMessage.SENTENCE_NOT_ATTACHED, 404);
 
-        ApplySentenceConfig(link, request.Position, request.BlankWord, request.Hint, request.AnswerList);
+        LearningHelper.ApplySentenceConfig(link, request.Position, request.BlankWord, request.Hint, request.AnswerList);
         _unitOfWork.CardSentences.UpdateAsync(link);
         await _unitOfWork.SaveChangesAsync();
 
@@ -198,8 +198,7 @@ public class AdminLearningService : IAdminLearningService
             .Select(x => x.Card.ToAdminCardIssueResponse(x.Issues))
             .ToList();
 
-        var normalizedPage = query.Page <= 0 ? 1 : query.Page;
-        var normalizedPageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 100);
+        var (normalizedPage, normalizedPageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
         var pagedItems = items
             .Skip((normalizedPage - 1) * normalizedPageSize)
             .Take(normalizedPageSize)
@@ -283,7 +282,7 @@ public class AdminLearningService : IAdminLearningService
             CompletedSessionsToday = sessionsToday.Count(x => x.CompletedAt.HasValue),
             SubmissionsToday = totalAttempts,
             DueCardsNow = allDue.Count,
-            AverageAccuracy = totalAttempts == 0 ? 0 : Math.Round((double)totalCorrect / totalAttempts * 100, 2),
+            AverageAccuracy = LearningHelper.CalculateAccuracy(totalCorrect, totalAttempts),
         };
     }
 
@@ -313,13 +312,13 @@ public class AdminLearningService : IAdminLearningService
             SessionCount = sessions.Count,
             CompletedSessionCount = sessions.Count(x => x.CompletedAt.HasValue),
             SubmissionCount = submissionCount,
-            AverageAccuracy = submissionCount == 0 ? 0 : Math.Round((double)correctCount / submissionCount * 100, 2),
+            AverageAccuracy = LearningHelper.CalculateAccuracy(correctCount, submissionCount),
             TrackedCards = progresses.Select(x => x.CardId).Distinct(StringComparer.Ordinal).Count(),
-            MasteredCards = progresses.Where(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12)
+            MasteredCards = progresses.Where(LearningHelper.IsMastered)
                 .Select(x => x.CardId)
                 .Distinct(StringComparer.Ordinal)
                 .Count(),
-            DueCards = progresses.Where(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow)
+            DueCards = progresses.Where(x => LearningHelper.IsDue(x, DateTime.UtcNow))
                 .Select(x => x.CardId)
                 .Distinct(StringComparer.Ordinal)
                 .Count(),
@@ -337,7 +336,7 @@ public class AdminLearningService : IAdminLearningService
                         SessionCount = group.Count(),
                         CompletedSessionCount = group.Count(x => x.CompletedAt.HasValue),
                         SubmissionCount = modeSubmissionCount,
-                        AverageAccuracy = modeSubmissionCount == 0 ? 0 : Math.Round((double)modeCorrectCount / modeSubmissionCount * 100, 2),
+                        AverageAccuracy = LearningHelper.CalculateAccuracy(modeCorrectCount, modeSubmissionCount),
                     };
                 })
                 .ToList(),
@@ -360,10 +359,10 @@ public class AdminLearningService : IAdminLearningService
             IncludedSessionCount = sessions.Count,
             IncludedCompletedSessionCount = sessions.Count(x => x.CompletedAt.HasValue),
             TrackedUsers = progresses.Select(x => x.UserId).Distinct(StringComparer.Ordinal).Count(),
-            MasteredUsers = progresses.Count(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12),
-            DueUsers = progresses.Count(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow),
-            AverageSrsLevel = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => (int)x.SrsLevel) + 1, 2),
-            AverageConsecutiveCorrect = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => x.ConsecutiveCorrect), 2),
+            MasteredUsers = progresses.Count(LearningHelper.IsMastered),
+            DueUsers = progresses.Count(x => LearningHelper.IsDue(x, DateTime.UtcNow)),
+            AverageSrsLevel = LearningHelper.CalculateAverageSrsLevel(progresses),
+            AverageConsecutiveCorrect = LearningHelper.CalculateAverageConsecutiveCorrect(progresses),
             LastReviewedAt = progresses
                 .Where(x => x.LastReviewedAt.HasValue)
                 .OrderByDescending(x => x.LastReviewedAt)
@@ -411,17 +410,17 @@ public class AdminLearningService : IAdminLearningService
             Email = user.Email,
             TotalTrackedCards = trackedCardIds.Count,
             MasteredCards = progresses
-                .Where(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12)
+                .Where(LearningHelper.IsMastered)
                 .Select(x => x.CardId)
                 .Distinct(StringComparer.Ordinal)
                 .Count(),
             DueCards = progresses
-                .Where(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow)
+                .Where(x => LearningHelper.IsDue(x, DateTime.UtcNow))
                 .Select(x => x.CardId)
                 .Distinct(StringComparer.Ordinal)
                 .Count(),
-            AverageSrsLevel = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => (int)x.SrsLevel) + 1, 2),
-            AverageConsecutiveCorrect = progresses.Count == 0 ? 0 : Math.Round(progresses.Average(x => x.ConsecutiveCorrect), 2),
+            AverageSrsLevel = LearningHelper.CalculateAverageSrsLevel(progresses),
+            AverageConsecutiveCorrect = LearningHelper.CalculateAverageConsecutiveCorrect(progresses),
             LastReviewedAt = progresses
                 .Where(x => x.LastReviewedAt.HasValue)
                 .OrderByDescending(x => x.LastReviewedAt)
@@ -460,12 +459,12 @@ public class AdminLearningService : IAdminLearningService
                             .Distinct(StringComparer.Ordinal)
                             .Count(),
                         MasteredCards = deckProgresses
-                            .Where(x => x.IsMastered || x.SrsLevel == SrsLevel.level_12)
+                            .Where(LearningHelper.IsMastered)
                             .Select(x => x.CardId)
                             .Distinct(StringComparer.Ordinal)
                             .Count(),
                         DueCards = deckProgresses
-                            .Where(x => !x.IsMastered && x.SrsLevel != SrsLevel.level_12 && x.NextReviewAt <= DateTime.UtcNow)
+                            .Where(x => LearningHelper.IsDue(x, DateTime.UtcNow))
                             .Select(x => x.CardId)
                             .Distinct(StringComparer.Ordinal)
                             .Count(),
@@ -479,7 +478,7 @@ public class AdminLearningService : IAdminLearningService
     public async Task<LearningPreviewResponse> PreviewCardAsync(string cardId, LearningPreviewQuery query)
     {
         var card = await GetLearningCardRequiredAsync(cardId);
-        var mode = ParseStudyMode(query.Mode);
+        var mode = LearningHelper.ParseStudyMode(query.Mode);
         var warnings = new List<string>();
 
         return mode switch
@@ -539,7 +538,7 @@ public class AdminLearningService : IAdminLearningService
 
     private async Task<LearningPreviewResponse> BuildMultipleChoicePreviewAsync(Card card, LearningPreviewQuery query, List<string> warnings)
     {
-        var questionType = ResolveEnumSetting(query.MultipleChoiceQuestion, MultipleChoiceQuestionType.TitleToSummary);
+        var questionType = LearningHelper.ResolveEnumSetting(query.MultipleChoiceQuestion, MultipleChoiceQuestionType.TitleToSummary);
         var shuffleOptions = query.ShuffleOptions ?? true;
         var acceptedAnswer = questionType == MultipleChoiceQuestionType.SummaryToTitle
             ? card.Title
@@ -594,10 +593,10 @@ public class AdminLearningService : IAdminLearningService
 
     private LearningPreviewResponse BuildFlashcardPreview(Card card, LearningPreviewQuery query, List<string> warnings)
     {
-        var front = ResolveEnumSetting(query.FlashcardFront, FlashcardContentType.Title);
-        var back = ResolveEnumSetting(query.FlashcardBack, FlashcardContentType.Summary);
-        var frontText = ResolveFlashcardContent(card, front);
-        var backText = ResolveFlashcardContent(card, back);
+        var front = LearningHelper.ResolveEnumSetting(query.FlashcardFront, FlashcardContentType.Title);
+        var back = LearningHelper.ResolveEnumSetting(query.FlashcardBack, FlashcardContentType.Summary);
+        var frontText = LearningHelper.ResolveFlashcardContent(card, front);
+        var backText = LearningHelper.ResolveFlashcardContent(card, back);
 
         if (string.IsNullOrWhiteSpace(frontText) || string.IsNullOrWhiteSpace(backText))
             warnings.Add("One side of the flashcard is empty. End-user flashcard settings should avoid this combination.");
@@ -645,50 +644,5 @@ public class AdminLearningService : IAdminLearningService
             .Select(folderCard => folderCard.CardId)
             .Distinct(StringComparer.Ordinal)
             .ToList();
-    }
-
-    private static void ApplySentenceConfig(CardSentence link, int position, string? blankWord, string? hint, List<string> answerList)
-    {
-        link.Position = position;
-        link.BlankWord = StringHelper.NormalizeOptional(blankWord);
-        link.Hint = StringHelper.NormalizeOptional(hint);
-        link.AnswerList = StringHelper.NormalizeAnswerList(answerList, blankWord);
-    }
-
-    private static StudyMode ParseStudyMode(string mode)
-    {
-        try
-        {
-            return EnumParsingHelper.ParseRequired<StudyMode>(mode);
-        }
-        catch (ApplicationException)
-        {
-            throw new AppException(MessageConstants.LearningMessage.INVALID_MODE, 400);
-        }
-    }
-
-    private static TEnum ResolveEnumSetting<TEnum>(string? value, TEnum fallback)
-        where TEnum : struct, Enum
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return fallback;
-
-        try
-        {
-            return EnumParsingHelper.ParseRequired<TEnum>(value);
-        }
-        catch (ApplicationException)
-        {
-            throw new AppException(MessageConstants.CommonMessage.INVALID, 400);
-        }
-    }
-
-    private static string ResolveFlashcardContent(Card card, FlashcardContentType contentType)
-    {
-        return contentType switch
-        {
-            FlashcardContentType.Summary => card.Summary,
-            _ => card.Title,
-        };
     }
 }

@@ -1,3 +1,5 @@
+using Application.Common;
+using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -35,6 +37,33 @@ public static class LearningHelper
             SrsLevel.level_12 => nowUtc.AddYears(100),
             _ => nowUtc.AddHours(4),
         };
+    }
+
+    public static bool IsMastered(UserCardProgress progress)
+    {
+        return progress.IsMastered || progress.SrsLevel == SrsLevel.level_12;
+    }
+
+    public static bool IsDue(UserCardProgress progress, DateTime nowUtc)
+    {
+        return !IsMastered(progress) && progress.NextReviewAt <= nowUtc;
+    }
+
+    public static double CalculateAccuracy(int correctCount, int totalAttempts)
+    {
+        return totalAttempts == 0 ? 0 : Math.Round((double)correctCount / totalAttempts * 100, 2);
+    }
+
+    public static double CalculateAverageSrsLevel(IEnumerable<UserCardProgress> progresses)
+    {
+        var progressList = progresses.ToList();
+        return progressList.Count == 0 ? 0 : Math.Round(progressList.Average(x => (int)x.SrsLevel) + 1, 2);
+    }
+
+    public static double CalculateAverageConsecutiveCorrect(IEnumerable<UserCardProgress> progresses)
+    {
+        var progressList = progresses.ToList();
+        return progressList.Count == 0 ? 0 : Math.Round(progressList.Average(x => x.ConsecutiveCorrect), 2);
     }
 
     public static List<string> BuildFallbackAnswers(Card card)
@@ -94,5 +123,88 @@ public static class LearningHelper
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(_ => random.Next())
             .ToList();
+    }
+
+    public static StudyMode ParseStudyMode(string mode)
+    {
+        try
+        {
+            return EnumParsingHelper.ParseRequired<StudyMode>(mode);
+        }
+        catch (ApplicationException)
+        {
+            throw new AppException(MessageConstants.LearningMessage.INVALID_MODE, 400);
+        }
+    }
+
+    public static FlashcardReviewResult ParseFlashcardResult(string? result)
+    {
+        try
+        {
+            return EnumParsingHelper.ParseRequired<FlashcardReviewResult>(result ?? string.Empty);
+        }
+        catch (ApplicationException)
+        {
+            throw new AppException(MessageConstants.LearningMessage.INVALID_SUBMISSION, 400);
+        }
+    }
+
+    public static TEnum ResolveEnumSetting<TEnum>(string? requestValue, TEnum? userValue, TEnum fallback)
+        where TEnum : struct, Enum
+    {
+        if (!string.IsNullOrWhiteSpace(requestValue))
+            return EnumParsingHelper.ParseRequired<TEnum>(requestValue);
+
+        return userValue ?? fallback;
+    }
+
+    public static TEnum ResolveEnumSetting<TEnum>(string? value, TEnum fallback)
+        where TEnum : struct, Enum
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        try
+        {
+            return EnumParsingHelper.ParseRequired<TEnum>(value);
+        }
+        catch (ApplicationException)
+        {
+            throw new AppException(MessageConstants.CommonMessage.INVALID, 400);
+        }
+    }
+
+    public static string ResolveFlashcardContent(Card card, FlashcardContentType contentType)
+    {
+        return contentType switch
+        {
+            FlashcardContentType.Summary => card.Summary,
+            _ => card.Title,
+        };
+    }
+
+    public static List<string> NormalizeRequestedIds(IEnumerable<string> values)
+    {
+        return values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    public static int NormalizeLimit(int? value, int defaultValue, int maxValue)
+    {
+        if (!value.HasValue || value.Value <= 0)
+            return defaultValue;
+
+        return Math.Min(value.Value, maxValue);
+    }
+
+    public static void ApplySentenceConfig(CardSentence link, int position, string? blankWord, string? hint, List<string> answerList)
+    {
+        link.Position = position;
+        link.BlankWord = StringHelper.NormalizeOptional(blankWord);
+        link.Hint = StringHelper.NormalizeOptional(hint);
+        link.AnswerList = StringHelper.NormalizeAnswerList(answerList, blankWord);
     }
 }

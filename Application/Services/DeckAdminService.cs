@@ -55,19 +55,19 @@ public class DeckAdminService : IDeckAdminService
     {
         await EnsureDeckTypeExistsIfNeeded(request.TypeId);
 
-        var ownerId = NormalizeOptionalText(request.CreatedBy) ?? currentUserId;
+        var ownerId = StringHelper.NormalizeOptional(request.CreatedBy) ?? currentUserId;
         await EnsureUserExists(ownerId);
 
         var deck = new Deck
         {
             Id = Guid.NewGuid().ToString(),
             CreatedBy = ownerId,
-            TypeId = NormalizeOptionalText(request.TypeId),
+            TypeId = StringHelper.NormalizeOptional(request.TypeId),
             Title = request.Title.Trim(),
-            Description = NormalizeOptionalText(request.Description) ?? string.Empty,
-            CoverImageUrl = NormalizeOptionalText(request.CoverImageUrl),
-            Visibility = ParseVisibilityOrDefault(request.Visibility, DeckVisibility.Public),
-            Status = ParseStatusOrDefault(request.Status, PublishStatus.Draft),
+            Description = StringHelper.NormalizeOptional(request.Description) ?? string.Empty,
+            CoverImageUrl = StringHelper.NormalizeOptional(request.CoverImageUrl),
+            Visibility = DeckHelper.ParseVisibilityOrDefault(request.Visibility, DeckVisibility.Public),
+            Status = DeckHelper.ParseStatusOrDefault(request.Status, PublishStatus.Draft),
             IsOfficial = request.IsOfficial,
             CardsCount = 0,
             FoldersCount = 0,
@@ -99,19 +99,19 @@ public class DeckAdminService : IDeckAdminService
             deck.Description = request.Description.Trim();
 
         if (request.CoverImageUrl != null)
-            deck.CoverImageUrl = NormalizeOptionalText(request.CoverImageUrl);
+            deck.CoverImageUrl = StringHelper.NormalizeOptional(request.CoverImageUrl);
 
         if (request.Visibility != null)
-            deck.Visibility = ParseVisibilityOrDefault(request.Visibility, deck.Visibility);
+            deck.Visibility = DeckHelper.ParseVisibilityOrDefault(request.Visibility, deck.Visibility);
 
         if (request.Status != null)
-            deck.Status = ParseStatusOrDefault(request.Status, deck.Status);
+            deck.Status = DeckHelper.ParseStatusOrDefault(request.Status, deck.Status);
 
         if (request.IsOfficial.HasValue)
             deck.IsOfficial = request.IsOfficial.Value;
 
         if (request.TypeId != null)
-            deck.TypeId = NormalizeOptionalText(request.TypeId);
+            deck.TypeId = StringHelper.NormalizeOptional(request.TypeId);
 
         deck.UpdatedAt = DateTime.UtcNow;
         _unitOfWork.Decks.UpdateAsync(deck);
@@ -162,7 +162,7 @@ public class DeckAdminService : IDeckAdminService
             Id = Guid.NewGuid().ToString(),
             DeckId = deckId,
             Title = request.Title.Trim(),
-            Description = NormalizeOptionalText(request.Description) ?? string.Empty,
+            Description = StringHelper.NormalizeOptional(request.Description) ?? string.Empty,
             Position = request.Position ?? GetNextFolderPosition(deck),
             CardsCount = 0,
         };
@@ -183,7 +183,7 @@ public class DeckAdminService : IDeckAdminService
             throw new ApplicationException(MessageConstants.DeckMessage.FOLDER_NOT_FOUND);
 
         folder.Title = request.Title.Trim();
-        folder.Description = NormalizeOptionalText(request.Description) ?? string.Empty;
+        folder.Description = StringHelper.NormalizeOptional(request.Description) ?? string.Empty;
         folder.UpdatedAt = DateTime.UtcNow;
         folder.Deck.UpdatedAt = DateTime.UtcNow;
 
@@ -358,7 +358,7 @@ public class DeckAdminService : IDeckAdminService
 
     private async Task EnsureDeckTypeExistsIfNeeded(string? typeId)
     {
-        var normalizedTypeId = NormalizeOptionalText(typeId);
+        var normalizedTypeId = StringHelper.NormalizeOptional(typeId);
         if (normalizedTypeId == null)
             return;
 
@@ -372,22 +372,6 @@ public class DeckAdminService : IDeckAdminService
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null)
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
-    }
-
-    private static string? NormalizeOptionalText(string? value)
-    {
-        var normalized = value?.Trim();
-        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
-    }
-
-    private static DeckVisibility ParseVisibilityOrDefault(string? value, DeckVisibility defaultValue)
-    {
-        return EnumParsingHelper.ParseNullable<DeckVisibility>(value) ?? defaultValue;
-    }
-
-    private static PublishStatus ParseStatusOrDefault(string? value, PublishStatus defaultValue)
-    {
-        return EnumParsingHelper.ParseNullable<PublishStatus>(value) ?? defaultValue;
     }
 
     private static int GetNextFolderPosition(Deck deck)

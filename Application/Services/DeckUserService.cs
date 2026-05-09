@@ -208,11 +208,11 @@ public class DeckUserService : IDeckUserService
         {
             Id = Guid.NewGuid().ToString(),
             CreatedBy = userId,
-            TypeId = NormalizeOptionalText(request.TypeId),
+            TypeId = StringHelper.NormalizeOptional(request.TypeId),
             Title = request.Title.Trim(),
-            Description = NormalizeOptionalText(request.Description) ?? string.Empty,
-            CoverImageUrl = NormalizeOptionalText(request.CoverImageUrl),
-            Visibility = ParseVisibilityOrDefault(request.Visibility),
+            Description = StringHelper.NormalizeOptional(request.Description) ?? string.Empty,
+            CoverImageUrl = StringHelper.NormalizeOptional(request.CoverImageUrl),
+            Visibility = DeckHelper.ParseVisibilityOrDefault(request.Visibility, DeckVisibility.Private),
             Status = PublishStatus.Published,
             IsOfficial = false,
             CardsCount = 0,
@@ -249,13 +249,13 @@ public class DeckUserService : IDeckUserService
             deck.Description = request.Description.Trim();
 
         if (request.CoverImageUrl != null)
-            deck.CoverImageUrl = NormalizeOptionalText(request.CoverImageUrl);
+            deck.CoverImageUrl = StringHelper.NormalizeOptional(request.CoverImageUrl);
 
         if (request.Visibility != null)
-            deck.Visibility = ParseVisibilityOrDefault(request.Visibility);
+            deck.Visibility = DeckHelper.ParseVisibilityOrDefault(request.Visibility, DeckVisibility.Private);
 
         if (request.TypeId != null)
-            deck.TypeId = NormalizeOptionalText(request.TypeId);
+            deck.TypeId = StringHelper.NormalizeOptional(request.TypeId);
 
         deck.UpdatedAt = DateTime.UtcNow;
         _unitOfWork.Decks.UpdateAsync(deck);
@@ -291,7 +291,7 @@ public class DeckUserService : IDeckUserService
             Id = Guid.NewGuid().ToString(),
             DeckId = deckId,
             Title = request.Title.Trim(),
-            Description = NormalizeOptionalText(request.Description) ?? string.Empty,
+            Description = StringHelper.NormalizeOptional(request.Description) ?? string.Empty,
             Position = request.Position ?? GetNextFolderPosition(deck),
             CardsCount = 0,
         };
@@ -312,7 +312,7 @@ public class DeckUserService : IDeckUserService
             throw new ApplicationException(MessageConstants.DeckMessage.FOLDER_NOT_FOUND);
 
         folder.Title = request.Title.Trim();
-        folder.Description = NormalizeOptionalText(request.Description) ?? string.Empty;
+        folder.Description = StringHelper.NormalizeOptional(request.Description) ?? string.Empty;
         folder.UpdatedAt = DateTime.UtcNow;
         folder.Deck.UpdatedAt = DateTime.UtcNow;
 
@@ -477,17 +477,6 @@ public class DeckUserService : IDeckUserService
 
         if (!canRead)
             throw new ApplicationException(MessageConstants.DeckMessage.READ_FORBIDDEN);
-    }
-
-    private static string? NormalizeOptionalText(string? value)
-    {
-        var normalized = value?.Trim();
-        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
-    }
-
-    private static DeckVisibility ParseVisibilityOrDefault(string? value)
-    {
-        return EnumParsingHelper.ParseNullable<DeckVisibility>(value) ?? DeckVisibility.Private;
     }
 
     private static int GetNextFolderPosition(Deck deck)

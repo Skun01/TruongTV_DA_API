@@ -23,11 +23,10 @@ public class CardNotesController : BaseController
     [HttpGet("api/cards/{cardId}/notes")]
     public async Task<ApiResponse<List<CardNoteResponse>>> GetCardCommunityNotes(
         [FromRoute] string cardId,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+        [FromQuery] CardNoteListQuery query)
     {
         var userId = GetCurrentUserId();
-        var (notes, meta) = await _cardNoteService.GetCardCommunityNotesAsync(cardId, userId, page, pageSize);
+        var (notes, meta) = await _cardNoteService.GetCardCommunityNotesAsync(cardId, userId, query);
         return ApiResponse<List<CardNoteResponse>>.SuccessResponse(notes, meta);
     }
 

@@ -19,7 +19,7 @@ public class CardNoteService : ICardNoteService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<(List<CardNoteResponse> Notes, MetaData Meta)> GetCardCommunityNotesAsync(string cardId, string currentUserId, int page, int pageSize)
+    public async Task<(List<CardNoteResponse> Notes, MetaData Meta)> GetCardCommunityNotesAsync(string cardId, string currentUserId, CardNoteListQuery query)
     {
         var card = await _unitOfWork.Cards.GetByIdAsync(cardId);
         if (card == null)
@@ -27,7 +27,7 @@ public class CardNoteService : ICardNoteService
 
         EnsureCardReadable(card, currentUserId);
 
-        (page, pageSize) = PagingHelper.Normalize(page, pageSize, 10, 100);
+        var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize, 10, 100);
 
         var (notes, total) = await _unitOfWork.UserCardNotes.GetCommunityByCardIdAsync(cardId, currentUserId, page, pageSize);
         var mappedNotes = notes.Select(n => n.ToCardNoteResponse(currentUserId)).ToList();

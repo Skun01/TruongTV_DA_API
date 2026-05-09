@@ -1,9 +1,8 @@
 namespace Application.DTOs.Dashboard.Learner;
 
-public class UpcomingReviewsResponse
+public class UpcomingReviewsSummary
 {
     public int DueToday { get; set; }
     public int DueTomorrow { get; set; }
     public int DueThisWeek { get; set; }
-    public List<DailyReviewCount> DueByDay { get; set; } = new();
 }

@@ -22,7 +22,7 @@ public class LearningService : ILearningService
 
     public async Task<StudySessionResponse> CreateSessionAsync(CreateStudySessionRequest request, string userId)
     {
-        var mode = ParseStudyMode(request.Mode);
+        var mode = LearningHelper.ParseStudyMode(request.Mode);
         var settings = await ResolveSessionSettingsAsync(userId, request.Settings);
         Deck? deck = null;
         List<string> cardIds;
@@ -31,12 +31,12 @@ public class LearningService : ILearningService
         if (!string.IsNullOrWhiteSpace(request.DeckId))
         {
             deck = await GetReadableDeckAsync(request.DeckId, userId);
-            cardIds = ResolveCardScope(deck, request.CardIds);
-            selectedFolderIds = ResolveSelectedFolderIds(deck, cardIds);
+            cardIds = LearningSessionHelper.ResolveCardScope(deck, request.CardIds);
+            selectedFolderIds = LearningSessionHelper.ResolveSelectedFolderIds(deck, cardIds);
         }
         else
         {
-            cardIds = NormalizeRequestedCardIds(request.CardIds);
+            cardIds = LearningHelper.NormalizeRequestedIds(request.CardIds);
             if (cardIds.Count == 0)
                 throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
@@ -50,19 +50,13 @@ public class LearningService : ILearningService
         if (cardIds.Count == 0)
             throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
-        var session = new StudySession
-        {
-            Id = Guid.NewGuid().ToString(),
-            UserId = userId,
-            DeckId = deck?.Id,
-            Mode = mode,
-            FlashcardFront = settings.FlashcardFront,
-            FlashcardBack = settings.FlashcardBack,
-            MultipleChoiceQuestion = settings.MultipleChoiceQuestion,
-            ShuffleOptions = settings.ShuffleOptions,
-            SelectedFolderIds = selectedFolderIds,
-            CardIds = cardIds,
-        };
+        var session = LearningSessionHelper.CreateSession(
+            userId,
+            deck?.Id,
+            mode,
+            settings,
+            selectedFolderIds,
+            cardIds);
 
         await _unitOfWork.StudySessions.AddAsync(session);
         await _unitOfWork.SaveChangesAsync();
@@ -87,7 +81,7 @@ public class LearningService : ILearningService
 
     public async Task<List<StudySessionResponse>> GetHistoryAsync(StudyHistoryQuery query, string userId)
     {
-        var limit = NormalizeLimit(query.Limit, 20, 100);
+        var limit = LearningHelper.NormalizeLimit(query.Limit, 20, 100);
         var sessions = await _unitOfWork.StudySessions.GetRecentByUserAsync(userId, limit);
         var deckIds = sessions
             .Where(x => !string.IsNullOrWhiteSpace(x.DeckId))
@@ -147,11 +141,11 @@ public class LearningService : ILearningService
         var isNewProgress = progress == null;
         progress ??= await CreateProgressAsync(userId, request.CardId);
 
-        var payload = BuildAnswerPayload(card, progress, session);
+        var payload = LearningQuestionHelper.BuildAnswerPayload(card, progress, session);
         var now = DateTime.UtcNow;
-        var isCorrect = EvaluateSubmission(payload, request, session.Mode);
+        var isCorrect = LearningQuestionHelper.EvaluateSubmission(payload, request, session.Mode);
 
-        ApplyProgress(progress, session.Mode, request, isCorrect, now);
+        LearningQuestionHelper.ApplyProgress(progress, session.Mode, request, isCorrect, now);
         if (!string.IsNullOrWhiteSpace(payload.SelectedSentenceId))
             progress.LastSentenceId = payload.SelectedSentenceId;
 
@@ -198,50 +192,16 @@ public class LearningService : ILearningService
         var progress = await _unitOfWork.UserCardProgresses.GetByUserAndCardIdAsync(userId, cardId);
 
         if (progress == null)
-        {
-            return new CardProgressResponse
-            {
-                CardId = card.Id,
-                CardType = card.CardType.ToString(),
-                Title = card.Title,
-                Summary = card.Summary,
-                SrsLevel = SrsLevel.level_1.ToString(),
-                NextReviewAt = DateTime.UtcNow,
-                ConsecutiveCorrect = 0,
-                IsMastered = false,
-            };
-        }
+            return card.ToDefaultCardProgressResponse(DateTime.UtcNow);
 
-        return MapCardProgress(card, progress);
+        return card.ToCardProgressResponse(progress);
     }
 
     public async Task<StudySessionResultResponse> GetSessionResultAsync(string sessionId, string userId)
     {
         var session = await GetOwnedSessionAsync(sessionId, userId);
         var deck = await GetSessionDeckAsync(session, userId);
-        var attempts = session.CorrectCount + session.IncorrectCount;
-
-        return new StudySessionResultResponse
-        {
-            SessionId = session.Id,
-            DeckId = session.DeckId,
-            DeckTitle = deck?.Title,
-            Mode = session.Mode.ToString(),
-            TotalCards = session.CardIds.Count,
-            CompletedCards = session.CompletedCardIds.Count,
-            CorrectCount = session.CorrectCount,
-            IncorrectCount = session.IncorrectCount,
-            Accuracy = attempts == 0 ? 0 : Math.Round((double)session.CorrectCount / attempts * 100, 2),
-            CreatedAt = session.CreatedAt,
-            CompletedAt = session.CompletedAt,
-            Settings = new StudySessionSettingsResponse
-            {
-                FlashcardFront = session.FlashcardFront.ToString(),
-                FlashcardBack = session.FlashcardBack.ToString(),
-                MultipleChoiceQuestion = session.MultipleChoiceQuestion.ToString(),
-                ShuffleOptions = session.ShuffleOptions,
-            },
-        };
+        return session.ToResultResponse(deck);
     }
 
     public async Task<StudySessionResponse> RestartSessionAsync(string sessionId, string userId)
@@ -254,12 +214,12 @@ public class LearningService : ILearningService
         if (!string.IsNullOrWhiteSpace(existingSession.DeckId))
         {
             deck = await GetReadableDeckAsync(existingSession.DeckId, userId);
-            cardIds = ResolveCardScope(deck, existingSession.CardIds);
-            selectedFolderIds = ResolveSelectedFolderIds(deck, cardIds);
+            cardIds = LearningSessionHelper.ResolveCardScope(deck, existingSession.CardIds);
+            selectedFolderIds = LearningSessionHelper.ResolveSelectedFolderIds(deck, cardIds);
         }
         else
         {
-            cardIds = NormalizeRequestedCardIds(existingSession.CardIds);
+            cardIds = LearningHelper.NormalizeRequestedIds(existingSession.CardIds);
             var cards = await _unitOfWork.Cards.GetStudyCardsByIdsAsync(cardIds);
             if (cards.Count != cardIds.Count)
                 throw new AppException(MessageConstants.LearningMessage.INVALID_SCOPE, 400);
@@ -270,19 +230,17 @@ public class LearningService : ILearningService
         if (cardIds.Count == 0)
             throw new AppException(MessageConstants.LearningMessage.NO_CARDS_AVAILABLE, 400);
 
-        var session = new StudySession
-        {
-            Id = Guid.NewGuid().ToString(),
-            UserId = userId,
-            DeckId = existingSession.DeckId,
-            Mode = existingSession.Mode,
-            FlashcardFront = existingSession.FlashcardFront,
-            FlashcardBack = existingSession.FlashcardBack,
-            MultipleChoiceQuestion = existingSession.MultipleChoiceQuestion,
-            ShuffleOptions = existingSession.ShuffleOptions,
-            SelectedFolderIds = selectedFolderIds,
-            CardIds = cardIds,
-        };
+        var session = LearningSessionHelper.CreateSession(
+            userId,
+            existingSession.DeckId,
+            existingSession.Mode,
+            new LearningSessionSettings(
+                existingSession.FlashcardFront,
+                existingSession.FlashcardBack,
+                existingSession.MultipleChoiceQuestion,
+                existingSession.ShuffleOptions),
+            selectedFolderIds,
+            cardIds);
 
         await _unitOfWork.StudySessions.AddAsync(session);
         await _unitOfWork.SaveChangesAsync();
@@ -303,7 +261,7 @@ public class LearningService : ILearningService
         }
 
         var deck = await GetReadableDeckAsync(query.DeckId, userId);
-        var selectedFolderIds = ResolveFolderScope(deck, query.FolderIds);
+        var selectedFolderIds = LearningSessionHelper.ResolveFolderScope(deck, query.FolderIds);
         var cardIds = deck.Folders
             .Where(folder => selectedFolderIds.Contains(folder.Id))
             .SelectMany(folder => folder.FolderCards)
@@ -342,7 +300,7 @@ public class LearningService : ILearningService
 
     private async Task<StudyQuestionResponse> BuildQuestionResponseAsync(StudySession session, Card card, UserCardProgress? progress)
     {
-        var payload = BuildAnswerPayload(card, progress, session);
+        var payload = LearningQuestionHelper.BuildAnswerPayload(card, progress, session);
         var response = new StudyQuestionResponse
         {
             SessionId = session.Id,
@@ -368,187 +326,35 @@ public class LearningService : ILearningService
         return response;
     }
 
-    private AnswerPayload BuildAnswerPayload(Card card, UserCardProgress? progress, StudySession session)
-    {
-        return session.Mode switch
-        {
-            StudyMode.FillInBlank => BuildFillInBlankPayload(card, progress),
-            StudyMode.MultipleChoice => BuildMultipleChoicePayload(card, session),
-            StudyMode.Flashcard => BuildFlashcardPayload(card, session),
-            _ => throw new AppException(MessageConstants.LearningMessage.INVALID_MODE, 400),
-        };
-    }
-
-    private AnswerPayload BuildFillInBlankPayload(Card card, UserCardProgress? progress)
-    {
-        var selected = SelectCardSentence(card, progress);
-        if (selected != null)
-        {
-            var acceptedAnswers = StringHelper.NormalizeAnswerList(
-                selected.AnswerList,
-                selected.BlankWord);
-
-            if (acceptedAnswers.Count == 0)
-                acceptedAnswers = LearningHelper.BuildFallbackAnswers(card);
-
-            var blankValue = selected.BlankWord ?? acceptedAnswers.FirstOrDefault() ?? string.Empty;
-            return new AnswerPayload(
-                "Điền vào chỗ trống",
-                LearningHelper.ReplaceFirstBlank(selected.Sentence.Text, blankValue),
-                selected.Sentence.Meaning,
-                selected.Hint,
-                acceptedAnswers,
-                selected.SentenceId,
-                null,
-                null);
-        }
-
-        var fallbackAnswers = LearningHelper.BuildFallbackAnswers(card);
-        return new AnswerPayload(
-            "Điền đáp án phù hợp cho thẻ",
-            card.Summary,
-            card.Title,
-            null,
-            fallbackAnswers,
-            null,
-            null,
-            null);
-    }
-
-    private AnswerPayload BuildMultipleChoicePayload(Card card, StudySession session)
-    {
-        var question = session.MultipleChoiceQuestion == MultipleChoiceQuestionType.SummaryToTitle
-            ? card.Summary
-            : card.Title;
-        var answer = session.MultipleChoiceQuestion == MultipleChoiceQuestionType.SummaryToTitle
-            ? card.Title
-            : card.Summary;
-
-        return new AnswerPayload(
-            session.MultipleChoiceQuestion == MultipleChoiceQuestionType.SummaryToTitle
-                ? "Chọn từ khóa đúng của nghĩa"
-                : "Chọn nghĩa đúng của thẻ",
-            question,
-            null,
-            null,
-            new List<string> { answer },
-            null,
-            null,
-            null);
-    }
-
-    private AnswerPayload BuildFlashcardPayload(Card card, StudySession session)
-    {
-        return new AnswerPayload(
-            "Xem flashcard rồi đánh dấu đang học hoặc đã biết",
-            null,
-            null,
-            null,
-            new List<string>(),
-            null,
-            ResolveFlashcardContent(card, session.FlashcardFront),
-            ResolveFlashcardContent(card, session.FlashcardBack));
-    }
-
     private async Task<List<StudyQuestionOptionResponse>> BuildOptionsAsync(StudySession session, Card card, List<string> acceptedAnswers)
     {
-        var options = new List<string>(acceptedAnswers);
         var distractors = new List<string>();
+        var sessionCandidateIds = session.CardIds
+            .Where(id => id != card.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        foreach (var candidateId in session.CardIds.Where(id => id != card.Id))
+        if (sessionCandidateIds.Count > 0)
         {
-            var candidateCard = await _unitOfWork.Cards.GetStudyCardByIdAsync(candidateId);
-            if (candidateCard == null || candidateCard.CardType != card.CardType)
-                continue;
-
-            distractors.Add(session.MultipleChoiceQuestion == MultipleChoiceQuestionType.SummaryToTitle
-                ? candidateCard.Title
-                : candidateCard.Summary);
-            if (options.Count + distractors.Distinct(StringComparer.OrdinalIgnoreCase).Count() >= 4)
-                break;
+            var sessionCandidateCards = await _unitOfWork.Cards.GetStudyCardsByIdsAsync(sessionCandidateIds);
+            distractors.AddRange(sessionCandidateCards
+                .Where(candidateCard => candidateCard.CardType == card.CardType)
+                .Select(candidateCard => LearningQuestionHelper.ResolveMultipleChoiceValue(candidateCard, session.MultipleChoiceQuestion)));
         }
 
-        if (options.Count + distractors.Distinct(StringComparer.OrdinalIgnoreCase).Count() < 4)
+        if (acceptedAnswers.Count + distractors.Distinct(StringComparer.OrdinalIgnoreCase).Count() < 4)
         {
             var (globalCards, _) = await _unitOfWork.Cards.SearchCardsAsync(card.CardType, null, null, 1, 50);
-            foreach (var globalCard in globalCards.Where(x => x.Id != card.Id && !session.CardIds.Contains(x.Id, StringComparer.Ordinal)))
-            {
-                var candidateCard = await _unitOfWork.Cards.GetStudyCardByIdAsync(globalCard.Id);
-                if (candidateCard == null || candidateCard.CardType != card.CardType)
-                    continue;
-
-                distractors.Add(session.MultipleChoiceQuestion == MultipleChoiceQuestionType.SummaryToTitle
-                    ? candidateCard.Title
-                    : candidateCard.Summary);
-                if (options.Count + distractors.Distinct(StringComparer.OrdinalIgnoreCase).Count() >= 4)
-                    break;
-            }
+            distractors.AddRange(globalCards
+                .Where(globalCard => globalCard.Id != card.Id && !session.CardIds.Contains(globalCard.Id, StringComparer.Ordinal))
+                .Select(globalCard => LearningQuestionHelper.ResolveMultipleChoiceValue(globalCard, session.MultipleChoiceQuestion)));
         }
 
-        options.AddRange(
-            LearningHelper.DistinctByRandomOrder(distractors, _random)
-                .Where(option => !acceptedAnswers.Contains(option, StringComparer.OrdinalIgnoreCase))
-                .Take(Math.Max(4 - options.Count, 0)));
-
-        var finalOptions = session.ShuffleOptions
-            ? LearningHelper.DistinctByRandomOrder(options, _random)
-            : options
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-        return finalOptions
-            .Select(option => new StudyQuestionOptionResponse
-            {
-                Id = option,
-                Text = option,
-            })
-            .ToList();
-    }
-
-    private static bool EvaluateSubmission(AnswerPayload payload, SubmitStudyAnswerRequest request, StudyMode mode)
-    {
-        return mode switch
-        {
-            StudyMode.FillInBlank => request.Answers
-                .Select(answer => answer.Trim())
-                .Any(answer => payload.AcceptedAnswers.Contains(answer, StringComparer.OrdinalIgnoreCase)),
-            StudyMode.MultipleChoice => payload.AcceptedAnswers.Count > 0
-                && payload.AcceptedAnswers.Count == request.SelectedOptionIds.Count
-                && payload.AcceptedAnswers.All(answer => request.SelectedOptionIds.Contains(answer, StringComparer.OrdinalIgnoreCase)),
-            StudyMode.Flashcard => ParseFlashcardResult(request.FlashcardResult) == FlashcardReviewResult.Known,
-            _ => false,
-        };
-    }
-
-    private static void ApplyProgress(UserCardProgress progress, StudyMode mode, SubmitStudyAnswerRequest request, bool isCorrect, DateTime now)
-    {
-        if (mode == StudyMode.Flashcard)
-        {
-            var result = ParseFlashcardResult(request.FlashcardResult);
-            if (result == FlashcardReviewResult.Learning)
-            {
-                progress.SrsLevel = SrsLevel.level_1;
-                progress.ConsecutiveCorrect = 0;
-            }
-            else
-            {
-                progress.SrsLevel = LearningHelper.IncreaseLevel(progress.SrsLevel);
-                progress.ConsecutiveCorrect++;
-            }
-        }
-        else if (isCorrect)
-        {
-            progress.SrsLevel = LearningHelper.IncreaseLevel(progress.SrsLevel);
-            progress.ConsecutiveCorrect++;
-        }
-        else
-        {
-            progress.SrsLevel = SrsLevel.level_1;
-            progress.ConsecutiveCorrect = 0;
-        }
-
-        progress.IsMastered = progress.SrsLevel == SrsLevel.level_12;
-        progress.NextReviewAt = LearningHelper.ResolveNextReviewAt(progress.SrsLevel, now);
+        return LearningQuestionHelper.BuildMultipleChoiceOptions(
+            acceptedAnswers,
+            distractors,
+            session.ShuffleOptions,
+            _random);
     }
 
     private async Task<UserCardProgress> CreateProgressAsync(string userId, string cardId)
@@ -592,91 +398,27 @@ public class LearningService : ILearningService
         return deck;
     }
 
-    private List<string> ResolveFolderScope(Deck deck, List<string>? requestedFolderIds)
-    {
-        var allFolderIds = deck.Folders.Select(folder => folder.Id).ToList();
-        if (requestedFolderIds == null || requestedFolderIds.Count == 0)
-            return allFolderIds;
-
-        var normalizedFolderIds = requestedFolderIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (normalizedFolderIds.Count == 0)
-            return allFolderIds;
-
-        if (normalizedFolderIds.Any(folderId => !allFolderIds.Contains(folderId, StringComparer.Ordinal)))
-            throw new AppException(MessageConstants.LearningMessage.INVALID_SCOPE, 400);
-
-        return normalizedFolderIds;
-    }
-
-    private static List<string> ResolveCardScope(Deck deck, List<string>? requestedCardIds)
-    {
-        var allCardIds = deck.Folders
-            .SelectMany(folder => folder.FolderCards)
-            .OrderBy(folderCard => folderCard.Position)
-            .Select(folderCard => folderCard.CardId)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (requestedCardIds == null || requestedCardIds.Count == 0)
-            return allCardIds;
-
-        var normalizedCardIds = requestedCardIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (normalizedCardIds.Count == 0)
-            return allCardIds;
-
-        if (normalizedCardIds.Any(cardId => !allCardIds.Contains(cardId, StringComparer.Ordinal)))
-            throw new AppException(MessageConstants.LearningMessage.INVALID_SCOPE, 400);
-
-        return normalizedCardIds;
-    }
-
-    private static List<string> ResolveSelectedFolderIds(Deck deck, List<string> cardIds)
-    {
-        return deck.Folders
-            .Where(folder => folder.FolderCards.Any(folderCard => cardIds.Contains(folderCard.CardId, StringComparer.Ordinal)))
-            .Select(folder => folder.Id)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static List<string> NormalizeRequestedCardIds(IEnumerable<string> cardIds)
-    {
-        return cardIds
-            .Where(cardId => !string.IsNullOrWhiteSpace(cardId))
-            .Select(cardId => cardId.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-    }
-
     private async Task<Card> GetStudyCardRequiredAsync(string cardId)
     {
         return await _unitOfWork.Cards.GetStudyCardByIdAsync(cardId)
             ?? throw new AppException(MessageConstants.DeckMessage.CARD_NOT_FOUND, 404);
     }
 
-    private async Task<ResolvedStudySessionSettings> ResolveSessionSettingsAsync(string userId, StudySessionSettingsRequest? request)
+    private async Task<LearningSessionSettings> ResolveSessionSettingsAsync(string userId, StudySessionSettingsRequest? request)
     {
         var userDefaults = await _unitOfWork.UserLearningSettings.GetByUserIdAsync(userId);
 
-        var flashcardFront = ResolveEnumSetting(
+        var flashcardFront = LearningHelper.ResolveEnumSetting(
             request?.FlashcardFront,
             userDefaults?.FlashcardFront,
             FlashcardContentType.Title);
 
-        var flashcardBack = ResolveEnumSetting(
+        var flashcardBack = LearningHelper.ResolveEnumSetting(
             request?.FlashcardBack,
             userDefaults?.FlashcardBack,
             FlashcardContentType.Summary);
 
-        var multipleChoiceQuestion = ResolveEnumSetting(
+        var multipleChoiceQuestion = LearningHelper.ResolveEnumSetting(
             request?.MultipleChoiceQuestion,
             userDefaults?.MultipleChoiceQuestion,
             MultipleChoiceQuestionType.TitleToSummary);
@@ -685,113 +427,10 @@ public class LearningService : ILearningService
             ?? userDefaults?.ShuffleOptions
             ?? true;
 
-        return new ResolvedStudySessionSettings(
+        return new LearningSessionSettings(
             flashcardFront,
             flashcardBack,
             multipleChoiceQuestion,
             shuffleOptions);
     }
-
-    private static string ResolveFlashcardContent(Card card, FlashcardContentType contentType)
-    {
-        return contentType switch
-        {
-            FlashcardContentType.Summary => card.Summary,
-            _ => card.Title,
-        };
-    }
-
-    private static TEnum ResolveEnumSetting<TEnum>(string? requestValue, TEnum? userValue, TEnum fallback)
-        where TEnum : struct, Enum
-    {
-        if (!string.IsNullOrWhiteSpace(requestValue))
-            return EnumParsingHelper.ParseRequired<TEnum>(requestValue);
-
-        return userValue ?? fallback;
-    }
-
-    private static int NormalizeLimit(int? value, int defaultValue, int maxValue)
-    {
-        if (!value.HasValue || value.Value <= 0)
-            return defaultValue;
-
-        return Math.Min(value.Value, maxValue);
-    }
-
-    private static CardProgressResponse MapCardProgress(Card card, UserCardProgress progress)
-    {
-        return new CardProgressResponse
-        {
-            CardId = card.Id,
-            CardType = card.CardType.ToString(),
-            Title = card.Title,
-            Summary = card.Summary,
-            SrsLevel = progress.SrsLevel.ToString(),
-            NextReviewAt = progress.NextReviewAt,
-            LastReviewedAt = progress.LastReviewedAt,
-            ConsecutiveCorrect = progress.ConsecutiveCorrect,
-            IsMastered = progress.IsMastered,
-            LastSentenceId = progress.LastSentenceId,
-        };
-    }
-
-    private static StudyMode ParseStudyMode(string mode)
-    {
-        try
-        {
-            return EnumParsingHelper.ParseRequired<StudyMode>(mode);
-        }
-        catch (ApplicationException)
-        {
-            throw new AppException(MessageConstants.LearningMessage.INVALID_MODE, 400);
-        }
-    }
-
-    private static FlashcardReviewResult ParseFlashcardResult(string? result)
-    {
-        try
-        {
-            return EnumParsingHelper.ParseRequired<FlashcardReviewResult>(result ?? string.Empty);
-        }
-        catch (ApplicationException)
-        {
-            throw new AppException(MessageConstants.LearningMessage.INVALID_SUBMISSION, 400);
-        }
-    }
-
-    private static CardSentence? SelectCardSentence(Card card, UserCardProgress? progress)
-    {
-        var sentences = card.CardSentences
-            .Where(cs => cs.Sentence != null)
-            .OrderBy(cs => cs.Position)
-            .ToList();
-
-        if (sentences.Count == 0)
-            return null;
-
-        if (!string.IsNullOrWhiteSpace(progress?.LastSentenceId))
-        {
-            var nextSentence = sentences.FirstOrDefault(cs => cs.SentenceId != progress.LastSentenceId);
-            if (nextSentence != null)
-                return nextSentence;
-        }
-
-        return sentences.First();
-    }
-
-    private sealed record AnswerPayload(
-        string Prompt,
-        string? QuestionText,
-        string? SecondaryText,
-        string? Hint,
-        List<string> AcceptedAnswers,
-        string? SelectedSentenceId,
-        string? FrontText,
-        string? BackText);
-
-    private sealed record ResolvedStudySessionSettings(
-        FlashcardContentType FlashcardFront,
-        FlashcardContentType FlashcardBack,
-        MultipleChoiceQuestionType MultipleChoiceQuestion,
-        bool ShuffleOptions);
 }
