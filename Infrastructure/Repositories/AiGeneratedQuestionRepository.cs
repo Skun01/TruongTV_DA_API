@@ -23,6 +23,9 @@ public class AiGeneratedQuestionRepository : Repository<AiGeneratedQuestion>, IA
             .AsNoTracking()
             .Include(x => x.Creator)
             .Include(x => x.Reviewer)
+            .Include(x => x.QuestionGroup!)
+                .ThenInclude(g => g.Section)
+                    .ThenInclude(s => s.Exam)
             .AsQueryable();
 
         if (level.HasValue)
@@ -49,7 +52,9 @@ public class AiGeneratedQuestionRepository : Repository<AiGeneratedQuestion>, IA
         return await _context.AiGeneratedQuestions
             .Include(x => x.Creator)
             .Include(x => x.Reviewer)
-            .Include(x => x.QuestionGroup)
+            .Include(x => x.QuestionGroup!)
+                .ThenInclude(g => g.Section)
+                    .ThenInclude(s => s.Exam)
             .Include(x => x.Question)
                 .ThenInclude(q => q!.Options)
             .FirstOrDefaultAsync(x => x.Id == id);

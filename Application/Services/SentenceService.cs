@@ -214,18 +214,22 @@ public class SentenceService : ISentenceService
             throw new ApplicationException(MessageConstants.CommonMessage.NOT_FOUND);
 
         var text = request.Text.Trim();
-        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
-            _ttsService,
-            _fileUploadService,
-            text,
-            sentence.CreatedBy,
-            $"sent_{id}.mp3",
-            MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
-            _logger);
+
+        if (text != sentence.Text)
+        {
+            var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+                _ttsService,
+                _fileUploadService,
+                text,
+                sentence.CreatedBy,
+                $"sent_{id}.mp3",
+                MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
+                _logger);
+            sentence.AudioUrl = audioResult.AudioUrl;
+        }
 
         sentence.Text = text;
         sentence.Meaning = request.Meaning.Trim();
-        sentence.AudioUrl = audioResult.AudioUrl;
         sentence.Level = EnumParsingHelper.ParseNullable<Domain.Enums.JlptLevel>(request.Level);
         sentence.UpdatedAt = DateTime.UtcNow;
 

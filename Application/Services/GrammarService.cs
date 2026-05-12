@@ -452,7 +452,36 @@ public class GrammarService : IGrammarService
         string currentUserId)
     {
         var text = request.Text.Trim();
-        var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+
+        if (!string.IsNullOrWhiteSpace(request.Id))
+        {
+            var existingSentence = await _unitOfWork.Sentences.GetByIdAsync(request.Id);
+            if (existingSentence == null)
+                throw new AppException(MessageConstants.SentenceMessage.NOT_FOUND, 404);
+
+            if (text != existingSentence.Text)
+            {
+                var audioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
+                    _ttsService,
+                    _fileUploadService,
+                    text,
+                    currentUserId,
+                    $"sent_{Guid.NewGuid():N}.mp3",
+                    MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
+                    _logger);
+                existingSentence.AudioUrl = audioResult.AudioUrl;
+            }
+
+            existingSentence.Text = text;
+            existingSentence.Meaning = request.Meaning.Trim();
+            existingSentence.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
+            existingSentence.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Sentences.UpdateAsync(existingSentence);
+            return existingSentence;
+        }
+
+        var newAudioResult = await AzureTtsHelper.SynthesizeAndUploadAsync(
             _ttsService,
             _fileUploadService,
             text,
@@ -461,33 +490,17 @@ public class GrammarService : IGrammarService
             MessageConstants.SentenceMessage.AUDIO_SYNTHESIS_FAILED,
             _logger);
 
-        if (string.IsNullOrWhiteSpace(request.Id))
+        var sentence = new Sentence
         {
-            var sentence = new Sentence
-            {
-                Id = Guid.NewGuid().ToString(),
-                Text = text,
-                Meaning = request.Meaning.Trim(),
-                AudioUrl = audioResult.AudioUrl,
-                Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
-                CreatedBy = currentUserId,
-            };
+            Id = Guid.NewGuid().ToString(),
+            Text = text,
+            Meaning = request.Meaning.Trim(),
+            AudioUrl = newAudioResult.AudioUrl,
+            Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level),
+            CreatedBy = currentUserId,
+        };
 
-            await _unitOfWork.Sentences.AddAsync(sentence);
-            return sentence;
-        }
-
-        var existingSentence = await _unitOfWork.Sentences.GetByIdAsync(request.Id);
-        if (existingSentence == null)
-            throw new AppException(MessageConstants.SentenceMessage.NOT_FOUND, 404);
-
-        existingSentence.Text = text;
-        existingSentence.Meaning = request.Meaning.Trim();
-        existingSentence.AudioUrl = audioResult.AudioUrl;
-        existingSentence.Level = EnumParsingHelper.ParseNullable<JlptLevel>(request.Level);
-        existingSentence.UpdatedAt = DateTime.UtcNow;
-
-        _unitOfWork.Sentences.UpdateAsync(existingSentence);
-        return existingSentence;
+        await _unitOfWork.Sentences.AddAsync(sentence);
+        return sentence;
     }
 }

@@ -7,6 +7,7 @@ public class AiGeneratedQuestionResponse
     public string SectionType { get; set; } = string.Empty;
     public string Topic { get; set; } = string.Empty;
     public string? QuestionGroupId { get; set; }
+    public string? TargetExamTitle { get; set; }
     public string GeneratedData { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? ReviewedBy { get; set; }

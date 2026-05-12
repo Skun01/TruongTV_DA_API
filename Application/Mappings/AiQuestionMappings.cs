@@ -14,6 +14,7 @@ public static class AiQuestionMappings
             SectionType = aiQuestion.SectionType.ToString(),
             Topic = aiQuestion.Topic,
             QuestionGroupId = aiQuestion.QuestionGroupId,
+            TargetExamTitle = aiQuestion.QuestionGroup?.Section?.Exam?.Title,
             GeneratedData = aiQuestion.GeneratedData,
             Status = aiQuestion.Status.ToString(),
             ReviewedBy = aiQuestion.ReviewedBy,
