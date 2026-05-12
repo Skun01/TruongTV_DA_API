@@ -337,8 +337,11 @@ public class VocabularyDetailService : IVocabularyDetailService
         var existingLinks = await _unitOfWork.CardSentences.GetByCardIdAsync(cardId);
         var keptSentenceIds = new HashSet<string>();
 
-        foreach (var request in requests)
+        for (int i = 0; i < requests.Count; i++)
         {
+            var request = requests[i];
+            var position = request.Position > 0 ? request.Position : i + 1;
+
             var sentence = await UpsertVocabularySentenceAsync(request, currentUserId);
             if (!keptSentenceIds.Add(sentence.Id))
                 continue;
@@ -346,7 +349,7 @@ public class VocabularyDetailService : IVocabularyDetailService
             var existingLink = existingLinks.FirstOrDefault(link => link.SentenceId == sentence.Id);
             if (existingLink != null)
             {
-                existingLink.Position = request.Position;
+                existingLink.Position = position;
                 existingLink.BlankWord = StringHelper.NormalizeOptional(request.BlankWord);
                 existingLink.Hint = StringHelper.NormalizeOptional(request.Hint);
                 existingLink.AnswerList = StringHelper.NormalizeAnswerList(request.AnswerList, request.BlankWord);
@@ -358,7 +361,7 @@ public class VocabularyDetailService : IVocabularyDetailService
             {
                 CardId = cardId,
                 SentenceId = sentence.Id,
-                Position = request.Position,
+                Position = position,
                 BlankWord = StringHelper.NormalizeOptional(request.BlankWord),
                 Hint = StringHelper.NormalizeOptional(request.Hint),
                 AnswerList = StringHelper.NormalizeAnswerList(request.AnswerList, request.BlankWord),

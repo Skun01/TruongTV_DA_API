@@ -16,7 +16,7 @@ public class VocabularySentenceUpsertRequestValidator : AbstractValidator<Vocabu
             .MaximumLength(500);
 
         RuleFor(x => x.Position)
-            .GreaterThan(0);
+            .GreaterThanOrEqualTo(0);
 
         RuleFor(x => x.Meaning)
             .NotEmpty()
