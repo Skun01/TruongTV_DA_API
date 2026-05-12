@@ -2,14 +2,19 @@ using Domain.Enums;
 
 namespace Application.Helper;
 
-/// <summary>
-/// Tạo prompt cho AI sinh câu hỏi JLPT — trả về JSON chuẩn
-/// </summary>
 public static class AiPromptHelper
 {
-    private const string SystemPrompt = @"Bạn là chuyên gia soạn đề thi JLPT (Japanese Language Proficiency Test).
-Nhiệm vụ: sinh câu hỏi theo đúng format JLPT thật, chất lượng cao, phù hợp cấp độ.
-Luôn trả về JSON hợp lệ, không markdown, không giải thích thêm ngoài JSON.";
+    public const string PromptVersion = "jlpt-ai-question-v2";
+
+    private const string SystemPrompt = """
+        Bạn là chuyên gia biên soạn câu hỏi JLPT cho người học tiếng Nhật.
+        Mục tiêu là tạo câu hỏi giống phong cách đề thật, hợp level, đúng section, có distractor hợp lý và explanation ngắn bằng tiếng Việt.
+        Luôn trả về JSON hợp lệ, không markdown, không thêm diễn giải ngoài JSON.
+        Mỗi câu phải có đúng 4 lựa chọn A, B, C, D và chỉ đúng 1 đáp án.
+        Nếu là Dokkai thì phải có passage.
+        Nếu là Choukai thì phải có script hội thoại tự nhiên.
+        Hãy tự kiểm tra trước khi trả kết quả để không sai schema.
+        """;
 
     public static string GetSystemPrompt() => SystemPrompt;
 
@@ -25,29 +30,62 @@ Luôn trả về JSON hợp lệ, không markdown, không giải thích thêm ng
         };
     }
 
+    public static string BuildRepairPrompt(
+        JlptLevel level,
+        SectionType sectionType,
+        string topic,
+        int count,
+        string invalidJson,
+        IEnumerable<string> errors)
+    {
+        var errorText = string.Join("\n- ", errors.Where(error => !string.IsNullOrWhiteSpace(error)));
+
+        return $"""
+            JSON trước đó không hợp lệ hoặc không đạt yêu cầu business.
+            Hãy sửa lại và trả về đúng JSON schema, không markdown.
+
+            Các lỗi đã phát hiện:
+            - {errorText}
+
+            JSON lỗi:
+            {invalidJson}
+
+            {BuildPrompt(level, sectionType, topic, count)}
+            """;
+    }
+
     private static string BuildMojiPrompt(JlptLevel level, string topic, int count)
     {
-        return $@"Tạo {count} câu hỏi phần 文字・語彙 (Moji/Goi - Từ vựng & Chữ Hán) cho kỳ thi JLPT {level}.
+        return $@"Tạo {count} câu hỏi phần 文字・語彙 cho JLPT {level}.
 Chủ đề: {topic}
 
 Yêu cầu:
-- Mỗi câu có 1 câu tiếng Nhật chứa từ được gạch chân (đặt trong dấu ＿＿)
-- 4 lựa chọn A, B, C, D — đúng 1 đáp án
-- Dạng bài: đọc kanji, chọn nghĩa, chọn cách đọc, hoặc điền từ vựng phù hợp
-- Giải thích ngắn bằng tiếng Việt
-- Phù hợp trình độ {level}
+- Phù hợp đúng level {level}.
+- Dạng câu hỏi có thể là đọc kanji, chọn nghĩa, chọn cách đọc, hoặc điền từ phù hợp vào ngữ cảnh.
+- Mỗi câu có đúng 4 lựa chọn A B C D và chỉ 1 đáp án đúng.
+- Distractor phải hợp lý, không quá lộ.
+- explanation viết tiếng Việt ngắn, nói rõ vì sao đáp án đúng.
+- skillTags là mảng ngắn như vocabulary, kanji-reading, meaning, context.
+- difficultyScore là số từ 0 đến 100.
 
-Trả về JSON đúng format sau:
+Trả về đúng JSON:
 {{
+  ""difficulty"": {{
+    ""level"": ""{level}"",
+    ""score"": 0,
+    ""reason"": ""string""
+  }},
   ""questions"": [
     {{
-      ""questionText"": ""câu hỏi tiếng Nhật"",
-      ""explanation"": ""giải thích tiếng Việt"",
+      ""questionText"": ""string"",
+      ""explanation"": ""string"",
+      ""difficultyScore"": 0,
+      ""skillTags"": [""string""],
       ""options"": [
-        {{ ""label"": ""A"", ""text"": ""lựa chọn A"", ""isCorrect"": false }},
-        {{ ""label"": ""B"", ""text"": ""lựa chọn B"", ""isCorrect"": true }},
-        {{ ""label"": ""C"", ""text"": ""lựa chọn C"", ""isCorrect"": false }},
-        {{ ""label"": ""D"", ""text"": ""lựa chọn D"", ""isCorrect"": false }}
+        {{ ""label"": ""A"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""B"", ""text"": ""string"", ""isCorrect"": true }},
+        {{ ""label"": ""C"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""D"", ""text"": ""string"", ""isCorrect"": false }}
       ]
     }}
   ]
@@ -56,26 +94,36 @@ Trả về JSON đúng format sau:
 
     private static string BuildBunpouPrompt(JlptLevel level, string topic, int count)
     {
-        return $@"Tạo {count} câu hỏi phần 文法 (Bunpou - Ngữ pháp) cho kỳ thi JLPT {level}.
+        return $@"Tạo {count} câu hỏi phần 文法 cho JLPT {level}.
 Chủ đề: {topic}
 
 Yêu cầu:
-- Dạng điền vào chỗ trống (＿＿＿) hoặc chọn cấu trúc ngữ pháp đúng
-- 4 lựa chọn A, B, C, D — đúng 1 đáp án
-- Câu hỏi phải dùng đúng mẫu ngữ pháp {level}
-- Giải thích ngắn bằng tiếng Việt (nêu rõ mẫu ngữ pháp nào)
+- Dạng điền vào chỗ trống hoặc chọn mẫu ngữ pháp phù hợp.
+- Phải dùng đúng mẫu ngữ pháp ở level {level}.
+- 4 lựa chọn A B C D, chỉ 1 đáp án đúng.
+- Các lựa chọn sai phải gần đúng để kiểm tra hiểu thật.
+- explanation viết tiếng Việt ngắn, nêu rõ mẫu ngữ pháp và lý do đáp án đúng.
+- skillTags là các nhãn như grammar, sentence-completion, nuance, contrast.
+- difficultyScore là số từ 0 đến 100.
 
-Trả về JSON đúng format sau:
+Trả về đúng JSON:
 {{
+  ""difficulty"": {{
+    ""level"": ""{level}"",
+    ""score"": 0,
+    ""reason"": ""string""
+  }},
   ""questions"": [
     {{
-      ""questionText"": ""câu hỏi tiếng Nhật có chỗ trống"",
-      ""explanation"": ""giải thích mẫu ngữ pháp + tiếng Việt"",
+      ""questionText"": ""string"",
+      ""explanation"": ""string"",
+      ""difficultyScore"": 0,
+      ""skillTags"": [""string""],
       ""options"": [
-        {{ ""label"": ""A"", ""text"": ""lựa chọn A"", ""isCorrect"": false }},
-        {{ ""label"": ""B"", ""text"": ""lựa chọn B"", ""isCorrect"": true }},
-        {{ ""label"": ""C"", ""text"": ""lựa chọn C"", ""isCorrect"": false }},
-        {{ ""label"": ""D"", ""text"": ""lựa chọn D"", ""isCorrect"": false }}
+        {{ ""label"": ""A"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""B"", ""text"": ""string"", ""isCorrect"": true }},
+        {{ ""label"": ""C"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""D"", ""text"": ""string"", ""isCorrect"": false }}
       ]
     }}
   ]
@@ -94,27 +142,35 @@ Trả về JSON đúng format sau:
             _ => "200-300"
         };
 
-        return $@"Tạo 1 đoạn văn đọc hiểu tiếng Nhật (読解 - Dokkai) cho kỳ thi JLPT {level}, kèm {count} câu hỏi.
+        return $@"Tạo 1 passage đọc hiểu tiếng Nhật cho JLPT {level}, kèm {count} câu hỏi.
 Chủ đề: {topic}
 
 Yêu cầu:
-- Đoạn văn khoảng {charCount} chữ tiếng Nhật, phù hợp trình độ {level}
-- {count} câu hỏi đọc hiểu, mỗi câu 4 lựa chọn A, B, C, D
-- Câu hỏi kiểm tra: hiểu nội dung chính, chi tiết, suy luận, ý nghĩa từ trong ngữ cảnh
-- Giải thích ngắn bằng tiếng Việt
+- passage dài khoảng {charCount} ký tự tiếng Nhật, phù hợp level {level}.
+- {count} câu hỏi đọc hiểu, mỗi câu đúng 4 lựa chọn A B C D và chỉ 1 đáp án đúng.
+- Câu hỏi nên phủ nhiều kỹ năng: main idea, detail, inference, vocabulary in context.
+- explanation viết tiếng Việt ngắn, tập trung lý do đáp án đúng.
+- difficultyScore là số từ 0 đến 100.
 
-Trả về JSON đúng format sau:
+Trả về đúng JSON:
 {{
-  ""passage"": ""đoạn văn tiếng Nhật"",
+  ""passage"": ""string"",
+  ""difficulty"": {{
+    ""level"": ""{level}"",
+    ""score"": 0,
+    ""reason"": ""string""
+  }},
   ""questions"": [
     {{
-      ""questionText"": ""câu hỏi về đoạn văn"",
-      ""explanation"": ""giải thích tiếng Việt"",
+      ""questionText"": ""string"",
+      ""explanation"": ""string"",
+      ""difficultyScore"": 0,
+      ""skillTags"": [""main-idea""],
       ""options"": [
-        {{ ""label"": ""A"", ""text"": ""lựa chọn A"", ""isCorrect"": false }},
-        {{ ""label"": ""B"", ""text"": ""lựa chọn B"", ""isCorrect"": true }},
-        {{ ""label"": ""C"", ""text"": ""lựa chọn C"", ""isCorrect"": false }},
-        {{ ""label"": ""D"", ""text"": ""lựa chọn D"", ""isCorrect"": false }}
+        {{ ""label"": ""A"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""B"", ""text"": ""string"", ""isCorrect"": true }},
+        {{ ""label"": ""C"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""D"", ""text"": ""string"", ""isCorrect"": false }}
       ]
     }}
   ]
@@ -123,28 +179,36 @@ Trả về JSON đúng format sau:
 
     private static string BuildChoukaiPrompt(JlptLevel level, string topic, int count)
     {
-        return $@"Tạo 1 script hội thoại tiếng Nhật (聴解 - Choukai) cho kỳ thi JLPT {level}, kèm {count} câu hỏi.
+        return $@"Tạo 1 script nghe hiểu tiếng Nhật cho JLPT {level}, kèm {count} câu hỏi.
 Chủ đề: {topic}
 
 Yêu cầu:
-- Script hội thoại tự nhiên giữa 2-3 người, phù hợp trình độ {level}
-- Hội thoại có tình huống rõ ràng (ở trường, công ty, cửa hàng, v.v.)
-- {count} câu hỏi nghe hiểu, mỗi câu 4 lựa chọn A, B, C, D
-- Câu hỏi kiểm tra: hiểu nội dung, mục đích, hành động tiếp theo
-- Giải thích ngắn bằng tiếng Việt
+- script là hội thoại tự nhiên 2-3 người hoặc lời thông báo ngắn, phù hợp level {level}.
+- script nên rõ tình huống, dễ dùng tiếp cho TTS.
+- {count} câu hỏi nghe hiểu, mỗi câu đúng 4 lựa chọn A B C D và chỉ 1 đáp án đúng.
+- Câu hỏi nên kiểm tra purpose, next action, detail, inference.
+- explanation viết tiếng Việt ngắn.
+- difficultyScore là số từ 0 đến 100.
 
-Trả về JSON đúng format sau:
+Trả về đúng JSON:
 {{
-  ""script"": ""script hội thoại tiếng Nhật (mỗi dòng ghi tên người nói: nội dung)"",
+  ""script"": ""string"",
+  ""difficulty"": {{
+    ""level"": ""{level}"",
+    ""score"": 0,
+    ""reason"": ""string""
+  }},
   ""questions"": [
     {{
-      ""questionText"": ""câu hỏi về hội thoại"",
-      ""explanation"": ""giải thích tiếng Việt"",
+      ""questionText"": ""string"",
+      ""explanation"": ""string"",
+      ""difficultyScore"": 0,
+      ""skillTags"": [""listening-detail""],
       ""options"": [
-        {{ ""label"": ""A"", ""text"": ""lựa chọn A"", ""isCorrect"": false }},
-        {{ ""label"": ""B"", ""text"": ""lựa chọn B"", ""isCorrect"": true }},
-        {{ ""label"": ""C"", ""text"": ""lựa chọn C"", ""isCorrect"": false }},
-        {{ ""label"": ""D"", ""text"": ""lựa chọn D"", ""isCorrect"": false }}
+        {{ ""label"": ""A"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""B"", ""text"": ""string"", ""isCorrect"": true }},
+        {{ ""label"": ""C"", ""text"": ""string"", ""isCorrect"": false }},
+        {{ ""label"": ""D"", ""text"": ""string"", ""isCorrect"": false }}
       ]
     }}
   ]

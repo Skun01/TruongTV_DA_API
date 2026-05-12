@@ -27,6 +27,10 @@ public class AiGeneratedQuestionConfiguration : IEntityTypeConfiguration<AiGener
             .IsRequired()
             .HasMaxLength(500);
 
+        builder.Property(x => x.QuestionGroupId)
+            .HasMaxLength(50)
+            .IsRequired(false);
+
         builder.Property(x => x.GeneratedData)
             .IsRequired()
             .HasColumnType("text");
@@ -65,6 +69,11 @@ public class AiGeneratedQuestionConfiguration : IEntityTypeConfiguration<AiGener
         builder.HasOne(x => x.Question)
             .WithMany()
             .HasForeignKey(x => x.QuestionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.QuestionGroup)
+            .WithMany()
+            .HasForeignKey(x => x.QuestionGroupId)
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(x => x.Creator)

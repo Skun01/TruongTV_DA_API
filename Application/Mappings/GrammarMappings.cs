@@ -31,7 +31,7 @@ public static class GrammarMappings
             Relations = relations.Select(r => new GrammarRelationUpsertRequest
             {
                 RelatedId = r.RelatedId,
-                RelationType = r.RelationType.ToString().ToLowerInvariant(),
+                RelationType = r.RelationType.ToString(),
             }).ToList(),
             Resources = resources.Select(r => new GrammarResourceUpsertRequest
             {
@@ -43,7 +43,6 @@ public static class GrammarMappings
                 .OrderBy(cs => cs.Position)
                 .Select(cs => new GrammarSentenceUpsertRequest
                 {
-                    Id = cs.Sentence!.Id,
                     Position = cs.Position,
                     Text = cs.Sentence.Text,
                     Meaning = cs.Sentence.Meaning,

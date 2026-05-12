@@ -13,6 +13,7 @@ public static class AiQuestionMappings
             Level = aiQuestion.Level.ToString(),
             SectionType = aiQuestion.SectionType.ToString(),
             Topic = aiQuestion.Topic,
+            QuestionGroupId = aiQuestion.QuestionGroupId,
             GeneratedData = aiQuestion.GeneratedData,
             Status = aiQuestion.Status.ToString(),
             ReviewedBy = aiQuestion.ReviewedBy,

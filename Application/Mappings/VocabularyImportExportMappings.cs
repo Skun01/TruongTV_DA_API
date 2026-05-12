@@ -36,7 +36,6 @@ public static class VocabularyImportExportMappings
                 .OrderBy(cs => cs.Position)
                 .Select(cs => new VocabularySentenceUpsertRequest
                 {
-                    Id = cs.Sentence!.Id,
                     Position = cs.Position,
                     Text = cs.Sentence.Text,
                     Meaning = cs.Sentence.Meaning,

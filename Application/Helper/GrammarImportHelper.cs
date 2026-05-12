@@ -1,3 +1,4 @@
+using Application.Common;
 using Application.DTOs.Grammar;
 using Application.IRepositories;
 using Domain.Constants;
@@ -17,8 +18,11 @@ public static class GrammarImportHelper
         guide.AllowedValues["sentences[].level"] = ImportTemplateGuideHelper.EnumValues<JlptLevel>();
         guide.FieldNotes["status"] = "Neu bo trong khi import, he thong mac dinh Published.";
         guide.FieldNotes["structures"] = "Bat buoc, it nhat 1 phan tu.";
+        guide.FieldNotes["structures[].pattern"] = "Bat buoc, toi da 1000 ky tu.";
+        guide.FieldNotes["structures[].annotations"] = "Toi da 20 annotation, key chi gom chu, so, '_' hoac '-'.";
         guide.FieldNotes["relations[].relatedId"] = "Phai la cardId cua grammar da ton tai.";
         guide.FieldNotes["relations[].relationType"] = "Bat buoc khi co relation.";
+        guide.FieldNotes["resources[].url"] = "Bat buoc la URL tuyet doi hop le.";
         guide.FieldNotes["sentences[].id"] = "Khong truyen khi import tao moi tu template.";
         guide.FieldNotes["sentences[].position"] = "Bat buoc > 0 de xac dinh thu tu cau trong card.";
         guide.FieldNotes["sentences[].blankWord"] = "Tu/cum tu bi an trong bai tap dien tu (tuy chon).";
@@ -117,6 +121,8 @@ public static class GrammarImportHelper
         ValidateOptionalText(item.Level, "level", 10, previewItem.Errors);
         ValidateOptionalText(item.Status, "status", 20, previewItem.Errors);
         ValidateOptionalText(item.Register, "register", 50, previewItem.Errors);
+        ValidateMarkdownOptional(item.Explanation, "explanation", 10000, previewItem.Errors);
+        ValidateMarkdownOptional(item.Caution, "caution", 5000, previewItem.Errors);
 
         ValidateOptionalEnum<JlptLevel>(item.Level, "level", previewItem.Errors);
         ValidateOptionalEnum<PublishStatus>(item.Status, "status", previewItem.Errors);
@@ -141,6 +147,34 @@ public static class GrammarImportHelper
 
         if (structures.Count > 30)
             errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_LIST_TOO_MANY_ITEMS, "structures"));
+
+        for (var i = 0; i < structures.Count; i++)
+        {
+            var item = structures[i];
+            var path = $"structures[{i}]";
+
+            ValidateMarkdownRequired(item.Pattern, $"{path}.pattern", 1000, errors);
+
+            if (item.Annotations == null)
+                continue;
+
+            if (item.Annotations.Count > 20)
+                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_LIST_TOO_MANY_ITEMS, $"{path}.annotations"));
+
+            foreach (var annotation in item.Annotations)
+            {
+                var key = annotation.Key?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(key)
+                    || key.Length > 20
+                    || key.Any(ch => !char.IsLetterOrDigit(ch) && ch != '_' && ch != '-'))
+                {
+                    errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_FIELD_INVALID, $"{path}.annotations"));
+                    break;
+                }
+
+                ValidateMarkdownRequired(annotation.Value, $"{path}.annotations.{key}", 1000, errors);
+            }
+        }
     }
 
     private static void ValidateResources(List<GrammarResourceUpsertRequest>? resources, List<string> errors)
@@ -156,6 +190,12 @@ public static class GrammarImportHelper
             var item = resources[i];
             ValidateRequiredText(item.Title, $"resources[{i}].title", 300, errors);
             ValidateRequiredText(item.Url, $"resources[{i}].url", 2000, errors);
+
+            if (!string.IsNullOrWhiteSpace(item.Url)
+                && !Uri.TryCreate(item.Url.Trim(), UriKind.Absolute, out _))
+            {
+                errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_FIELD_INVALID, $"resources[{i}].url"));
+            }
         }
     }
 
@@ -275,6 +315,33 @@ public static class GrammarImportHelper
 
         if (value.Trim().Length > maxLength)
             errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.IMPORT_FIELD_TOO_LONG, fieldName));
+    }
+
+    private static void ValidateMarkdownRequired(string? value, string fieldName, int maxLength, List<string> errors)
+    {
+        try
+        {
+            GrammarMarkdownHelper.NormalizeRequired(value ?? string.Empty, fieldName, maxLength);
+        }
+        catch (AppException)
+        {
+            errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.INVALID_RICH_TEXT, fieldName));
+        }
+    }
+
+    private static void ValidateMarkdownOptional(string? value, string fieldName, int maxLength, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        try
+        {
+            GrammarMarkdownHelper.NormalizeOptional(value, fieldName, maxLength);
+        }
+        catch (AppException)
+        {
+            errors.Add(BuildFieldCode(MessageConstants.GrammarMessage.INVALID_RICH_TEXT, fieldName));
+        }
     }
 
     private static void ValidateOptionalEnum<TEnum>(

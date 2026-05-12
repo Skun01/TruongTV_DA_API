@@ -13,4 +13,5 @@ public interface IQuestionRepository : IRepository<Question>
         int pageSize);
 
     Task<Question?> GetDetailByIdAsync(string id);
+    Task<List<Question>> GetDuplicateCandidatesAsync(JlptLevel level, SectionType sectionType, int limit = 200);
 }

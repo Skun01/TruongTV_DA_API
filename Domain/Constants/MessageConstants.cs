@@ -211,6 +211,8 @@ public static class MessageConstants
         public const string NOT_FOUND = "AiQuestion_NotFound_404";
         public const string ALREADY_REVIEWED = "AiQuestion_AlreadyReviewed_400";
         public const string GENERATION_FAILED = "AiQuestion_GenerationFailed_500";
+        public const string INVALID_GENERATED_DATA = "AiQuestion_InvalidGeneratedData_400";
+        public const string TARGET_GROUP_MISMATCH = "AiQuestion_TargetGroupMismatch_400";
         public const string TTS_FAILED = "AiQuestion_TtsFailed_500";
         public const string NO_AUDIO_SCRIPT = "AiQuestion_NoAudioScript_400";
     }

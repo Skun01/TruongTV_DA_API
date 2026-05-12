@@ -57,4 +57,18 @@ public class QuestionRepository : Repository<Question>, IQuestionRepository
                 .ThenInclude(g => g.Section)
             .FirstOrDefaultAsync(x => x.Id == id);
     }
+
+    public async Task<List<Question>> GetDuplicateCandidatesAsync(JlptLevel level, SectionType sectionType, int limit = 200)
+    {
+        return await _context.Questions
+            .AsNoTracking()
+            .Include(x => x.Options)
+            .Include(x => x.Group)
+                .ThenInclude(group => group.Section)
+                    .ThenInclude(section => section.Exam)
+            .Where(x => x.Group.Section.SectionType == sectionType && x.Group.Section.Exam.Level == level)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(limit)
+            .ToListAsync();
+    }
 }

@@ -49,6 +49,7 @@ public class AiGeneratedQuestionRepository : Repository<AiGeneratedQuestion>, IA
         return await _context.AiGeneratedQuestions
             .Include(x => x.Creator)
             .Include(x => x.Reviewer)
+            .Include(x => x.QuestionGroup)
             .Include(x => x.Question)
                 .ThenInclude(q => q!.Options)
             .FirstOrDefaultAsync(x => x.Id == id);

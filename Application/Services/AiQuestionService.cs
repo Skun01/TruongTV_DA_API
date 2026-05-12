@@ -16,6 +16,7 @@ public class AiQuestionService : IAiQuestionService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAiGenerationService _aiGenerationService;
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
     public AiQuestionService(IUnitOfWork unitOfWork, IAiGenerationService aiGenerationService)
     {
@@ -27,13 +28,41 @@ public class AiQuestionService : IAiQuestionService
     {
         var level = EnumParsingHelper.ParseRequired<JlptLevel>(request.Level);
         var sectionType = EnumParsingHelper.ParseRequired<SectionType>(request.SectionType);
+        var topic = request.Topic.Trim();
+        var targetGroup = await ValidateTargetGroupAsync(request.QuestionGroupId, level, sectionType);
 
-        // Gọi AI API sinh câu hỏi
-        var generatedJson = await _aiGenerationService.GenerateQuestionsJsonAsync(
-            level, sectionType, request.Topic.Trim(), request.Count);
+        var generationResult = await _aiGenerationService.GenerateStructuredJsonAsync(
+            AiPromptHelper.GetSystemPrompt(),
+            AiPromptHelper.BuildPrompt(level, sectionType, topic, request.Count));
 
-        // Parse JSON để tách từng câu hỏi thành record riêng
-        var parsedData = JsonSerializer.Deserialize<AiGeneratedQuestionData>(generatedJson);
+        var generatedJson = generationResult.Content;
+        if (!JlptQuestionGenerationValidationHelper.TryParseAndValidate(
+                generatedJson,
+                level,
+                sectionType,
+                request.Count,
+                out var parsedData,
+                out var errors,
+                out var warnings))
+        {
+            var repairResult = await _aiGenerationService.GenerateStructuredJsonAsync(
+                AiPromptHelper.GetSystemPrompt(),
+                AiPromptHelper.BuildRepairPrompt(level, sectionType, topic, request.Count, generatedJson, errors));
+
+            generatedJson = repairResult.Content;
+
+            if (!JlptQuestionGenerationValidationHelper.TryParseAndValidate(
+                    generatedJson,
+                    level,
+                    sectionType,
+                    request.Count,
+                    out parsedData,
+                    out errors,
+                    out warnings))
+            {
+                throw new AppException(MessageConstants.AiQuestionMessage.INVALID_GENERATED_DATA, 400, details: errors);
+            }
+        }
 
         var generatedQuestions = new List<AiGeneratedQuestion>();
 
@@ -41,21 +70,25 @@ public class AiQuestionService : IAiQuestionService
         {
             foreach (var questionItem in parsedData.Questions)
             {
-                // Mỗi câu hỏi lưu riêng — kèm passage/script nếu có (Dokkai/Choukai)
                 var singleQuestionData = new AiGeneratedQuestionData
                 {
                     Passage = parsedData.Passage,
                     Script = parsedData.Script,
+                    Difficulty = parsedData.Difficulty,
                     Questions = new List<AiGeneratedQuestionItem> { questionItem }
                 };
+
+                var duplicates = await GetDuplicateCandidatesAsync(level, sectionType, singleQuestionData);
+                JlptQuestionGenerationValidationHelper.ApplyMetadata(singleQuestionData, level, sectionType, warnings, duplicates);
 
                 var aiQuestion = new AiGeneratedQuestion
                 {
                     Id = Guid.NewGuid().ToString(),
                     Level = level,
                     SectionType = sectionType,
-                    Topic = request.Topic.Trim(),
-                    GeneratedData = JsonSerializer.Serialize(singleQuestionData),
+                    Topic = topic,
+                    QuestionGroupId = targetGroup?.Id,
+                    GeneratedData = JsonSerializer.Serialize(singleQuestionData, JsonOptions),
                     Status = AiQuestionStatus.Pending,
                     CreatedBy = userId,
                 };
@@ -119,9 +152,17 @@ public class AiQuestionService : IAiQuestionService
         if (aiQuestion.Status != AiQuestionStatus.Pending && aiQuestion.Status != AiQuestionStatus.Edited)
             throw new AppException(MessageConstants.AiQuestionMessage.ALREADY_REVIEWED, 400);
 
-        // Câu hỏi AI chỉ được duyệt ở bước này.
-        // Question thực tế chỉ được tạo khi đã có group target hợp lệ.
-        aiQuestion.QuestionId = null;
+        var parsedData = JlptQuestionGenerationValidationHelper.EnsureValidOrThrow(
+            aiQuestion.GeneratedData,
+            aiQuestion.Level,
+            aiQuestion.SectionType,
+            1);
+
+        if (!string.IsNullOrWhiteSpace(aiQuestion.QuestionGroupId))
+        {
+            var createdQuestion = await CreateQuestionFromAiAsync(aiQuestion, parsedData);
+            aiQuestion.QuestionId = createdQuestion.Id;
+        }
 
         aiQuestion.Status = AiQuestionStatus.Approved;
         aiQuestion.ReviewedBy = userId;
@@ -167,7 +208,16 @@ public class AiQuestionService : IAiQuestionService
         if (aiQuestion.Status == AiQuestionStatus.Approved || aiQuestion.Status == AiQuestionStatus.Rejected)
             throw new AppException(MessageConstants.AiQuestionMessage.ALREADY_REVIEWED, 400);
 
-        aiQuestion.GeneratedData = request.GeneratedData;
+        var parsedData = JlptQuestionGenerationValidationHelper.EnsureValidOrThrow(
+            request.GeneratedData,
+            aiQuestion.Level,
+            aiQuestion.SectionType,
+            1);
+
+        var duplicates = await GetDuplicateCandidatesAsync(aiQuestion.Level, aiQuestion.SectionType, parsedData);
+        JlptQuestionGenerationValidationHelper.ApplyMetadata(parsedData, aiQuestion.Level, aiQuestion.SectionType, Array.Empty<string>(), duplicates);
+
+        aiQuestion.GeneratedData = JlptQuestionGenerationValidationHelper.Serialize(parsedData);
         aiQuestion.Status = AiQuestionStatus.Edited;
         aiQuestion.UpdatedAt = DateTime.UtcNow;
 
@@ -178,5 +228,97 @@ public class AiQuestionService : IAiQuestionService
             ?? throw new ApplicationException(MessageConstants.AiQuestionMessage.NOT_FOUND);
 
         return result.ToResponse();
+    }
+
+    private async Task<QuestionGroup?> ValidateTargetGroupAsync(string? questionGroupId, JlptLevel level, SectionType sectionType)
+    {
+        if (string.IsNullOrWhiteSpace(questionGroupId))
+            return null;
+
+        var group = await _unitOfWork.QuestionGroups.GetByIdAsync(questionGroupId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.GROUP_NOT_FOUND);
+
+        var section = await _unitOfWork.ExamSections.GetByIdAsync(group.SectionId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.SECTION_NOT_FOUND);
+
+        var exam = await _unitOfWork.Exams.GetByIdAsync(section.ExamId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.NOT_FOUND);
+
+        if (section.SectionType != sectionType || exam.Level != level)
+            throw new AppException(MessageConstants.AiQuestionMessage.TARGET_GROUP_MISMATCH, 400);
+
+        if (exam.Status == PublishStatus.Published)
+            throw new AppException(MessageConstants.ExamMessage.CANNOT_MODIFY_PUBLISHED, 400);
+
+        return group;
+    }
+
+    private async Task<List<AiGeneratedQuestionDuplicateCandidate>> GetDuplicateCandidatesAsync(
+        JlptLevel level,
+        SectionType sectionType,
+        AiGeneratedQuestionData data)
+    {
+        var existingQuestions = await _unitOfWork.Questions.GetDuplicateCandidatesAsync(level, sectionType);
+        return JlptQuestionDuplicateHelper.FindDuplicates(data, existingQuestions);
+    }
+
+    private async Task<Question> CreateQuestionFromAiAsync(AiGeneratedQuestion aiQuestion, AiGeneratedQuestionData parsedData)
+    {
+        var groupId = aiQuestion.QuestionGroupId
+            ?? throw new AppException(MessageConstants.AiQuestionMessage.TARGET_GROUP_MISMATCH, 400);
+
+        var group = await _unitOfWork.QuestionGroups.GetWithQuestionsAsync(groupId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.GROUP_NOT_FOUND);
+
+        var section = await _unitOfWork.ExamSections.GetByIdAsync(group.SectionId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.SECTION_NOT_FOUND);
+
+        var exam = await _unitOfWork.Exams.GetByIdAsync(section.ExamId)
+            ?? throw new ApplicationException(MessageConstants.ExamMessage.NOT_FOUND);
+
+        if (section.SectionType != aiQuestion.SectionType || exam.Level != aiQuestion.Level)
+            throw new AppException(MessageConstants.AiQuestionMessage.TARGET_GROUP_MISMATCH, 400);
+
+        if (exam.Status == PublishStatus.Published)
+            throw new AppException(MessageConstants.ExamMessage.CANNOT_MODIFY_PUBLISHED, 400);
+
+        var singleQuestion = parsedData.Questions.Single();
+        var nextOrderIndex = group.Questions.Count == 0 ? 1 : group.Questions.Max(question => question.OrderIndex) + 1;
+
+        if (aiQuestion.SectionType == SectionType.Dokkai && string.IsNullOrWhiteSpace(group.PassageText))
+            group.PassageText = parsedData.Passage;
+
+        if (aiQuestion.SectionType == SectionType.Choukai && string.IsNullOrWhiteSpace(group.AudioScript))
+            group.AudioScript = parsedData.Script;
+
+        group.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.QuestionGroups.UpdateAsync(group);
+
+        var question = new Question
+        {
+            Id = Guid.NewGuid().ToString(),
+            GroupId = group.Id,
+            QuestionText = singleQuestion.QuestionText,
+            Explanation = singleQuestion.Explanation,
+            Score = 1,
+            OrderIndex = nextOrderIndex,
+        };
+
+        foreach (var option in singleQuestion.Options)
+        {
+            var label = EnumParsingHelper.ParseRequired<OptionLabel>(option.Label);
+            question.Options.Add(new QuestionOption
+            {
+                Id = Guid.NewGuid().ToString(),
+                QuestionId = question.Id,
+                Label = label,
+                Text = option.Text,
+                OptionType = OptionType.Text,
+                IsCorrect = option.IsCorrect,
+            });
+        }
+
+        await _unitOfWork.Questions.AddAsync(question);
+        return question;
     }
 }

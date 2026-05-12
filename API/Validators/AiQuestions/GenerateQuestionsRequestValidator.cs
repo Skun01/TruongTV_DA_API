@@ -24,5 +24,9 @@ public class GenerateQuestionsRequestValidator : AbstractValidator<GenerateQuest
 
         RuleFor(x => x.Count)
             .InclusiveBetween(1, 20).WithMessage("Count must be between 1 and 20.");
+
+        RuleFor(x => x.QuestionGroupId)
+            .MaximumLength(50).WithMessage("QuestionGroupId must not exceed 50 characters.")
+            .When(x => !string.IsNullOrWhiteSpace(x.QuestionGroupId));
     }
 }
