@@ -1,6 +1,7 @@
 using Application.Common;
 using Application.DTOs.Cards;
 using Application.IServices;
+using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,5 +42,17 @@ public class CardsController : BaseController
         var result = await _cardService.ExplainAsync(cardId, request ?? new ExplainCardRequest());
 
         return ApiResponse<CardExplanationResponse>.SuccessResponse(result);
+    }
+
+    /// <summary>
+    /// Gợi ý card theo chủ đề. Chỉ trả card Published.
+    /// </summary>
+    [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
+    [HttpGet("suggest-by-topic")]
+    public async Task<ApiResponse<List<CardListItemResponse>>> SuggestByTopic([FromQuery] TopicSuggestQuery query)
+    {
+        var (items, meta) = await _cardService.SuggestByTopicAsync(query);
+
+        return ApiResponse<List<CardListItemResponse>>.SuccessResponse(items, meta);
     }
 }

@@ -19,6 +19,9 @@ public class ConversationsController : BaseController
         _conversationService = conversationService;
     }
 
+    /// <summary>
+    /// Lấy danh sách kịch bản hội thoại
+    /// </summary>
     [HttpGet("scenarios")]
     [AllowAnonymous]
     public ApiResponse<ScenarioListResponse> GetScenarios()
@@ -27,6 +30,9 @@ public class ConversationsController : BaseController
         return ApiResponse<ScenarioListResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy chi tiết cuộc hội thoại
+    /// </summary>
     [HttpGet("{conversationId}")]
     public async Task<ApiResponse<ConversationDetailResponse>> GetConversation(
         [FromRoute] string conversationId,
@@ -37,6 +43,9 @@ public class ConversationsController : BaseController
         return ApiResponse<ConversationDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Bắt đầu cuộc hội thoại mới
+    /// </summary>
     [HttpPost("start")]
     public async Task<ApiResponse<StartConversationResponse>> StartConversation(
         [FromBody] StartConversationRequest request,
@@ -47,6 +56,9 @@ public class ConversationsController : BaseController
         return ApiResponse<StartConversationResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Gửi tin nhắn trong cuộc hội thoại
+    /// </summary>
     [HttpPost("{conversationId}/message")]
     public async Task<ApiResponse<SendMessageResponse>> SendMessage(
         [FromRoute] string conversationId,
@@ -58,6 +70,9 @@ public class ConversationsController : BaseController
         return ApiResponse<SendMessageResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Kết thúc cuộc hội thoại và lấy đánh giá
+    /// </summary>
     [HttpPost("{conversationId}/complete")]
     public async Task<ApiResponse<ConversationResultResponse>> CompleteConversation(
         [FromRoute] string conversationId,
@@ -68,6 +83,9 @@ public class ConversationsController : BaseController
         return ApiResponse<ConversationResultResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy kết quả đánh giá cuộc hội thoại
+    /// </summary>
     [HttpGet("{conversationId}/result")]
     public async Task<ApiResponse<ConversationResultResponse>> GetResult(
         [FromRoute] string conversationId,
@@ -78,6 +96,9 @@ public class ConversationsController : BaseController
         return ApiResponse<ConversationResultResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tìm kiếm lịch sử hội thoại
+    /// </summary>
     [HttpGet]
     public async Task<ApiResponse<List<ConversationListItemResponse>>> SearchHistory([FromQuery] ConversationHistoryQuery query)
     {
@@ -86,6 +107,9 @@ public class ConversationsController : BaseController
         return ApiResponse<List<ConversationListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Xóa cuộc hội thoại
+    /// </summary>
     [HttpDelete("{conversationId}")]
     public async Task<ApiResponse<bool>> DeleteConversation([FromRoute] string conversationId)
     {

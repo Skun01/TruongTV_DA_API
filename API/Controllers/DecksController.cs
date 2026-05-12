@@ -17,6 +17,9 @@ public class DecksController : BaseController
         _deckUserService = deckUserService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách bộ thẻ công khai
+    /// </summary>
     [AllowAnonymous]
     [HttpGet]
     public async Task<ApiResponse<List<DeckListItemResponse>>> Search([FromQuery] DeckListQuery query)
@@ -26,6 +29,9 @@ public class DecksController : BaseController
         return ApiResponse<List<DeckListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết bộ thẻ
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("{deckId}")]
     public async Task<ApiResponse<DeckDetailResponse>> GetDetail([FromRoute] string deckId)
@@ -35,6 +41,9 @@ public class DecksController : BaseController
         return ApiResponse<DeckDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Đánh dấu / bỏ đánh dấu bộ thẻ
+    /// </summary>
     [Authorize]
     [HttpPost("{deckId}/bookmark")]
     public async Task<ApiResponse<DeckBookmarkResponse>> ToggleBookmark([FromRoute] string deckId, [FromBody] ToggleDeckBookmarkRequest request)
@@ -44,6 +53,9 @@ public class DecksController : BaseController
         return ApiResponse<DeckBookmarkResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Fork bộ thẻ về bộ sưu tập cá nhân
+    /// </summary>
     [Authorize]
     [HttpPost("{deckId}/fork")]
     public async Task<ApiResponse<DeckDetailResponse>> Fork([FromRoute] string deckId)

@@ -73,4 +73,10 @@ public interface ICardRepository : IRepository<Card>
 	Task<Card?> GetStudyCardByIdAsync(string cardId);
 	Task<List<Card>> GetStudyCardsByIdsAsync(List<string> cardIds);
 	Task<Card?> GetExplainCardByIdAsync(string cardId);
+	Task<(List<Card> Items, int Total)> SuggestCardsByTopicAsync(
+		List<string> keywords,
+		CardType? cardType,
+		JlptLevel? level,
+		int page,
+		int pageSize);
 }

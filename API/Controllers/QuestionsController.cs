@@ -19,6 +19,9 @@ public class QuestionsController : BaseController
         _questionService = questionService;
     }
 
+    /// <summary>
+    /// Tạo câu hỏi mới
+    /// </summary>
     [HttpPost]
     public async Task<ApiResponse<QuestionResponse>> CreateQuestion([FromBody] CreateQuestionRequest request)
     {
@@ -26,6 +29,9 @@ public class QuestionsController : BaseController
         return ApiResponse<QuestionResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách câu hỏi
+    /// </summary>
     [HttpGet]
     public async Task<ApiResponse<List<QuestionResponse>>> SearchQuestions([FromQuery] QuestionSearchQuery query)
     {
@@ -33,6 +39,9 @@ public class QuestionsController : BaseController
         return ApiResponse<List<QuestionResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết câu hỏi
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ApiResponse<QuestionResponse>> GetQuestionDetail([FromRoute] string id)
     {
@@ -40,6 +49,9 @@ public class QuestionsController : BaseController
         return ApiResponse<QuestionResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật câu hỏi
+    /// </summary>
     [HttpPut("{id}")]
     public async Task<ApiResponse<QuestionResponse>> UpdateQuestion(
         [FromRoute] string id,
@@ -49,6 +61,9 @@ public class QuestionsController : BaseController
         return ApiResponse<QuestionResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa câu hỏi
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<ApiResponse<string>> DeleteQuestion([FromRoute] string id)
     {
@@ -56,6 +71,9 @@ public class QuestionsController : BaseController
         return ApiResponse<string>.SuccessResponse("Deleted");
     }
 
+    /// <summary>
+    /// Tạo hàng loạt câu hỏi trong nhóm
+    /// </summary>
     [HttpPost("groups/{groupId}/bulk")]
     public async Task<ApiResponse<List<QuestionResponse>>> BulkCreateQuestions(
         [FromRoute] string groupId,
@@ -65,6 +83,9 @@ public class QuestionsController : BaseController
         return ApiResponse<List<QuestionResponse>>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Sắp xếp lại thứ tự câu hỏi trong nhóm
+    /// </summary>
     [HttpPut("groups/{groupId}/reorder")]
     public async Task<ApiResponse<string>> ReorderQuestions(
         [FromRoute] string groupId,

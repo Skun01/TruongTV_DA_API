@@ -20,6 +20,9 @@ public class AdminShadowingController : BaseController
         _adminShadowingService = adminShadowingService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách chủ đề shadowing (admin)
+    /// </summary>
     [HttpGet("topics")]
     public async Task<ApiResponse<List<ShadowingTopicListItemResponse>>> SearchTopics([FromQuery] AdminShadowingTopicListQuery query)
     {
@@ -27,6 +30,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<List<ShadowingTopicListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết chủ đề shadowing (admin)
+    /// </summary>
     [HttpGet("topics/{topicId}")]
     public async Task<ApiResponse<ShadowingTopicDetailResponse>> GetTopicDetail([FromRoute] string topicId)
     {
@@ -34,6 +40,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tạo chủ đề shadowing mới (admin)
+    /// </summary>
     [HttpPost("topics")]
     public async Task<ApiResponse<ShadowingTopicDetailResponse>> CreateTopic([FromBody] CreateShadowingTopicRequest request)
     {
@@ -41,6 +50,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật chủ đề shadowing (admin)
+    /// </summary>
     [HttpPatch("topics/{topicId}")]
     public async Task<ApiResponse<ShadowingTopicDetailResponse>> UpdateTopic([FromRoute] string topicId, [FromBody] UpdateShadowingTopicRequest request)
     {
@@ -48,6 +60,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tìm kiếm câu có thể gắn vào chủ đề
+    /// </summary>
     [HttpGet("topics/{topicId}/available-sentences")]
     public async Task<ApiResponse<List<AdminShadowingAvailableSentenceResponse>>> SearchAvailableSentences(
         [FromRoute] string topicId,
@@ -57,6 +72,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<List<AdminShadowingAvailableSentenceResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Xóa chủ đề shadowing (admin)
+    /// </summary>
     [HttpDelete("topics/{topicId}")]
     public async Task<ApiResponse<bool>> DeleteTopic([FromRoute] string topicId)
     {
@@ -64,6 +82,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<bool>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Gắn câu vào chủ đề shadowing
+    /// </summary>
     [HttpPost("topics/{topicId}/sentences")]
     public async Task<ApiResponse<ShadowingTopicSentenceResponse>> AttachSentence([FromRoute] string topicId, [FromBody] AttachShadowingTopicSentenceRequest request)
     {
@@ -71,6 +92,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicSentenceResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Gắn hàng loạt câu vào chủ đề shadowing
+    /// </summary>
     [HttpPost("topics/{topicId}/sentences/bulk")]
     public async Task<ApiResponse<List<ShadowingTopicSentenceResponse>>> BulkAttachSentences(
         [FromRoute] string topicId,
@@ -80,6 +104,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<List<ShadowingTopicSentenceResponse>>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật câu trong chủ đề shadowing
+    /// </summary>
     [HttpPut("topics/{topicId}/sentences/{sentenceId}")]
     public async Task<ApiResponse<ShadowingTopicSentenceResponse>> UpdateSentence(
         [FromRoute] string topicId,
@@ -90,6 +117,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicSentenceResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa câu khỏi chủ đề shadowing
+    /// </summary>
     [HttpDelete("topics/{topicId}/sentences/{sentenceId}")]
     public async Task<ApiResponse<bool>> DeleteSentence([FromRoute] string topicId, [FromRoute] string sentenceId)
     {
@@ -97,6 +127,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<bool>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Sắp xếp lại thứ tự câu trong chủ đề shadowing
+    /// </summary>
     [HttpPost("topics/{topicId}/sentences/reorder")]
     public async Task<ApiResponse<List<ShadowingTopicSentenceResponse>>> ReorderSentences(
         [FromRoute] string topicId,
@@ -106,6 +139,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<List<ShadowingTopicSentenceResponse>>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy thống kê chủ đề shadowing
+    /// </summary>
     [HttpGet("topics/{topicId}/analytics")]
     public async Task<ApiResponse<ShadowingTopicAnalyticsResponse>> GetTopicAnalytics([FromRoute] string topicId)
     {
@@ -113,6 +149,9 @@ public class AdminShadowingController : BaseController
         return ApiResponse<ShadowingTopicAnalyticsResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy thống kê từng câu trong chủ đề shadowing
+    /// </summary>
     [HttpGet("topics/{topicId}/analytics/sentences")]
     public async Task<ApiResponse<List<ShadowingTopicSentenceAnalyticsResponse>>> GetTopicSentenceAnalytics([FromRoute] string topicId)
     {

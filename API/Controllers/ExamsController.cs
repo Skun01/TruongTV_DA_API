@@ -22,6 +22,9 @@ public class ExamsController : BaseController
         _examService = examService;
     }
 
+    /// <summary>
+    /// Tạo đề thi mới
+    /// </summary>
     [HttpPost]
     public async Task<ApiResponse<ExamDetailResponse>> CreateExam([FromBody] CreateExamRequest request)
     {
@@ -30,6 +33,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tải template import đề thi
+    /// </summary>
     [HttpGet("import-template")]
     public async Task<IActionResult> DownloadImportTemplate()
     {
@@ -37,6 +43,9 @@ public class ExamsController : BaseController
         return CreateJsonFileResult(result, "jlpt-exam-import-template.json");
     }
 
+    /// <summary>
+    /// Lấy hướng dẫn import đề thi
+    /// </summary>
     [HttpGet("import-guide")]
     public async Task<ApiResponse<ExamImportTemplateGuide>> GetImportGuide()
     {
@@ -44,6 +53,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamImportTemplateGuide>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xuất dữ liệu đề thi
+    /// </summary>
     [HttpGet("{id}/export")]
     public async Task<IActionResult> Export([FromRoute] string id)
     {
@@ -52,6 +64,9 @@ public class ExamsController : BaseController
         return CreateJsonFileResult(result, $"jlpt-exam-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
     }
 
+    /// <summary>
+    /// Xem trước dữ liệu import đề thi
+    /// </summary>
     [HttpPost("preview-import")]
     public async Task<ApiResponse<ExamImportPreviewResponse>> PreviewImport([FromBody] ImportExamRequest request)
     {
@@ -59,6 +74,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamImportPreviewResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xác nhận import đề thi
+    /// </summary>
     [HttpPost("commit-import")]
     public async Task<ApiResponse<ExamImportCommitResponse>> CommitImport([FromBody] ImportExamRequest request)
     {
@@ -67,6 +85,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamImportCommitResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách đề thi
+    /// </summary>
     [HttpGet]
     public async Task<ApiResponse<List<ExamListItemResponse>>> SearchExams([FromQuery] ExamSearchQuery query)
     {
@@ -74,6 +95,9 @@ public class ExamsController : BaseController
         return ApiResponse<List<ExamListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết đề thi
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ApiResponse<ExamDetailResponse>> GetExamDetail([FromRoute] string id)
     {
@@ -81,6 +105,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật đề thi
+    /// </summary>
     [HttpPut("{id}")]
     public async Task<ApiResponse<ExamDetailResponse>> UpdateExam([FromRoute] string id, [FromBody] UpdateExamRequest request)
     {
@@ -88,6 +115,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xuất bản đề thi
+    /// </summary>
     [HttpPatch("{id}/publish")]
     public async Task<ApiResponse<string>> PublishExam([FromRoute] string id)
     {
@@ -95,6 +125,9 @@ public class ExamsController : BaseController
         return ApiResponse<string>.SuccessResponse("Published");
     }
 
+    /// <summary>
+    /// Xóa đề thi
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<ApiResponse<string>> DeleteExam([FromRoute] string id)
     {
@@ -102,6 +135,9 @@ public class ExamsController : BaseController
         return ApiResponse<string>.SuccessResponse("Deleted");
     }
 
+    /// <summary>
+    /// Tạo section trong đề thi
+    /// </summary>
     // Section endpoints
     [HttpPost("{examId}/sections")]
     public async Task<ApiResponse<ExamSectionResponse>> CreateSection(
@@ -112,6 +148,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamSectionResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật section trong đề thi
+    /// </summary>
     [HttpPut("{examId}/sections/{sectionId}")]
     public async Task<ApiResponse<ExamSectionResponse>> UpdateSection(
         [FromRoute] string examId,
@@ -122,6 +161,9 @@ public class ExamsController : BaseController
         return ApiResponse<ExamSectionResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa section trong đề thi
+    /// </summary>
     [HttpDelete("{examId}/sections/{sectionId}")]
     public async Task<ApiResponse<string>> DeleteSection(
         [FromRoute] string examId,
@@ -131,6 +173,9 @@ public class ExamsController : BaseController
         return ApiResponse<string>.SuccessResponse("Deleted");
     }
 
+    /// <summary>
+    /// Tạo nhóm câu hỏi trong section
+    /// </summary>
     // QuestionGroup endpoints
     [HttpPost("sections/{sectionId}/groups")]
     public async Task<ApiResponse<QuestionGroupResponse>> CreateQuestionGroup(
@@ -141,6 +186,9 @@ public class ExamsController : BaseController
         return ApiResponse<QuestionGroupResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật nhóm câu hỏi trong section
+    /// </summary>
     [HttpPut("sections/{sectionId}/groups/{groupId}")]
     public async Task<ApiResponse<QuestionGroupResponse>> UpdateQuestionGroup(
         [FromRoute] string sectionId,
@@ -151,6 +199,9 @@ public class ExamsController : BaseController
         return ApiResponse<QuestionGroupResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa nhóm câu hỏi trong section
+    /// </summary>
     [HttpDelete("sections/{sectionId}/groups/{groupId}")]
     public async Task<ApiResponse<string>> DeleteQuestionGroup(
         [FromRoute] string sectionId,

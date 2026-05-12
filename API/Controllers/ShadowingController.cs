@@ -18,6 +18,9 @@ public class ShadowingController : BaseController
         _shadowingService = shadowingService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách chủ đề shadowing
+    /// </summary>
     [HttpGet("topics")]
     public async Task<ApiResponse<List<ShadowingTopicListItemResponse>>> SearchTopics([FromQuery] ShadowingTopicListQuery query)
     {
@@ -26,6 +29,9 @@ public class ShadowingController : BaseController
         return ApiResponse<List<ShadowingTopicListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết chủ đề shadowing
+    /// </summary>
     [HttpGet("topics/{topicId}")]
     public async Task<ApiResponse<ShadowingTopicDetailResponse>> GetTopicDetail([FromRoute] string topicId)
     {
@@ -34,6 +40,9 @@ public class ShadowingController : BaseController
         return ApiResponse<ShadowingTopicDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy tiến độ học chủ đề shadowing
+    /// </summary>
     [HttpGet("topics/{topicId}/progress")]
     public async Task<ApiResponse<ShadowingTopicProgressResponse>> GetTopicProgress([FromRoute] string topicId)
     {
@@ -42,6 +51,9 @@ public class ShadowingController : BaseController
         return ApiResponse<ShadowingTopicProgressResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy tiến độ từng câu trong chủ đề shadowing
+    /// </summary>
     [HttpGet("topics/{topicId}/sentences/progress")]
     public async Task<ApiResponse<List<ShadowingTopicSentenceProgressItemResponse>>> GetTopicSentenceProgress([FromRoute] string topicId)
     {
@@ -50,6 +62,9 @@ public class ShadowingController : BaseController
         return ApiResponse<List<ShadowingTopicSentenceProgressItemResponse>>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy vị trí tiếp tục học shadowing
+    /// </summary>
     [HttpGet("topics/{topicId}/resume")]
     public async Task<ApiResponse<ShadowingTopicResumeResponse>> GetTopicResume([FromRoute] string topicId)
     {
@@ -58,6 +73,9 @@ public class ShadowingController : BaseController
         return ApiResponse<ShadowingTopicResumeResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Nộp bài luyện shadowing
+    /// </summary>
     [HttpPost("attempts")]
     [RequestSizeLimit(20 * 1024 * 1024)]
     public async Task<ApiResponse<ShadowingAttemptResponse>> SubmitAttempt(
@@ -83,6 +101,9 @@ public class ShadowingController : BaseController
         return ApiResponse<ShadowingAttemptResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy chi tiết lần luyện shadowing
+    /// </summary>
     [HttpGet("attempts/{attemptId}")]
     public async Task<ApiResponse<ShadowingAttemptResponse>> GetAttemptDetail([FromRoute] string attemptId)
     {
@@ -91,6 +112,9 @@ public class ShadowingController : BaseController
         return ApiResponse<ShadowingAttemptResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy lịch sử luyện shadowing
+    /// </summary>
     [HttpGet("attempts/history")]
     public async Task<ApiResponse<List<ShadowingAttemptHistoryItemResponse>>> GetAttemptHistory([FromQuery] ShadowingAttemptHistoryQuery query)
     {
@@ -99,6 +123,9 @@ public class ShadowingController : BaseController
         return ApiResponse<List<ShadowingAttemptHistoryItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy tiến độ luyện theo câu
+    /// </summary>
     [HttpGet("sentences/{sentenceId}/progress")]
     public async Task<ApiResponse<ShadowingSentenceProgressResponse>> GetSentenceProgress([FromRoute] string sentenceId)
     {

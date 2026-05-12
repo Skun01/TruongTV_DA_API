@@ -480,6 +480,95 @@ public class CardRepository : Repository<Card>, ICardRepository
             .FirstOrDefaultAsync(c => c.Id == cardId && c.Status == PublishStatus.Published);
     }
 
+    public async Task<(List<Card> Items, int Total)> SuggestCardsByTopicAsync(
+        List<string> keywords,
+        CardType? cardType,
+        JlptLevel? level,
+        int page,
+        int pageSize)
+    {
+        var cardsQuery = _context.Cards
+            .AsNoTracking()
+            .Include(c => c.VocabularyDetail)
+            .Include(c => c.GrammarDetail)
+            .Include(c => c.KanjiDetail)
+            .Where(c => c.Status == PublishStatus.Published);
+
+        if (cardType.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.CardType == cardType.Value);
+
+        if (level.HasValue)
+            cardsQuery = cardsQuery.Where(c => c.Level == level.Value);
+
+        var allCandidates = await cardsQuery
+            .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
+            .ToListAsync();
+
+        var filtered = allCandidates
+            .Where(c => CardMatchesAnyKeyword(c, keywords))
+            .ToList();
+
+        var total = filtered.Count;
+        var items = filtered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return (items, total);
+    }
+
+    private static bool CardMatchesAnyKeyword(Card card, List<string> keywords)
+    {
+        return keywords.Any(kw => CardMatchesKeyword(card, kw));
+    }
+
+    private static bool CardMatchesKeyword(Card card, string keyword)
+    {
+        if (card.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (card.Summary.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (card.Tags.Any(tag => tag.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        if (card.VocabularyDetail != null)
+        {
+            if (card.VocabularyDetail.Writing.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (card.VocabularyDetail.Reading?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+            if (card.VocabularyDetail.Meanings.Any(m =>
+                m.Definitions.Any(d => d.Contains(keyword, StringComparison.OrdinalIgnoreCase))))
+                return true;
+        }
+
+        if (card.GrammarDetail != null)
+        {
+            if (card.GrammarDetail.Explanation?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+            if (card.GrammarDetail.Structures.Any(s =>
+                s.Pattern.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                return true;
+            if (card.GrammarDetail.AlternateForms.Any(f =>
+                f.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+
+        if (card.KanjiDetail != null)
+        {
+            if (card.KanjiDetail.MeaningVi.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (card.KanjiDetail.HanViet?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+            if (card.KanjiDetail.Onyomi.Any(o => o.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                return true;
+            if (card.KanjiDetail.Kunyomi.Any(k => k.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+
+        return false;
+    }
+
     private IQueryable<Card> BuildLearningAdminQuery()
     {
         return _context.Cards

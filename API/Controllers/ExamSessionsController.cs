@@ -44,6 +44,9 @@ public class ExamSessionsController : BaseController
         return ApiResponse<SessionStartResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Kiểm tra phiên thi đang hoạt động
+    /// </summary>
     [HttpGet("active")]
     public async Task<ApiResponse<ActiveSessionLookupResponse>> GetActiveSession([FromQuery] ActiveSessionQuery query)
     {

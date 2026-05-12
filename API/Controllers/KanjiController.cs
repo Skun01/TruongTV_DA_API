@@ -22,6 +22,9 @@ public class KanjiController : BaseController
         _kanjiService = kanjiService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet]
     public async Task<ApiResponse<List<KanjiListItemResponse>>> Search([FromQuery] KanjiSearchQuery query)
@@ -31,6 +34,9 @@ public class KanjiController : BaseController
         return ApiResponse<List<KanjiListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết Kanji
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("{cardId}")]
     public async Task<ApiResponse<KanjiDetailResponse>> GetDetail([FromRoute] string cardId)
@@ -40,6 +46,9 @@ public class KanjiController : BaseController
         return ApiResponse<KanjiDetailResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Tải template import Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet("import-template")]
     public async Task<IActionResult> DownloadImportTemplate()
@@ -48,6 +57,9 @@ public class KanjiController : BaseController
         return CreateJsonFileResult(result, "kanji-import-template.json");
     }
 
+    /// <summary>
+    /// Xuất dữ liệu Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] KanjiExportQuery query)
@@ -57,6 +69,9 @@ public class KanjiController : BaseController
         return CreateJsonFileResult(result, $"kanji-export-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
     }
 
+    /// <summary>
+    /// Xem trước dữ liệu import Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost("import/preview")]
     public async Task<ApiResponse<KanjiImportPreviewResponse>> PreviewImport([FromBody] ImportKanjiRequest request)
@@ -65,6 +80,9 @@ public class KanjiController : BaseController
         return ApiResponse<KanjiImportPreviewResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xác nhận import Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost("import/commit")]
     public async Task<ApiResponse<KanjiImportCommitResponse>> CommitImport([FromBody] ImportKanjiRequest request)
@@ -74,6 +92,9 @@ public class KanjiController : BaseController
         return ApiResponse<KanjiImportCommitResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tạo thẻ Kanji mới
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPost]
     public async Task<ApiResponse<KanjiDetailResponse>> Create([FromBody] CreateKanjiCardRequest request)
@@ -83,6 +104,9 @@ public class KanjiController : BaseController
         return ApiResponse<KanjiDetailResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Cập nhật thẻ Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpPatch("{cardId}")]
     public async Task<ApiResponse<KanjiDetailResponse>> Update([FromRoute] string cardId, [FromBody] UpdateKanjiCardRequest request)
@@ -92,6 +116,9 @@ public class KanjiController : BaseController
         return ApiResponse<KanjiDetailResponse>.SuccessResponse(item);
     }
 
+    /// <summary>
+    /// Xóa mềm thẻ Kanji
+    /// </summary>
     [Authorize(Policy = AuthPolicyConstants.EditorOrAdmin)]
     [HttpDelete("{cardId}")]
     public async Task<ApiResponse<bool>> SoftDelete([FromRoute] string cardId)

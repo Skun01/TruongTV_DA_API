@@ -17,6 +17,9 @@ public class JlptExamsController : BaseController
         _examService = examService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách đề thi JLPT đã xuất bản
+    /// </summary>
     [AllowAnonymous]
     [HttpGet]
     public async Task<ApiResponse<List<PublishedExamListItemResponse>>> Search([FromQuery] PublishedExamQuery query)
@@ -25,6 +28,9 @@ public class JlptExamsController : BaseController
         return ApiResponse<List<PublishedExamListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết đề thi JLPT đã xuất bản
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<ApiResponse<PublishedExamDetailResponse>> GetDetail([FromRoute] string id)

@@ -19,6 +19,9 @@ public class AdminDeckTypesController : BaseController
         _deckTypeAdminService = deckTypeAdminService;
     }
 
+    /// <summary>
+    /// Tìm kiếm danh sách loại bộ thẻ (admin)
+    /// </summary>
     [HttpGet]
     public async Task<ApiResponse<List<AdminDeckTypeResponse>>> Search([FromQuery] AdminDeckTypeListQuery query)
     {
@@ -26,6 +29,9 @@ public class AdminDeckTypesController : BaseController
         return ApiResponse<List<AdminDeckTypeResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Lấy chi tiết loại bộ thẻ (admin)
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ApiResponse<AdminDeckTypeResponse>> GetDetail([FromRoute] string id)
     {
@@ -33,6 +39,9 @@ public class AdminDeckTypesController : BaseController
         return ApiResponse<AdminDeckTypeResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Tạo loại bộ thẻ mới (admin)
+    /// </summary>
     [HttpPost]
     public async Task<ApiResponse<AdminDeckTypeResponse>> Create([FromBody] CreateDeckTypeRequest request)
     {
@@ -40,6 +49,9 @@ public class AdminDeckTypesController : BaseController
         return ApiResponse<AdminDeckTypeResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật loại bộ thẻ (admin)
+    /// </summary>
     [HttpPatch("{id}")]
     public async Task<ApiResponse<AdminDeckTypeResponse>> Update([FromRoute] string id, [FromBody] UpdateDeckTypeRequest request)
     {
@@ -47,6 +59,9 @@ public class AdminDeckTypesController : BaseController
         return ApiResponse<AdminDeckTypeResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa loại bộ thẻ (admin)
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<ApiResponse<bool>> Delete([FromRoute] string id)
     {

@@ -297,6 +297,41 @@ public class CardService : ICardService
         return results;
     }
 
+    public async Task<(List<CardListItemResponse> Items, MetaData Meta)> SuggestByTopicAsync(TopicSuggestQuery query)
+    {
+        var (page, pageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
+        var cardTypeEnum = EnumParsingHelper.ParseNullable<CardType>(query.CardType);
+        var levelEnum = EnumParsingHelper.ParseNullable<JlptLevel>(query.Level);
+
+        var keywords = ExtractKeywords(query.Topic);
+        if (keywords.Count == 0)
+            return (new List<CardListItemResponse>(), new MetaData { Page = page, PageSize = pageSize, Total = 0 });
+
+        var (items, total) = await _unitOfWork.Cards.SuggestCardsByTopicAsync(
+            keywords, cardTypeEnum, levelEnum, page, pageSize);
+
+        var response = items.Select(c => c.ToCardListItemResponse()).ToList();
+
+        var meta = new MetaData
+        {
+            Page = page,
+            PageSize = pageSize,
+            Total = total,
+        };
+
+        return (response, meta);
+    }
+
+    private static List<string> ExtractKeywords(string topic)
+    {
+        return topic
+            .Split(new[] { ' ', ',', ';', '、', '　' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(k => k.Trim())
+            .Where(k => k.Length >= 1)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private sealed record SearchCardItem(CardListItemResponse Item, DateTime CreatedAt, DateTime? UpdatedAt);
     private sealed record GenerationContentResult(CardExplanationContent Content, string Model);
 }

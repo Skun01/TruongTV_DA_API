@@ -18,6 +18,9 @@ public class MyDecksController : BaseController
         _deckUserService = deckUserService;
     }
 
+    /// <summary>
+    /// Lấy danh sách bộ thẻ của tôi
+    /// </summary>
     [HttpGet]
     public async Task<ApiResponse<List<DeckListItemResponse>>> GetMyDecks([FromQuery] MyDeckListQuery query)
     {
@@ -26,6 +29,9 @@ public class MyDecksController : BaseController
         return ApiResponse<List<DeckListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Tạo bộ thẻ cá nhân mới
+    /// </summary>
     [HttpPost]
     public async Task<ApiResponse<DeckDetailResponse>> CreateMyDeck([FromBody] CreateMyDeckRequest request)
     {
@@ -34,6 +40,9 @@ public class MyDecksController : BaseController
         return ApiResponse<DeckDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Cập nhật bộ thẻ cá nhân
+    /// </summary>
     [HttpPatch("{deckId}")]
     public async Task<ApiResponse<DeckDetailResponse>> UpdateMyDeck([FromRoute] string deckId, [FromBody] UpdateMyDeckRequest request)
     {
@@ -42,6 +51,9 @@ public class MyDecksController : BaseController
         return ApiResponse<DeckDetailResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Xóa bộ thẻ cá nhân
+    /// </summary>
     [HttpDelete("{deckId}")]
     public async Task<ApiResponse<bool>> DeleteMyDeck([FromRoute] string deckId)
     {
@@ -50,6 +62,9 @@ public class MyDecksController : BaseController
         return ApiResponse<bool>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Lấy danh sách bộ thẻ đã đánh dấu
+    /// </summary>
     [HttpGet("bookmarks")]
     public async Task<ApiResponse<List<DeckListItemResponse>>> GetBookmarkedDecks([FromQuery] BookmarkedDeckListQuery query)
     {
@@ -58,6 +73,9 @@ public class MyDecksController : BaseController
         return ApiResponse<List<DeckListItemResponse>>.SuccessResponse(items, meta);
     }
 
+    /// <summary>
+    /// Tạo thư mục trong bộ thẻ cá nhân
+    /// </summary>
     [HttpPost("{deckId}/folders")]
     public async Task<ApiResponse<DeckFolderResponse>> CreateFolder([FromRoute] string deckId, [FromBody] CreateDeckFolderRequest request)
     {
@@ -66,6 +84,9 @@ public class MyDecksController : BaseController
         return ApiResponse<DeckFolderResponse>.SuccessResponse(result);
     }
 
+    /// <summary>
+    /// Sắp xếp lại thứ tự thư mục trong bộ thẻ cá nhân
+    /// </summary>
     [HttpPut("{deckId}/folders/order")]
     public async Task<ApiResponse<List<DeckFolderResponse>>> ReorderFolders([FromRoute] string deckId, [FromBody] ReorderDeckFoldersRequest request)
     {

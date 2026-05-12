@@ -17,6 +17,9 @@ public class DeckTypesController : BaseController
         _deckTypeService = deckTypeService;
     }
 
+    /// <summary>
+    /// Lấy danh sách tất cả loại bộ thẻ
+    /// </summary>
     [AllowAnonymous]
     [HttpGet]
     public async Task<ApiResponse<List<DeckTypeResponse>>> GetAll()
