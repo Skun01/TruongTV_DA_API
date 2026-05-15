@@ -47,7 +47,8 @@ public static class LearningAdminMappings
 
     public static LearningAdminCardIssueResponse ToAdminCardIssueResponse(
         this Card card,
-        List<LearningAdminCardIssueItemResponse> issues)
+        List<LearningAdminCardIssueItemResponse> filteredIssues,
+        List<string> availableModes)
     {
         return new LearningAdminCardIssueResponse
         {
@@ -55,8 +56,8 @@ public static class LearningAdminMappings
             CardType = card.CardType.ToString(),
             Title = card.Title,
             Summary = card.Summary,
-            AvailableModes = LearningAdminHelper.BuildAvailableModes(card, issues),
-            Issues = issues,
+            AvailableModes = availableModes,
+            Issues = filteredIssues,
         };
     }
 }

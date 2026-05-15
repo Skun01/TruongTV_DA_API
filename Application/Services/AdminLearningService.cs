@@ -178,12 +178,14 @@ public class AdminLearningService : IAdminLearningService
         var items = cards
             .Select(card =>
             {
-                var issues = LearningAdminHelper.BuildIssues(card);
-                issues = LearningAdminHelper.FilterIssuesByMode(issues, parsedMode);
+                var allIssues = LearningAdminHelper.BuildIssues(card);
+                var availableModes = LearningAdminHelper.BuildAvailableModes(card, allIssues);
+
+                var filteredIssues = LearningAdminHelper.FilterIssuesByMode(allIssues, parsedMode);
 
                 if (parsedIssueType.HasValue)
                 {
-                    issues = issues
+                    filteredIssues = filteredIssues
                         .Where(issue => issue.Type == parsedIssueType.Value.ToString())
                         .ToList();
                 }
@@ -191,11 +193,12 @@ public class AdminLearningService : IAdminLearningService
                 return new
                 {
                     Card = card,
-                    Issues = issues,
+                    FilteredIssues = filteredIssues,
+                    AvailableModes = availableModes,
                 };
             })
-            .Where(x => x.Issues.Count > 0)
-            .Select(x => x.Card.ToAdminCardIssueResponse(x.Issues))
+            .Where(x => x.FilteredIssues.Count > 0)
+            .Select(x => x.Card.ToAdminCardIssueResponse(x.FilteredIssues, x.AvailableModes))
             .ToList();
 
         var (normalizedPage, normalizedPageSize) = PagingHelper.Normalize(query.Page, query.PageSize);
